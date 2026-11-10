@@ -30,8 +30,24 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Verify Flutter Installation
-        run: flutter --version
+      - name: Verify Flutter & Environment
+        run: |
+          flutter --version
+          java -version
+
+      - name: Decode Release Keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.jks
+          echo "Keystore decoded: $(stat -c%s android/app/release.jks) bytes"
+
+      - name: Create key.properties for Gradle
+        run: |
+          cat > android/key.properties << EOF
+          storePassword=musicapp123
+          keyPassword=musicapp123
+          keyAlias=musicappkey
+          storeFile=release.jks
+          EOF
 
       - name: Install Project Dependencies
         run: flutter pub get
@@ -41,17 +57,21 @@ jobs:
         run: |
           VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | cut -d'+' -f1 | tr -d ' ')
           echo "APP_VERSION=${VERSION}" >> $GITHUB_ENV
-          echo "Version is ${VERSION}"
+          echo "Building version ${VERSION}"
 
       - name: Build Android Release APK
-        run: |
-          flutter build apk --release
+        run: flutter build apk --release --verbose
+        env:
+          KEYSTORE_STORE_PASSWORD: musicapp123
+          KEYSTORE_KEY_PASSWORD: musicapp123
+          KEYSTORE_KEY_ALIAS: musicappkey
 
       - name: Prepare Release Artifact
         run: |
           mkdir -p release-output
           cp build/app/outputs/flutter-apk/app-release.apk release-output/music-app-v${{ env.APP_VERSION }}.apk
           cp build/app/outputs/flutter-apk/app-release.apk release-output/music-app-release.apk
+          echo "APK size: $(stat -c%s release-output/music-app-release.apk) bytes"
 
       - name: Upload APK as GitHub Actions Artifact
         uses: actions/upload-artifact@v4
@@ -67,17 +87,24 @@ jobs:
           name: "Music App v${{ env.APP_VERSION }}"
           body: |
             ### 🎵 Music App v${{ env.APP_VERSION }}
-            
-            - **Ad-Free Zero-Delay Streaming Engine** (JioSaavn 320kbps DES-ECB + YouTube audio-only stream extraction)
-            - **Universal UI Design System: Twilight Calm**
-            - **Native Background & Lock-Screen Media Controls**
-            - **Local Disk Caching & 0ms Offline Playback Vault**
-            - **In-App Auto-Update System** (seamless in-place updates without uninstalling)
 
-            #### Direct Download:
-            Download **`music-app-release.apk`** below and install directly on your Android phone.
+            **What's included:**
+            - 🚫 Ad-Free Zero-Delay Streaming Engine (JioSaavn 320kbps + YouTube audio-only extraction)
+            - 🌙 Universal UI: Twilight Calm Design System
+            - 🎵 Native Background & Lock-Screen Media Controls
+            - 💾 Local Disk Cache & 0ms Offline Playback Vault
+            - 🔄 In-App Auto-Update System (seamless in-place updates)
+
+            #### 📲 How to Install:
+            1. Download **`music-app-release.apk`** below
+            2. On your Android phone: **Settings → Security → Unknown Sources → Allow**
+            3. Open the downloaded APK and tap **Install**
+            4. Future updates will be delivered **inside the app automatically**!
+
+            > ⚠️ You may need to allow "Install from Unknown Sources" for this app in Android settings.
           draft: false
           prerelease: false
+          update_existing_release: true
           files: |
             release-output/music-app-v${{ env.APP_VERSION }}.apk
             release-output/music-app-release.apk

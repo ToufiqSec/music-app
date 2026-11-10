@@ -4,12 +4,12 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import androidx.core.content.FileProvider
-import com.ryanheise.audioservice.AudioServiceActivity
+import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
 
-class MainActivity : AudioServiceActivity() {
+class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.toufiqsec.music_app/installer"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {

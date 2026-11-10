@@ -1,6 +1,6 @@
 plugins {
     id "com.android.application"
-    id "kotlin-android"
+    id "org.jetbrains.kotlin.android"
     id "dev.flutter.flutter-gradle-plugin"
 }
 
@@ -12,20 +12,15 @@ if (localPropertiesFile.exists()) {
     }
 }
 
-def flutterVersionCode = localProperties.getProperty("flutter.versionCode")
-if (flutterVersionCode == null) {
-    flutterVersionCode = "1"
-}
+def flutterVersionCode = localProperties.getProperty("flutter.versionCode") ?: "1"
+def flutterVersionName = localProperties.getProperty("flutter.versionName") ?: "1.0.0"
 
-def flutterVersionName = localProperties.getProperty("flutter.versionName")
-if (flutterVersionName == null) {
-    flutterVersionName = "1.0.0"
-}
+def keystoreFile = file("release.jks")
+def hasKeystore = keystoreFile.exists()
 
 android {
     namespace "com.toufiqsec.music_app"
     compileSdk 34
-    ndkVersion flutter.ndkVersion
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
@@ -34,10 +29,6 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
-    }
-
-    sourceSets {
-        main.java.srcDirs += "src/main/kotlin"
     }
 
     defaultConfig {
@@ -50,24 +41,25 @@ android {
     }
 
     signingConfigs {
-        release {
-            storeFile file("release.jks")
-            storePassword "musicapp123"
-            keyAlias "musicappkey"
-            keyPassword "musicapp123"
-            storeType "PKCS12"
+        if (hasKeystore) {
+            release {
+                storeFile keystoreFile
+                storePassword "musicapp123"
+                keyAlias "musicappkey"
+                keyPassword "musicapp123"
+            }
         }
     }
 
     buildTypes {
         release {
-            signingConfig signingConfigs.release
+            if (hasKeystore) {
+                signingConfig signingConfigs.release
+            } else {
+                signingConfig signingConfigs.debug
+            }
             minifyEnabled false
             shrinkResources false
-            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
-        }
-        debug {
-            signingConfig signingConfigs.release
         }
     }
 }
