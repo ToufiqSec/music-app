@@ -2,10 +2,10 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
-import '../../features/music/models/music_models.dart';
-import '../../core/services/audio_cache_service.dart';
-import '../../core/services/youtube_music_service.dart';
-import '../../services/audio_handler.dart';
+import '../features/music/models/music_models.dart';
+import '../core/services/audio_cache_service.dart';
+import '../core/services/youtube_music_service.dart';
+import '../services/audio_handler.dart';
 
 enum RepeatMode { off, all, one }
 
@@ -100,7 +100,9 @@ class AudioProvider extends ChangeNotifier {
     final nextIdx = _getNextIndex();
     if (nextIdx != null && nextIdx < _playlistQueue.length) {
       final nextTrack = _playlistQueue[nextIdx];
-      final url = await _musicService.getAudioStreamUrl(nextTrack.id);
+      final url = (nextTrack.audioStreamUrl != null && nextTrack.audioStreamUrl!.isNotEmpty)
+          ? nextTrack.audioStreamUrl
+          : await _musicService.getAudioStreamUrl(nextTrack.id);
       if (url != null && !await AudioCacheService.isTrackCached(nextTrack.id)) {
         // Pre-cache next track into disk silently
         AudioCacheService.downloadAndCacheTrack(nextTrack.id, url).listen(
@@ -149,7 +151,17 @@ class AudioProvider extends ChangeNotifier {
 
     try {
       // 1. Resolve stream or local file path
-      final resolvedUrl = await _musicService.getAudioStreamUrl(track.id);
+      // Check disk cache first
+      final cached = await AudioCacheService.getCachedTrackFile(track.id);
+      String? resolvedUrl;
+      if (cached != null) {
+        resolvedUrl = cached.path;
+      } else if (track.audioStreamUrl != null && track.audioStreamUrl!.isNotEmpty) {
+        resolvedUrl = track.audioStreamUrl;
+      } else {
+        resolvedUrl = await _musicService.getAudioStreamUrl(track.id);
+      }
+
       if (resolvedUrl == null) {
         throw Exception('Unable to resolve audio stream for track ${track.title}');
       }
@@ -232,7 +244,9 @@ class AudioProvider extends ChangeNotifier {
   Future<void> downloadTrackForOffline(YoutubeTrack track) async {
     if (await AudioCacheService.isTrackCached(track.id)) return;
 
-    final streamUrl = await _musicService.getAudioStreamUrl(track.id);
+    final streamUrl = (track.audioStreamUrl != null && track.audioStreamUrl!.isNotEmpty)
+        ? track.audioStreamUrl
+        : await _musicService.getAudioStreamUrl(track.id);
     if (streamUrl == null) return;
 
     _downloadProgress[track.id] = 0.0;

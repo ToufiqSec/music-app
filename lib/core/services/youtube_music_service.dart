@@ -99,7 +99,7 @@ class YoutubeMusicService {
         title: title,
         artist: artist,
         durationSeconds: duration,
-        thumbnailUrl: image,
+        thumbnailUrl: image ?? '',
         audioStreamUrl: streamUrl,
       ));
     }

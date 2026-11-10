@@ -88,4 +88,18 @@ class AppTextStyles {
         height: 1.2,
         color: AppColors.textSecondary,
       );
+
+  // Standard semantic aliases
+  static TextStyle get h1 => displayTitle;
+  static TextStyle get h2 => screenTitle;
+  static TextStyle get h3 => sectionTitle;
+  static TextStyle get bodyLarge => GoogleFonts.poppins(
+        fontSize: 16,
+        fontWeight: FontWeight.w400,
+        height: 1.4,
+        color: AppColors.textPrimary,
+      );
+  static TextStyle get bodyMedium => body;
+  static TextStyle get bodySmall => subtitle;
+  static TextStyle get caption => meta;
 }

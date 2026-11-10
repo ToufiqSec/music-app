@@ -6,7 +6,7 @@ class YoutubeTrack {
   final String title;
   final String artist;
   final int durationSeconds;
-  final String? thumbnailUrl;
+  final String thumbnailUrl;
   final String? audioStreamUrl;
   final bool isDownloaded;
   final String? localFilePath;
@@ -16,7 +16,7 @@ class YoutubeTrack {
     required this.title,
     required this.artist,
     required this.durationSeconds,
-    this.thumbnailUrl,
+    this.thumbnailUrl = '',
     this.audioStreamUrl,
     this.isDownloaded = false,
     this.localFilePath,
@@ -63,7 +63,7 @@ class YoutubeTrack {
       title: json['title'] as String? ?? 'Unknown Title',
       artist: json['artist'] as String? ?? 'Unknown Artist',
       durationSeconds: json['durationSeconds'] as int? ?? 0,
-      thumbnailUrl: json['thumbnailUrl'] as String?,
+      thumbnailUrl: json['thumbnailUrl'] as String? ?? '',
       audioStreamUrl: json['audioStreamUrl'] as String?,
       isDownloaded: json['isDownloaded'] as bool? ?? false,
       localFilePath: json['localFilePath'] as String?,
@@ -76,7 +76,7 @@ class YoutubeTrack {
       title: title,
       artist: artist,
       duration: Duration(seconds: durationSeconds),
-      artUri: thumbnailUrl != null ? Uri.tryParse(thumbnailUrl!) : null,
+      artUri: thumbnailUrl.isNotEmpty ? Uri.tryParse(thumbnailUrl) : null,
       extras: {
         'audioStreamUrl': audioStreamUrl,
         'localFilePath': localFilePath,
@@ -91,7 +91,7 @@ class YoutubeTrack {
       title: item.title,
       artist: item.artist ?? 'Unknown Artist',
       durationSeconds: item.duration?.inSeconds ?? 0,
-      thumbnailUrl: item.artUri?.toString(),
+      thumbnailUrl: item.artUri?.toString() ?? '',
       audioStreamUrl: item.extras?['audioStreamUrl'] as String?,
       isDownloaded: item.extras?['isDownloaded'] as bool? ?? false,
       localFilePath: item.extras?['localFilePath'] as String?,

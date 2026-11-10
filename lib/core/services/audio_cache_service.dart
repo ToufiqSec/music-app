@@ -113,6 +113,52 @@ class AudioCacheService {
       }
     } catch (_) {}
   }
+
+  /// Returns all cached track IDs by inspecting filenames in cache directory
+  static Future<List<String>> getCachedTrackIds() async {
+    try {
+      final dir = await getCacheDirectory();
+      final entities = dir.listSync().whereType<File>().toList();
+      return entities
+          .where((f) => f.path.endsWith('.m4a'))
+          .map((f) => f.uri.pathSegments.last.replaceAll('.m4a', ''))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Calculates total bytes in cache
+  static Future<int> getCacheSizeBytes() async {
+    try {
+      final dir = await getCacheDirectory();
+      final entities = dir.listSync().whereType<File>().toList();
+      int total = 0;
+      for (final f in entities) {
+        if (f.path.endsWith('.m4a')) {
+          total += f.lengthSync();
+        }
+      }
+      return total;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  /// Clears all cached tracks
+  static Future<void> clearCache() async {
+    try {
+      final dir = await getCacheDirectory();
+      final entities = dir.listSync().whereType<File>().toList();
+      for (final f in entities) {
+        if (f.path.endsWith('.m4a') || f.path.endsWith('.tmp')) {
+          try {
+            f.deleteSync();
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
+  }
 }
 
 class _CacheFileInfo {
