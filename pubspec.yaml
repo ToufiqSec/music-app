@@ -1,5 +1,5 @@
 name: music_app
-description: "A modern Flutter music player app supporting local playback and online streaming."
+description: "A high-performance personal music player in Flutter with zero-delay streaming, background playback, and the Twilight Calm design system."
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -13,16 +13,18 @@ dependencies:
   # State Management
   provider: ^6.1.2
 
-  # Audio Playback & Background Service
+  # Audio Playback & Background Media Service
   just_audio: ^0.9.46
   audio_service: ^0.18.18
   audio_video_progress_bar: ^2.0.3
 
-  # Local Audio Query & Storage Permissions
-  on_audio_query: ^2.9.0
-  permission_handler: ^11.3.1
+  # Audio Stream Extraction & HTTP
+  youtube_explode_dart: ^2.2.1
+  http: ^1.2.2
+  path_provider: ^2.1.4
 
-  # UI & Networking
+  # UI, Fonts & Network Assets
+  google_fonts: ^6.2.1
   cached_network_image: ^3.4.1
   cupertino_icons: ^1.0.8
 

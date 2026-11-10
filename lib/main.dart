@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:audio_service/audio_service.dart';
 import 'services/audio_handler.dart';
-import 'providers/player_provider.dart';
+import 'providers/audio_provider.dart';
 import 'screens/home_screen.dart';
 import 'theme/app_theme.dart';
 
@@ -11,7 +11,7 @@ late MyAudioHandler _audioHandler;
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize audio service for background playback & lock screen notifications
+  // Initialize native background audio service
   _audioHandler = await AudioService.init(
     builder: () => MyAudioHandler(),
     config: const AudioServiceConfig(
@@ -27,7 +27,7 @@ Future<void> main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(
-          create: (_) => PlayerProvider(_audioHandler),
+          create: (_) => AudioProvider(_audioHandler),
         ),
       ],
       child: const MusicApp(),

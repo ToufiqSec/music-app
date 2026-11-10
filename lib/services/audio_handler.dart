@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
 
+/// Background Audio Handler using audio_service and just_audio.
 class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
   final AudioPlayer _player = AudioPlayer();
 
@@ -11,10 +13,8 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
   AudioPlayer get player => _player;
 
   void _init() {
-    // Forward playback events from just_audio to audio_service
     _player.playbackEventStream.listen(_broadcastState);
 
-    // Track position changes
     _player.durationStream.listen((duration) {
       final index = _player.currentIndex;
       final newQueue = queue.value;
@@ -24,7 +24,6 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
       }
     });
 
-    // Listen for current index changes to update current mediaItem
     _player.currentIndexStream.listen((index) {
       final newQueue = queue.value;
       if (index != null && index < newQueue.length) {
@@ -86,24 +85,19 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
   @override
   Future<void> skipToPrevious() => _player.seekToPrevious();
 
-  Future<void> setAudioSource(List<MediaItem> items, {int initialIndex = 0}) async {
-    queue.add(items);
-    final audioSourceList = ConcatenatingAudioSource(
-      children: items.map((item) {
-        final uri = item.extras?['uri'] as String? ?? '';
-        final isLocal = item.extras?['isLocal'] as bool? ?? false;
-        if (isLocal) {
-          return AudioSource.uri(Uri.file(uri), tag: item);
-        } else {
-          return AudioSource.uri(Uri.parse(uri), tag: item);
-        }
-      }).toList(),
-    );
+  /// Play a single direct stream or local file
+  Future<void> playTrackUrl(MediaItem item, String resolvedUrl) async {
+    mediaItem.add(item);
+    queue.add([item]);
 
-    await _player.setAudioSource(
-      audioSourceList,
-      initialIndex: initialIndex,
-      initialPosition: Duration.zero,
-    );
+    if (File(resolvedUrl).existsSync()) {
+      await _player.setFilePath(resolvedUrl);
+    } else {
+      await _player.setUrl(
+        resolvedUrl,
+        headers: {'Accept-Ranges': 'bytes'},
+      );
+    }
+    await _player.play();
   }
 }
