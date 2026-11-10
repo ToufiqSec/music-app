@@ -1,13 +1,16 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.music_app">
+    package="com.toufiqsec.music_app">
 
-    <!-- Audio Streaming & Storage Permissions -->
+    <!-- Audio Streaming, Background Playback & Storage Permissions -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO"/>
+
+    <!-- In-App Auto-Update Package Installer Permission -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
 
     <application
         android:label="Music App"
@@ -16,7 +19,7 @@
         android:usesCleartextTraffic="true">
 
         <activity
-            android:name="com.ryanheise.audioservice.AudioServiceActivity"
+            android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:taskAffinity=""
@@ -49,9 +52,20 @@
             android:name="com.ryanheise.audioservice.MediaButtonReceiver"
             android:exported="true">
             <intent-filter>
-                <action android:name="android.intent.action.MEDIA_BUTTON" />
+                <action android:name="android.media.button.MEDIA_BUTTON" />
             </intent-filter>
         </receiver>
+
+        <!-- FileProvider for In-App APK Updates -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
         <meta-data
             android:name="flutterEmbedding"

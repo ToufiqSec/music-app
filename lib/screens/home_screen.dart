@@ -13,6 +13,8 @@ import '../theme/app_motion.dart';
 import '../widgets/mini_player.dart';
 import '../widgets/bottom_nav_bar.dart';
 import '../widgets/content_card.dart';
+import '../widgets/update_dialog.dart';
+import '../core/services/app_update_service.dart';
 import 'search_screen.dart';
 import 'library_screen.dart';
 import 'downloads_screen.dart';
@@ -28,6 +30,21 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentTabIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkForUpdatesOnLaunch();
+    });
+  }
+
+  Future<void> _checkForUpdatesOnLaunch() async {
+    final updateInfo = await AppUpdateService.checkForUpdate();
+    if (updateInfo != null && mounted) {
+      UpdateDialog.show(context, updateInfo);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -793,6 +810,50 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
               Text(
                 'Streaming Quality: 320 kbps Lossless\nAds: None (Pure Direct Stream)',
                 style: AppTextStyles.caption.copyWith(color: AppColors.primarySoft),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppColors.primarySoft),
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: AppRadii.borderPill,
+                    ),
+                  ),
+                  icon: const Icon(Icons.system_update_rounded, size: 18, color: AppColors.primarySoft),
+                  label: Text(
+                    'Check for Updates (v${AppUpdateService.currentVersion})',
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.primarySoft,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Checking for updates...', style: AppTextStyles.bodySmall),
+                        backgroundColor: AppColors.surface2,
+                        duration: const Duration(seconds: 1),
+                      ),
+                    );
+                    final info = await AppUpdateService.checkForUpdate();
+                    if (info != null && context.mounted) {
+                      UpdateDialog.show(context, info);
+                    } else if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'App is up to date (v${AppUpdateService.currentVersion})',
+                            style: AppTextStyles.bodySmall,
+                          ),
+                          backgroundColor: AppColors.surface2,
+                        ),
+                      );
+                    }
+                  },
+                ),
               ),
             ],
           ),
