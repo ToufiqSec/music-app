@@ -1,31 +1,54 @@
-# Music App
+# Music App (Flutter Mobile)
 
-A modern music application configured with [GSD Core](https://github.com/open-gsd/gsd-core) for spec-driven development and context-engineered AI agent workflows.
+A production-ready Flutter mobile music application supporting both **local device audio playback** and **online streaming**, built with **Provider** state management, background playback service, and a modular architecture ready for custom UI integration.
 
-## Overview
+## Features
 
-This repository contains the source code, architecture specifications, and execution phases for the Music App.
+- **Dual Audio Sources**:
+  - **Online Streaming**: Stream tracks directly via URL with instant buffering and duration tracking.
+  - **Local Audio Library**: Scans device audio files (`.mp3`, `.m4a`, `.wav`) using `on_audio_query` with runtime storage permissions.
+- **Background & Lock Screen Playback**:
+  - Seamless background audio via `just_audio` and `audio_service`.
+  - Native lock screen notification controls (Play, Pause, Next, Previous, Seek).
+- **Playback Controls**:
+  - Play, Pause, Seek, Next, Previous.
+  - Loop modes (`LoopMode.off`, `LoopMode.all`, `LoopMode.one`).
+  - Shuffle toggle.
+- **UI Architecture**:
+  - Persistent **MiniPlayer** docked at the bottom.
+  - Full-screen **NowPlayingScreen** with album artwork, interactive progress bar, and controls.
+  - Tabbed **HomeScreen** (Streams, Local Music, Playlists).
+  - Modular theme tokens in `lib/theme/app_theme.dart` designed to easily drop in custom UI designs.
 
-## Development Workflow (GSD Core)
+## Architecture
 
-This project uses the **Git. Ship. Done. (GSD)** execution loop to ensure clean context and verified delivery:
-
-1. **Discuss & Explore** — Clarify requirements and explore design ideas.
-2. **Plan** — Decompose milestones into atomic, test-backed execution waves.
-3. **Execute** — Implement phase plans in isolated contexts.
-4. **Verify** — Run automated checks and user acceptance tests.
-5. **Ship** — Code review and release milestone deliveries.
-
-### Available Slash Commands
-
-- `/gsd-new-project` — Initialize greenfield project planning and create the roadmap.
-- `/gsd-progress` — Check project status and route to the next workflow step.
-- `/gsd-plan-phase <N>` — Create an atomic, goal-backward plan for phase `<N>`.
-- `/gsd-execute-phase <N>` — Execute the tasks for phase `<N>`.
-- `/gsd-verify-work` — Verify implementation goals against acceptance criteria.
-- `/gsd-ship` — Review code, create PRs, and finalize delivery.
-- `/gsd-help` — View the complete index of 72 GSD workflow commands.
+```text
+lib/
+├── main.dart                  # App bootstrap, AudioService initialization, Provider root
+├── models/
+│   └── song_model.dart        # Unified Song data model (compatible with MediaItem & on_audio_query)
+├── services/
+│   └── audio_handler.dart     # AudioService background daemon integrating just_audio
+├── providers/
+│   └── player_provider.dart   # Central ChangeNotifier managing playback state, queue, & permissions
+├── screens/
+│   ├── home_screen.dart       # Main tabbed view (Streams, Local, Playlists)
+│   └── now_playing_screen.dart# Full-screen player with album art & progress slider
+├── widgets/
+│   ├── mini_player.dart       # Bottom persistent mini-player
+│   └── song_tile.dart         # Reusable track tile widget
+└── theme/
+    └── app_theme.dart         # Design tokens (colors, dark theme, typography)
+```
 
 ## Getting Started
 
-Open the project in Antigravity or your preferred AI coding assistant and run `/gsd-new-project` to begin speccing features.
+1. Ensure Flutter is installed on your machine (`flutter --version`).
+2. Fetch dependencies:
+   ```bash
+   flutter pub get
+   ```
+3. Run on your connected device or emulator:
+   ```bash
+   flutter run
+   ```
