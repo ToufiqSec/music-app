@@ -41,8 +41,8 @@ android {
     }
 
     signingConfigs {
-        if (hasKeystore) {
-            release {
+        release {
+            if (hasKeystore) {
                 storeFile keystoreFile
                 storePassword "musicapp123"
                 keyAlias "musicappkey"

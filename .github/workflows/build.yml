@@ -68,11 +68,12 @@ jobs:
           echo "Building version ${VERSION}"
 
       - name: Build Android Release APK
-        run: flutter build apk --release --verbose
-        env:
-          KEYSTORE_STORE_PASSWORD: musicapp123
-          KEYSTORE_KEY_PASSWORD: musicapp123
-          KEYSTORE_KEY_ALIAS: musicappkey
+        run: |
+          echo "Starting Flutter APK build..."
+          flutter build apk --release --verbose || {
+            echo "::error::Flutter build apk failed! Checking Gradle log..."
+            exit 1
+          }
 
       - name: Prepare Release Artifact
         run: |
