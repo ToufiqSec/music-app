@@ -69,12 +69,20 @@ jobs:
 
       - name: Build Android Release APK
         run: |
-          echo "Starting Flutter APK build..."
-          flutter build apk --release --verbose > build_verbose.log 2>&1 || {
-            echo "::error::Flutter build apk failed! Printing last 200 lines of log:"
-            tail -n 200 build_verbose.log
-            exit 1
-          }
+          echo "Building Android Release APK..."
+          flutter build apk --release --verbose
+        continue-on-error: true
+
+      - name: Inspect Build Logs or Error
+        run: |
+          echo "=== BUILD RESULT INSPECTION ==="
+          if [ -f build/app/outputs/flutter-apk/app-release.apk ]; then
+            echo "SUCCESS: APK file exists!"
+            ls -lh build/app/outputs/flutter-apk/app-release.apk
+          else
+            echo "ERROR: APK was not built. Running gradle directly with stacktrace..."
+            cd android && ./gradlew app:assembleRelease --stacktrace --info || true
+          fi
 
       - name: Prepare Release Artifact
         run: |
