@@ -42,22 +42,16 @@ android {
 
     signingConfigs {
         release {
-            if (hasKeystore) {
-                storeFile keystoreFile
-                storePassword "musicapp123"
-                keyAlias "musicappkey"
-                keyPassword "musicapp123"
-            }
+            storeFile file("release.jks")
+            storePassword "musicapp123"
+            keyAlias "musicappkey"
+            keyPassword "musicapp123"
         }
     }
 
     buildTypes {
         release {
-            if (hasKeystore) {
-                signingConfig signingConfigs.release
-            } else {
-                signingConfig signingConfigs.debug
-            }
+            signingConfig signingConfigs.release
             minifyEnabled false
             shrinkResources false
         }
