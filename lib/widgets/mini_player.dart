@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../features/music/models/music_models.dart';
 import '../providers/audio_provider.dart';
 import '../screens/now_playing_screen.dart';
 import '../theme/app_colors.dart';

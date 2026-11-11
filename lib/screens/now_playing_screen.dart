@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide RepeatMode;
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
@@ -47,7 +47,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
 
     if (track == null) {
       return Scaffold(
-        backgroundColor: AppColors.backgroundLayer0,
+        backgroundColor: AppColors.bgBase,
         body: Center(
           child: Text('No song selected', style: AppTextStyles.bodyMedium),
         ),
@@ -59,7 +59,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
     final artSize = (screenWidth * 0.75).clamp(200.0, 320.0);
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundLayer0,
+      backgroundColor: AppColors.bgBase,
       body: Stack(
         children: [
           // Background Glow
@@ -686,7 +686,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               ListTile(
                 leading: const Icon(Icons.person_outline_rounded, color: AppColors.iconIdle),
                 title: Text('Artist: ${track.artist}', style: AppTextStyles.bodyMedium),
-                subtitle: const Text('View Discography in Search', style: AppTextStyles.caption),
+                subtitle: Text('View Discography in Search', style: AppTextStyles.caption),
                 onTap: () {
                   Navigator.pop(context);
                 },

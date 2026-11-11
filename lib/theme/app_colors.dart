@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 class AppColors {
   // Backgrounds and surfaces (Dark mode: Warm charcoal-slate base #121218 to #1A1A22)
   static const Color bgBase = Color(0xFF121218);
+  static const Color backgroundLayer0 = bgBase;
   static const Color bgDeep = Color(0xFF0D0D12);
   static const Color surface1 = Color(0xFF1E1E28);
   static const Color surface2 = Color(0xFF282836);

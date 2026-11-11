@@ -81,7 +81,7 @@ class YoutubeMusicService {
         streamUrl = DesEcbDecryptor.decryptMediaUrl(encryptedUrl);
       }
 
-      final id = item['id']?.toString() ?? UniqueKey().toString();
+      final id = item['id']?.toString() ?? DateTime.now().microsecondsSinceEpoch.toString();
       final title = _unescapeHtml(item['song']?.toString() ?? item['title']?.toString() ?? 'Unknown Song');
       final artist = _unescapeHtml(item['primary_artists']?.toString() ?? item['singers']?.toString() ?? 'Various Artists');
       final duration = int.tryParse(item['duration']?.toString() ?? '0') ?? 0;
