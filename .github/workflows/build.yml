@@ -69,8 +69,12 @@ jobs:
 
       - name: Build Android Release APK
         run: |
-          echo "Building Android Release APK..."
-          flutter build apk --release
+          echo "Building Android Release APK via Flutter..."
+          flutter build apk --release --verbose || {
+            echo "::error::Flutter build failed. Printing last 300 lines of Gradle log:"
+            cd android && ./gradlew app:assembleRelease --stacktrace --info
+            exit 1
+          }
 
       - name: Prepare Release Artifact
         run: |
