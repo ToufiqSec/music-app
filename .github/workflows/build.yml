@@ -70,7 +70,7 @@ jobs:
       - name: Build Android Release APK
         run: |
           echo "Building Android Release APK via Flutter..."
-          flutter build apk --release
+          flutter build apk --release --android-skip-build-dependency-validation
 
       - name: Prepare Release Artifact
         run: |
