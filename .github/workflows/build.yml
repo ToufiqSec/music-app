@@ -70,8 +70,9 @@ jobs:
       - name: Build Android Release APK
         run: |
           echo "Starting Flutter APK build..."
-          flutter build apk --release --verbose || {
-            echo "::error::Flutter build apk failed! Checking Gradle log..."
+          flutter build apk --release --verbose > build_verbose.log 2>&1 || {
+            echo "::error::Flutter build apk failed! Printing last 200 lines of log:"
+            tail -n 200 build_verbose.log
             exit 1
           }
 
