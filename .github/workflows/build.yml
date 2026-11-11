@@ -35,10 +35,18 @@ jobs:
           flutter --version
           java -version
 
-      - name: Decode Release Keystore
+      - name: Setup Release Keystore
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.jks
-          echo "Keystore decoded: $(stat -c%s android/app/release.jks) bytes"
+          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+            echo "Decoding KEYSTORE_BASE64 from GitHub Secrets..."
+            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.jks
+          elif [ -f android/app/release.jks ]; then
+            echo "Using repository bundled release.jks..."
+          else
+            echo "ERROR: Neither secret KEYSTORE_BASE64 nor android/app/release.jks exists!"
+            exit 1
+          fi
+          echo "Keystore file ready: $(ls -lh android/app/release.jks)"
 
       - name: Create key.properties for Gradle
         run: |
