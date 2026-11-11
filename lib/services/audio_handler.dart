@@ -54,7 +54,7 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
           ProcessingState.buffering: AudioProcessingState.buffering,
           ProcessingState.ready: AudioProcessingState.ready,
           ProcessingState.completed: AudioProcessingState.completed,
-        }[_player.processingState]!,
+        }[_player.processingState] ?? AudioProcessingState.idle,
         playing: playing,
         updatePosition: _player.position,
         bufferedPosition: _player.bufferedPosition,

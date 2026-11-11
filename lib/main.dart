@@ -6,33 +6,133 @@ import 'providers/audio_provider.dart';
 import 'screens/home_screen.dart';
 import 'theme/app_theme.dart';
 
-late MyAudioHandler _audioHandler;
-
-Future<void> main() async {
+void main() {
+  // 1. Ensure Flutter binding is initialized first
   WidgetsFlutterBinding.ensureInitialized();
+  debugPrint('[Startup] WidgetsFlutterBinding initialized.');
 
-  // Initialize native background audio service
-  _audioHandler = await AudioService.init(
-    builder: () => MyAudioHandler(),
-    config: const AudioServiceConfig(
-      androidNotificationChannelId: 'com.musicapp.channel.audio',
-      androidNotificationChannelName: 'Music Playback',
-      androidNotificationOngoing: true,
-      androidStopForegroundOnPause: true,
-      androidNotificationIcon: 'drawable/ic_launcher',
-    ),
-  );
+  // 2. Global release mode error presentation to prevent blank/black screens
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    debugPrint('[Startup Error] Uncaught Flutter Error: ${details.exceptionAsString()}');
+  };
 
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(
-          create: (_) => AudioProvider(_audioHandler),
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    return Material(
+      color: const Color(0xFF182838),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline_rounded, color: Color(0xFFFF8FA3), size: 48),
+              const SizedBox(height: 16),
+              const Text(
+                'Initialization Issue',
+                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                details.exceptionAsString(),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+                maxLines: 4,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
         ),
+      ),
+    );
+  };
+
+  // 3. Immediately invoke runApp with a lightweight bootstrap widget to guarantee first-frame rendering
+  debugPrint('[Startup] runApp() dispatched immediately.');
+  runApp(const MusicAppBootstrap());
+}
+
+/// Lightweight App Bootstrap that guarantees immediate first-frame rendering
+/// and manages background audio service initialization without freezing the UI.
+class MusicAppBootstrap extends StatefulWidget {
+  const MusicAppBootstrap({super.key});
+
+  @override
+  State<MusicAppBootstrap> createState() => _MusicAppBootstrapState();
+}
+
+class _MusicAppBootstrapState extends State<MusicAppBootstrap> {
+  AudioProvider? _audioProvider;
+
+  @override
+  void initState() {
+    super.initState();
+    debugPrint('[Startup] MusicAppBootstrap initState()');
+    _initServices();
+  }
+
+  Future<void> _initServices() async {
+    MyAudioHandler handler;
+    try {
+      debugPrint('[Startup] Initializing native AudioService...');
+      handler = await AudioService.init(
+        builder: () => MyAudioHandler(),
+        config: const AudioServiceConfig(
+          androidNotificationChannelId: 'com.musicapp.channel.audio',
+          androidNotificationChannelName: 'Music Playback',
+          androidNotificationOngoing: true,
+          androidStopForegroundOnPause: true,
+          androidNotificationIcon: 'mipmap/ic_launcher',
+        ),
+      );
+      debugPrint('[Startup] AudioService successfully initialized.');
+    } catch (e, stack) {
+      debugPrint('[Startup] AudioService.init failed, falling back to local player: $e\n$stack');
+      // Graceful fallback to standalone handler so playback is never completely blocked
+      handler = MyAudioHandler();
+    }
+
+    if (mounted) {
+      setState(() {
+        _audioProvider = AudioProvider(handler);
+      });
+      debugPrint('[Startup] AudioProvider mounted, rendering HomeScreen.');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // If not ready yet on frame 1, show a fast lightweight native-matched splash container
+    if (_audioProvider == null) {
+      return MaterialApp(
+        title: 'Music App',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.darkTheme,
+        home: Scaffold(
+          backgroundColor: const Color(0xFF182838),
+          body: Center(
+            child: Image.asset(
+              'assets/icon/splash_icon.png',
+              width: 140,
+              height: 140,
+              errorBuilder: (_, __, ___) => const Icon(
+                Icons.music_note_rounded,
+                size: 80,
+                color: Colors.white70,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: _audioProvider!),
       ],
       child: const MusicApp(),
-    ),
-  );
+    );
+  }
 }
 
 class MusicApp extends StatelessWidget {
