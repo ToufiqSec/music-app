@@ -70,26 +70,20 @@ jobs:
       - name: Build Android Release APK
         run: |
           echo "Building Android Release APK..."
-          flutter build apk --release --verbose
-        continue-on-error: true
-
-      - name: Inspect Build Logs or Error
-        run: |
-          echo "=== BUILD RESULT INSPECTION ==="
-          if [ -f build/app/outputs/flutter-apk/app-release.apk ]; then
-            echo "SUCCESS: APK file exists!"
-            ls -lh build/app/outputs/flutter-apk/app-release.apk
-          else
-            echo "ERROR: APK was not built. Running gradle directly with stacktrace..."
-            cd android && ./gradlew app:assembleRelease --stacktrace --info || true
-          fi
+          flutter build apk --release
 
       - name: Prepare Release Artifact
         run: |
           mkdir -p release-output
-          cp build/app/outputs/flutter-apk/app-release.apk release-output/music-app-v${{ env.APP_VERSION }}.apk
-          cp build/app/outputs/flutter-apk/app-release.apk release-output/music-app-release.apk
-          echo "APK size: $(stat -c%s release-output/music-app-release.apk) bytes"
+          APK_PATH=$(find build -name "*.apk" -type f | grep "release" | head -n 1)
+          if [ -z "$APK_PATH" ]; then
+            echo "Searching all built APKs..."
+            APK_PATH=$(find . -name "*.apk" -type f | head -n 1)
+          fi
+          echo "Found APK at: $APK_PATH"
+          cp "$APK_PATH" release-output/music-app-v${{ env.APP_VERSION }}.apk
+          cp "$APK_PATH" release-output/music-app-release.apk
+          ls -lh release-output/
 
       - name: Upload APK as GitHub Actions Artifact
         uses: actions/upload-artifact@v4
