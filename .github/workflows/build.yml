@@ -70,19 +70,16 @@ jobs:
       - name: Build Android Release APK
         run: |
           echo "Building Android Release APK via Flutter..."
-          flutter build apk --release --verbose || {
-            echo "::error::Flutter build failed. Printing last 300 lines of Gradle log:"
-            cd android && ./gradlew app:assembleRelease --stacktrace --info
-            exit 1
-          }
+          flutter build apk --release
 
       - name: Prepare Release Artifact
         run: |
           mkdir -p release-output
-          APK_PATH=$(find build -name "*.apk" -type f | grep "release" | head -n 1)
+          APK_PATH=$(find . -name "*release*.apk" -type f | head -n 1)
           if [ -z "$APK_PATH" ]; then
-            echo "Searching all built APKs..."
-            APK_PATH=$(find . -name "*.apk" -type f | head -n 1)
+            echo "ERROR: No release APK found anywhere in workspace!"
+            find . -name "*.apk" -type f
+            exit 1
           fi
           echo "Found APK at: $APK_PATH"
           cp "$APK_PATH" release-output/music-app-v${{ env.APP_VERSION }}.apk
