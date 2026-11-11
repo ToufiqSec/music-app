@@ -92,9 +92,12 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 _HomeDiscoveryView(
                   onNavigateToSearch: () => setState(() => _currentTabIndex = 1),
+                  onNavigateToTab: (idx) => setState(() => _currentTabIndex = idx),
                 ),
                 const SearchScreen(),
-                const LibraryScreen(),
+                LibraryScreen(
+                  onNavigateToDownloads: () => setState(() => _currentTabIndex = 3),
+                ),
                 const DownloadsScreen(),
               ],
             ),
@@ -134,8 +137,12 @@ class _HomeScreenState extends State<HomeScreen> {
 /// The Main Home Discovery Feed Tab
 class _HomeDiscoveryView extends StatefulWidget {
   final VoidCallback onNavigateToSearch;
+  final ValueChanged<int> onNavigateToTab;
 
-  const _HomeDiscoveryView({required this.onNavigateToSearch});
+  const _HomeDiscoveryView({
+    required this.onNavigateToSearch,
+    required this.onNavigateToTab,
+  });
 
   @override
   State<_HomeDiscoveryView> createState() => _HomeDiscoveryViewState();
@@ -164,7 +171,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
 
   @override
   Widget build(BuildContext context) {
-    final audioProvider = context.watch<AudioProvider>();
+    final audioProvider = context.read<AudioProvider>();
 
     return SafeArea(
       bottom: false,
@@ -299,6 +306,11 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
                   onTap: () {
                     HapticFeedback.selectionClick();
                     setState(() => _activeFilter = filter);
+                    if (filter == 'Liked Songs') {
+                      widget.onNavigateToTab(2); // Jump to Library
+                    } else if (filter == 'Downloaded') {
+                      widget.onNavigateToTab(3); // Jump to Downloads
+                    }
                   },
                   child: AnimatedContainer(
                     duration: AppMotion.durationFast,
@@ -731,9 +743,34 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.favorite_border_rounded, color: AppColors.iconIdle),
-                title: Text('Like Song', style: AppTextStyles.bodyMedium),
-                onTap: () => Navigator.pop(ctx),
+                leading: Icon(
+                  audioProvider.isTrackLiked(track.id)
+                      ? Icons.favorite_rounded
+                      : Icons.favorite_border_rounded,
+                  color: audioProvider.isTrackLiked(track.id)
+                      ? const Color(0xFFE91E63)
+                      : AppColors.iconIdle,
+                ),
+                title: Text(
+                  audioProvider.isTrackLiked(track.id) ? 'Unlike Song' : 'Like Song',
+                  style: AppTextStyles.bodyMedium,
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  audioProvider.toggleFavorite(track);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        audioProvider.isTrackLiked(track.id)
+                            ? 'Removed from Liked Songs'
+                            : 'Added to Liked Songs',
+                        style: AppTextStyles.bodySmall,
+                      ),
+                      backgroundColor: AppColors.surface1,
+                      duration: const Duration(seconds: 1),
+                    ),
+                  );
+                },
               ),
             ],
           ),
@@ -747,8 +784,12 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
+        final history = audioProvider.historyTracks.isNotEmpty
+            ? audioProvider.historyTracks
+            : CuratedTracks.jumpBackInTracks;
+
         return Container(
-          height: 300,
+          height: 340,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: AppColors.surface1,
@@ -759,21 +800,56 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Listening History', style: AppTextStyles.h3),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Listening History', style: AppTextStyles.h3),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, color: AppColors.iconIdle),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
               const SizedBox(height: 12),
               Expanded(
-                child: ListView(
-                  children: CuratedTracks.jumpBackInTracks.take(3).map((t) {
+                child: ListView.separated(
+                  itemCount: history.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 4),
+                  itemBuilder: (context, index) {
+                    final t = history[index];
                     return ListTile(
-                      leading: const Icon(Icons.music_note, color: AppColors.primarySoft),
+                      contentPadding: EdgeInsets.zero,
+                      leading: ClipRRect(
+                        borderRadius: AppRadii.borderSmall,
+                        child: t.thumbnailUrl.isNotEmpty
+                            ? CachedNetworkImage(
+                                imageUrl: t.thumbnailUrl,
+                                width: 44,
+                                height: 44,
+                                fit: BoxFit.cover,
+                                errorWidget: (_, __, ___) => Container(
+                                  width: 44,
+                                  height: 44,
+                                  color: AppColors.surface2,
+                                  child: const Icon(Icons.music_note, color: AppColors.primarySoft),
+                                ),
+                              )
+                            : Container(
+                                width: 44,
+                                height: 44,
+                                color: AppColors.surface2,
+                                child: const Icon(Icons.music_note, color: AppColors.primarySoft),
+                              ),
+                      ),
                       title: Text(t.title, style: AppTextStyles.bodyMedium),
                       subtitle: Text(t.artist, style: AppTextStyles.caption),
+                      trailing: const Icon(Icons.play_arrow_rounded, color: AppColors.primarySoft),
                       onTap: () {
                         Navigator.pop(ctx);
-                        audioProvider.playTrack(t);
+                        audioProvider.playTrack(t, history);
                       },
                     );
-                  }).toList(),
+                  },
                 ),
               ),
             ],

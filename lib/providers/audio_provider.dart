@@ -5,6 +5,7 @@ import 'package:just_audio/just_audio.dart';
 import '../features/music/models/music_models.dart';
 import '../core/services/audio_cache_service.dart';
 import '../core/services/youtube_music_service.dart';
+import '../core/services/track_metadata_store.dart';
 import '../services/audio_handler.dart';
 
 enum RepeatMode { off, all, one }
@@ -32,9 +33,16 @@ class AudioProvider extends ChangeNotifier {
 
   // Download states for offline tracks
   final Map<String, double> _downloadProgress = {};
+  StreamSubscription<double>? _currentDownloadSubscription;
+
+  // Persistent Favorites & Playlists state
+  Set<String> _favoriteIds = {};
+  List<YoutubeTrack> _historyTracks = [];
+  Map<String, List<String>> _userPlaylists = {};
 
   AudioProvider(this._audioHandler) {
     _initListeners();
+    _loadUserLibrary();
   }
 
   // Getters
@@ -50,6 +58,19 @@ class AudioProvider extends ChangeNotifier {
   Duration get bufferedPosition => _bufferedPosition;
   Map<String, double> get downloadProgress => _downloadProgress;
   YoutubeMusicService get musicService => _musicService;
+  Set<String> get favoriteIds => _favoriteIds;
+  List<YoutubeTrack> get historyTracks => _historyTracks;
+  Map<String, List<String>> get userPlaylists => _userPlaylists;
+
+  bool isTrackLiked(String trackId) => _favoriteIds.contains(trackId);
+
+  Future<void> _loadUserLibrary() async {
+    await TrackMetadataStore.init();
+    _favoriteIds = await TrackMetadataStore.getFavoriteIds();
+    _historyTracks = await TrackMetadataStore.getListeningHistory();
+    _userPlaylists = await TrackMetadataStore.getUserPlaylists();
+    notifyListeners();
+  }
 
   void _initListeners() {
     _audioHandler.playbackState.listen((state) {
@@ -77,10 +98,15 @@ class AudioProvider extends ChangeNotifier {
       notifyListeners();
     });
 
-    // Auto-advance to next track on completion
+    // Auto-advance or Repeat One loop on completion
     _audioHandler.player.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed) {
-        playNext();
+        if (_repeatMode == RepeatMode.one && _currentTrack != null) {
+          seekTo(Duration.zero);
+          _audioHandler.play();
+        } else {
+          playNext();
+        }
       }
     });
   }
@@ -104,11 +130,12 @@ class AudioProvider extends ChangeNotifier {
           ? nextTrack.audioStreamUrl
           : await _musicService.getAudioStreamUrl(nextTrack.id);
       if (url != null && !await AudioCacheService.isTrackCached(nextTrack.id)) {
-        // Pre-cache next track into disk silently
-        AudioCacheService.downloadAndCacheTrack(nextTrack.id, url).listen(
-          null,
-          onError: (_) {},
-        );
+        // Pre-cache next track into disk silently with metadata
+        AudioCacheService.downloadAndCacheTrack(
+          nextTrack.id,
+          url,
+          trackMetadata: nextTrack,
+        ).listen(null, onError: (_) {});
       }
     }
   }
@@ -149,9 +176,16 @@ class AudioProvider extends ChangeNotifier {
     _isBuffering = true;
     notifyListeners();
 
+    // Record to listening history
+    TrackMetadataStore.addToHistory(track).then((_) {
+      TrackMetadataStore.getListeningHistory().then((h) {
+        _historyTracks = h;
+        notifyListeners();
+      });
+    });
+
     try {
       // 1. Resolve stream or local file path
-      // Check disk cache first
       final cached = await AudioCacheService.getCachedTrackFile(track.id);
       String? resolvedUrl;
       if (cached != null) {
@@ -169,12 +203,16 @@ class AudioProvider extends ChangeNotifier {
       // 2. Play immediately via AudioHandler
       await _audioHandler.playTrackUrl(track.toMediaItem(), resolvedUrl);
 
-      // 3. If playing remote stream, stream-cache in background for future zero-delay offline playback
-      if (!resolvedUrl.startsWith('/') && !await AudioCacheService.isTrackCached(track.id)) {
-        AudioCacheService.downloadAndCacheTrack(track.id, resolvedUrl).listen(
-          null,
-          onError: (_) {},
-        );
+      // 3. Network protocol check (robust for Windows & Unix)
+      final isRemote = resolvedUrl.startsWith('http://') || resolvedUrl.startsWith('https://');
+      if (isRemote && !await AudioCacheService.isTrackCached(track.id)) {
+        // Cache in background for zero-delay offline replay
+        _currentDownloadSubscription?.cancel();
+        _currentDownloadSubscription = AudioCacheService.downloadAndCacheTrack(
+          track.id,
+          resolvedUrl,
+          trackMetadata: track,
+        ).listen(null, onError: (_) {});
       }
     } catch (e) {
       debugPrint('Playback error: $e');
@@ -240,7 +278,28 @@ class AudioProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Downloads a track for offline storage with progress tracking
+  /// Persistent Favorite toggle
+  Future<bool> toggleFavorite(YoutubeTrack track) async {
+    final result = await TrackMetadataStore.toggleFavorite(track);
+    _favoriteIds = await TrackMetadataStore.getFavoriteIds();
+    notifyListeners();
+    return result;
+  }
+
+  /// Playlist management
+  Future<void> createPlaylist(String name) async {
+    await TrackMetadataStore.createPlaylist(name);
+    _userPlaylists = await TrackMetadataStore.getUserPlaylists();
+    notifyListeners();
+  }
+
+  Future<void> addTrackToPlaylist(String playlistName, YoutubeTrack track) async {
+    await TrackMetadataStore.addTrackToPlaylist(playlistName, track);
+    _userPlaylists = await TrackMetadataStore.getUserPlaylists();
+    notifyListeners();
+  }
+
+  /// Downloads a track for offline storage with progress tracking & metadata preservation
   Future<void> downloadTrackForOffline(YoutubeTrack track) async {
     if (await AudioCacheService.isTrackCached(track.id)) return;
 
@@ -252,7 +311,11 @@ class AudioProvider extends ChangeNotifier {
     _downloadProgress[track.id] = 0.0;
     notifyListeners();
 
-    AudioCacheService.downloadAndCacheTrack(track.id, streamUrl).listen(
+    AudioCacheService.downloadAndCacheTrack(
+      track.id,
+      streamUrl,
+      trackMetadata: track,
+    ).listen(
       (progress) {
         _downloadProgress[track.id] = progress;
         notifyListeners();
@@ -271,6 +334,7 @@ class AudioProvider extends ChangeNotifier {
   @override
   void dispose() {
     _seekDebounceTimer?.cancel();
+    _currentDownloadSubscription?.cancel();
     _musicService.dispose();
     super.dispose();
   }

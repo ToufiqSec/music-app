@@ -8,20 +8,26 @@ import '../features/music/models/music_models.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radii.dart';
 import '../theme/app_text_styles.dart';
-import '../theme/app_shadows.dart';
 
 class LibraryScreen extends StatelessWidget {
-  const LibraryScreen({super.key});
+  final VoidCallback? onNavigateToDownloads;
+
+  const LibraryScreen({super.key, this.onNavigateToDownloads});
 
   @override
   Widget build(BuildContext context) {
-    final audioProvider = context.watch<AudioProvider>();
+    final audioProvider = context.read<AudioProvider>();
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 12,
+            bottom: 160, // Clear mini-player & bottom nav
+          ),
           children: [
             // Top Bar
             Row(
@@ -35,7 +41,7 @@ class LibraryScreen extends StatelessWidget {
                   icon: const Icon(Icons.add_rounded, color: AppColors.iconIdle, size: 28),
                   onPressed: () {
                     HapticFeedback.lightImpact();
-                    _showCreatePlaylistDialog(context);
+                    _showCreatePlaylistDialog(context, audioProvider);
                   },
                 ),
               ],
@@ -43,131 +49,243 @@ class LibraryScreen extends StatelessWidget {
             const SizedBox(height: 16),
 
             // Top Quick Rows (Liked Songs & Offline Cache)
-            Row(
-              children: [
-                Expanded(
-                  child: _buildQuickCard(
-                    title: 'Liked Songs',
-                    subtitle: '12 Favorites',
-                    icon: Icons.favorite_rounded,
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF5B4D8A), Color(0xFFC789B8)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+            Selector<AudioProvider, int>(
+              selector: (_, ap) => ap.favoriteIds.length,
+              builder: (context, favCount, child) {
+                return Row(
+                  children: [
+                    Expanded(
+                      child: _buildQuickCard(
+                        title: 'Liked Songs',
+                        subtitle: '$favCount Favorites',
+                        icon: Icons.favorite_rounded,
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF5B4D8A), Color(0xFFC789B8)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          _showFavoritesSheet(context, audioProvider);
+                        },
+                      ),
                     ),
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      audioProvider.playTrack(
-                        CuratedTracks.jumpBackInTracks.first,
-                        CuratedTracks.jumpBackInTracks,
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildQuickCard(
-                    title: 'Downloads',
-                    subtitle: 'Saved Offline',
-                    icon: Icons.download_done_rounded,
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF2C3E50), Color(0xFF4CA1AF)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildQuickCard(
+                        title: 'Downloads',
+                        subtitle: 'Saved Offline',
+                        icon: Icons.download_done_rounded,
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF2C3E50), Color(0xFF4CA1AF)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          if (onNavigateToDownloads != null) {
+                            onNavigateToDownloads!();
+                          }
+                        },
+                      ),
                     ),
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      audioProvider.playTrack(
-                        CuratedTracks.trendingTracks.first,
-                        CuratedTracks.trendingTracks,
-                      );
-                    },
-                  ),
-                ),
-              ],
+                  ],
+                );
+              },
             ),
 
             const SizedBox(height: 24),
             Text(
-              'Recently Played',
+              'Listening History',
               style: AppTextStyles.h3.copyWith(color: AppColors.textPrimary),
             ),
             const SizedBox(height: 12),
 
-            // Recent Tracks List
-            ...CuratedTracks.jumpBackInTracks.take(4).map((track) {
-              final isCurrent = audioProvider.currentTrack?.id == track.id;
-              return Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                decoration: BoxDecoration(
-                  color: isCurrent
-                      ? AppColors.surface2
-                      : AppColors.surface1.withValues(alpha: 0.6),
-                  borderRadius: AppRadii.borderMedium,
+            // Real Listening History
+            Selector<AudioProvider, List<YoutubeTrack>>(
+              selector: (_, ap) => ap.historyTracks,
+              builder: (context, history, child) {
+                final displayHistory = history.isNotEmpty
+                    ? history.take(5).toList()
+                    : CuratedTracks.jumpBackInTracks.take(4).toList();
+
+                return Column(
+                  children: displayHistory.map((track) {
+                    return Selector<AudioProvider, (bool, bool)>(
+                      selector: (_, ap) => (
+                        ap.currentTrack?.id == track.id,
+                        ap.isPlaying,
+                      ),
+                      builder: (context, state, child) {
+                        final (isCurrent, isPlaying) = state;
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface1.withValues(alpha: 0.6),
+                            borderRadius: AppRadii.borderMedium,
+                            border: isCurrent
+                                ? Border.all(color: AppColors.primarySoft.withValues(alpha: 0.5))
+                                : null,
+                          ),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                            leading: ClipRRect(
+                              borderRadius: AppRadii.borderSmall,
+                              child: track.thumbnailUrl.isNotEmpty
+                                  ? CachedNetworkImage(
+                                      imageUrl: track.thumbnailUrl,
+                                      width: 44,
+                                      height: 44,
+                                      fit: BoxFit.cover,
+                                      errorWidget: (_, __, ___) => _buildThumbFallback(),
+                                    )
+                                  : _buildThumbFallback(),
+                            ),
+                            title: Text(
+                              track.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: isCurrent ? AppColors.primarySoft : AppColors.textPrimary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            subtitle: Text(
+                              track.artist,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                            ),
+                            trailing: Icon(
+                              isCurrent && isPlaying
+                                  ? Icons.pause_circle_filled_rounded
+                                  : Icons.play_circle_fill_rounded,
+                              color: isCurrent ? AppColors.primarySoft : AppColors.iconIdle,
+                              size: 28,
+                            ),
+                            onTap: () {
+                              HapticFeedback.lightImpact();
+                              audioProvider.playTrack(track, displayHistory);
+                            },
+                          ),
+                        );
+                      },
+                    );
+                  }).toList(),
+                );
+              },
+            ),
+
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Your Playlists',
+                  style: AppTextStyles.h3.copyWith(color: AppColors.textPrimary),
                 ),
-                child: ListTile(
-                  leading: ClipRRect(
-                    borderRadius: AppRadii.borderSmall,
-                    child: SizedBox(
-                      width: 44,
-                      height: 44,
-                      child: CachedNetworkImage(
-                        imageUrl: track.thumbnailUrl,
-                        fit: BoxFit.cover,
-                        memCacheWidth: 120,
+                GestureDetector(
+                  onTap: () => _showCreatePlaylistDialog(context, audioProvider),
+                  child: Text(
+                    '+ Create',
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.primarySoft,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Persistent Playlists
+            Selector<AudioProvider, Map<String, List<String>>>(
+              selector: (_, ap) => ap.userPlaylists,
+              builder: (context, playlists, child) {
+                final names = playlists.keys.toList();
+                if (names.isEmpty) {
+                  return Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface1.withValues(alpha: 0.6),
+                      borderRadius: AppRadii.borderMedium,
+                    ),
+                    child: Center(
+                      child: Text(
+                        'No custom playlists yet. Tap "+ Create" above!',
+                        style: AppTextStyles.caption.copyWith(color: AppColors.textMuted),
                       ),
                     ),
-                  ),
-                  title: Text(
-                    track.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: isCurrent
-                          ? AppColors.primarySoft
-                          : AppColors.textPrimary,
-                      fontWeight:
-                          isCurrent ? FontWeight.bold : FontWeight.w500,
-                    ),
-                  ),
-                  subtitle: Text(
-                    track.artist,
-                    style: AppTextStyles.caption.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  trailing: Icon(
-                    isCurrent && audioProvider.isPlaying
-                        ? Icons.pause_circle_filled_rounded
-                        : Icons.play_circle_fill_rounded,
-                    color: isCurrent
-                        ? AppColors.primarySoft
-                        : AppColors.iconIdle,
-                    size: 28,
-                  ),
-                  onTap: () {
-                    HapticFeedback.lightImpact();
-                    audioProvider.playTrack(
-                      track,
-                      CuratedTracks.jumpBackInTracks,
+                  );
+                }
+
+                return Column(
+                  children: names.map((name) {
+                    final count = playlists[name]?.length ?? 0;
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface1.withValues(alpha: 0.7),
+                        borderRadius: AppRadii.borderMedium,
+                      ),
+                      child: ListTile(
+                        leading: Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: AppColors.surface2,
+                            borderRadius: AppRadii.borderSmall,
+                          ),
+                          child: const Icon(
+                            Icons.playlist_play_rounded,
+                            color: AppColors.primarySoft,
+                            size: 26,
+                          ),
+                        ),
+                        title: Text(
+                          name,
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        subtitle: Text(
+                          '$count ${count == 1 ? "Song" : "Songs"}',
+                          style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                        ),
+                        trailing: const Icon(
+                          Icons.chevron_right_rounded,
+                          color: AppColors.iconIdle,
+                        ),
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Playlist "$name" ($count tracks)'),
+                              backgroundColor: AppColors.surface1,
+                              duration: const Duration(seconds: 1),
+                            ),
+                          );
+                        },
+                      ),
                     );
-                  },
-                ),
-              );
-            }),
-
-            const SizedBox(height: 20),
-            Text(
-              'Your Playlists',
-              style: AppTextStyles.h3.copyWith(color: AppColors.textPrimary),
+                  }).toList(),
+                );
+              },
             ),
-            const SizedBox(height: 12),
-
-            ..._buildDummyPlaylists(context, audioProvider),
-            const SizedBox(height: 40),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildThumbFallback() {
+    return Container(
+      width: 44,
+      height: 44,
+      color: AppColors.surface2,
+      child: const Icon(Icons.music_note_rounded, color: AppColors.primarySoft),
     );
   }
 
@@ -182,17 +300,16 @@ class LibraryScreen extends StatelessWidget {
       onTap: onTap,
       child: Container(
         height: 100,
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           gradient: gradient,
           borderRadius: AppRadii.borderMedium,
-          boxShadow: const [AppShadows.shadowSoft],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Icon(icon, color: Colors.white, size: 28),
+            Icon(icon, color: Colors.white, size: 26),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -218,83 +335,22 @@ class LibraryScreen extends StatelessWidget {
     );
   }
 
-  List<Widget> _buildDummyPlaylists(
-    BuildContext context,
-    AudioProvider audioProvider,
-  ) {
-    final playlists = [
-      {'title': 'Chill Evening Flow', 'count': '24 Songs'},
-      {'title': 'Deep Focus & Coding', 'count': '38 Songs'},
-      {'title': 'Acoustic Sunday Vibes', 'count': '18 Songs'},
-    ];
-
-    return playlists.map((p) {
-      return Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        decoration: BoxDecoration(
-          color: AppColors.surface1.withValues(alpha: 0.7),
-          borderRadius: AppRadii.borderMedium,
-        ),
-        child: ListTile(
-          leading: Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.surface2,
-              borderRadius: AppRadii.borderSmall,
-            ),
-            child: const Icon(
-              Icons.music_note_rounded,
-              color: AppColors.primarySoft,
-            ),
-          ),
-          title: Text(
-            p['title']!,
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          subtitle: Text(
-            p['count']!,
-            style: AppTextStyles.caption.copyWith(
-              color: AppColors.textSecondary,
-            ),
-          ),
-          trailing: const Icon(
-            Icons.chevron_right_rounded,
-            color: AppColors.iconIdle,
-          ),
-          onTap: () {
-            HapticFeedback.lightImpact();
-            audioProvider.playTrack(
-              CuratedTracks.madeForYouTracks.first,
-              CuratedTracks.madeForYouTracks,
-            );
-          },
-        ),
-      );
-    }).toList();
-  }
-
-  void _showCreatePlaylistDialog(BuildContext context) {
+  void _showCreatePlaylistDialog(BuildContext context, AudioProvider audioProvider) {
+    final textController = TextEditingController();
     showDialog(
       context: context,
       builder: (ctx) {
         return AlertDialog(
           backgroundColor: AppColors.surface1,
-          shape: RoundedRectangleBorder(
-            borderRadius: AppRadii.borderLarge,
-          ),
+          shape: RoundedRectangleBorder(borderRadius: AppRadii.borderLarge),
           title: Text('New Playlist', style: AppTextStyles.h3),
           content: TextField(
+            controller: textController,
             autofocus: true,
             style: AppTextStyles.bodyMedium,
             decoration: InputDecoration(
               hintText: 'Playlist name',
-              hintStyle: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textMuted,
-              ),
+              hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textMuted),
               enabledBorder: const UnderlineInputBorder(
                 borderSide: BorderSide(color: AppColors.primarySoft),
               ),
@@ -308,11 +364,15 @@ class LibraryScreen extends StatelessWidget {
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primarySoft,
-                shape: RoundedRectangleBorder(
-                  borderRadius: AppRadii.borderPill,
-                ),
+                shape: RoundedRectangleBorder(borderRadius: AppRadii.borderPill),
               ),
-              onPressed: () => Navigator.pop(ctx),
+              onPressed: () {
+                final name = textController.text.trim();
+                if (name.isNotEmpty) {
+                  audioProvider.createPlaylist(name);
+                }
+                Navigator.pop(ctx);
+              },
               child: Text(
                 'Create',
                 style: AppTextStyles.bodySmall.copyWith(
@@ -322,6 +382,92 @@ class LibraryScreen extends StatelessWidget {
               ),
             ),
           ],
+        );
+      },
+    );
+  }
+
+  void _showFavoritesSheet(BuildContext context, AudioProvider audioProvider) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface1,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        final favIds = audioProvider.favoriteIds;
+        final allTracks = [
+          ...CuratedTracks.jumpBackInTracks,
+          ...CuratedTracks.trendingTracks,
+          ...CuratedTracks.madeForYouTracks,
+          ...audioProvider.historyTracks,
+        ];
+        final favTracks = allTracks.where((t) => favIds.contains(t.id)).toSet().toList();
+
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Liked Songs (${favTracks.length})', style: AppTextStyles.h3),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, color: AppColors.iconIdle),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                if (favTracks.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Center(
+                      child: Text(
+                        'No liked songs yet. Tap the heart icon on any song!',
+                        style: AppTextStyles.caption.copyWith(color: AppColors.textMuted),
+                      ),
+                    ),
+                  )
+                else
+                  Flexible(
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: favTracks.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 6),
+                      itemBuilder: (context, index) {
+                        final track = favTracks[index];
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: ClipRRect(
+                            borderRadius: AppRadii.borderSmall,
+                            child: track.thumbnailUrl.isNotEmpty
+                                ? CachedNetworkImage(
+                                    imageUrl: track.thumbnailUrl,
+                                    width: 44,
+                                    height: 44,
+                                    fit: BoxFit.cover,
+                                    errorWidget: (_, __, ___) => _buildThumbFallback(),
+                                  )
+                                : _buildThumbFallback(),
+                          ),
+                          title: Text(track.title, style: AppTextStyles.bodyMedium),
+                          subtitle: Text(track.artist, style: AppTextStyles.caption),
+                          trailing: const Icon(Icons.play_arrow_rounded, color: AppColors.primarySoft),
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            audioProvider.playTrack(track, favTracks);
+                          },
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          ),
         );
       },
     );

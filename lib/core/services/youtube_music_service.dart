@@ -167,7 +167,3 @@ class YoutubeMusicService {
   }
 }
 
-class UniqueKey {
-  @override
-  String toString() => DateTime.now().microsecondsSinceEpoch.toString();
-}

@@ -16,18 +16,26 @@ class MiniPlayer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final audioProvider = context.watch<AudioProvider>();
-    final track = audioProvider.currentTrack;
+    final audioProvider = context.read<AudioProvider>();
 
-    if (track == null) {
-      return const SizedBox.shrink();
-    }
+    return Selector<AudioProvider, (YoutubeTrack?, bool, bool, Duration, Duration)>(
+      selector: (_, ap) => (
+        ap.currentTrack,
+        ap.isPlaying,
+        ap.isBuffering,
+        ap.position,
+        ap.duration,
+      ),
+      builder: (context, data, child) {
+        final (track, isPlaying, isBuffering, position, duration) = data;
 
-    final duration = audioProvider.duration;
-    final position = audioProvider.position;
-    final progress = (duration.inMilliseconds > 0)
-        ? (position.inMilliseconds / duration.inMilliseconds).clamp(0.0, 1.0)
-        : 0.0;
+        if (track == null) {
+          return const SizedBox.shrink();
+        }
+
+        final progress = (duration.inMilliseconds > 0)
+            ? (position.inMilliseconds / duration.inMilliseconds).clamp(0.0, 1.0)
+            : 0.0;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
@@ -150,7 +158,7 @@ class MiniPlayer extends StatelessWidget {
                       ),
 
                       // Equalizer mini indicator if playing
-                      if (audioProvider.isPlaying)
+                      if (isPlaying)
                         Padding(
                           padding: const EdgeInsets.only(right: 8.0),
                           child: _MiniEqualizerBar(),
@@ -167,7 +175,7 @@ class MiniPlayer extends StatelessWidget {
                             shape: BoxShape.circle,
                           ),
                           child: Center(
-                            child: audioProvider.isBuffering
+                            child: isBuffering
                                 ? const SizedBox(
                                     width: 18,
                                     height: 18,
@@ -179,7 +187,7 @@ class MiniPlayer extends StatelessWidget {
                                     ),
                                   )
                                 : Icon(
-                                    audioProvider.isPlaying
+                                    isPlaying
                                         ? Icons.pause_rounded
                                         : Icons.play_arrow_rounded,
                                     color: AppColors.iconActive,
@@ -213,6 +221,8 @@ class MiniPlayer extends StatelessWidget {
         ),
       ),
     );
+  },
+);
   }
 }
 

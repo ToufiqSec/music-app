@@ -122,33 +122,40 @@ class _UpdateDialogState extends State<UpdateDialog> {
             ),
             const SizedBox(height: 8),
           ],
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.surface2.withValues(alpha: 0.6),
-              borderRadius: AppRadii.borderSmall,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "What's New:",
-                  style: AppTextStyles.caption.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 180),
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.surface2.withValues(alpha: 0.6),
+                  borderRadius: AppRadii.borderSmall,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  widget.updateInfo.releaseNotes.trim().isEmpty
-                      ? '• Performance optimizations and bug fixes.'
-                      : widget.updateInfo.releaseNotes,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
-                    fontSize: 12,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "What's New:",
+                      style: AppTextStyles.caption.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.updateInfo.releaseNotes.trim().isEmpty
+                          ? '• Performance optimizations and bug fixes.'
+                          : widget.updateInfo.releaseNotes,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
           if (_isDownloading) ...[

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../providers/audio_provider.dart';
 import '../core/services/audio_cache_service.dart';
+import '../core/services/track_metadata_store.dart';
 import '../core/services/curated_tracks.dart';
 import '../features/music/models/music_models.dart';
 import '../theme/app_colors.dart';
@@ -18,7 +19,7 @@ class DownloadsScreen extends StatefulWidget {
 }
 
 class _DownloadsScreenState extends State<DownloadsScreen> {
-  List<String> _cachedTrackIds = [];
+  List<YoutubeTrack> _downloadedTracks = [];
   int _cacheSizeBytes = 0;
   bool _isLoading = true;
 
@@ -32,9 +33,42 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
     setState(() => _isLoading = true);
     final ids = await AudioCacheService.getCachedTrackIds();
     final size = await AudioCacheService.getCacheSizeBytes();
+
+    // 1. Check metadata store for dynamically downloaded songs (Search, Playlists, etc.)
+    final allSaved = await TrackMetadataStore.getAllSavedTracks();
+    final savedMap = {for (final t in allSaved) t.id: t};
+
+    // 2. Check Curated catalog
+    final curatedList = [
+      ...CuratedTracks.jumpBackInTracks,
+      ...CuratedTracks.trendingTracks,
+      ...CuratedTracks.madeForYouTracks,
+    ];
+    for (final t in curatedList) {
+      savedMap.putIfAbsent(t.id, () => t);
+    }
+
+    // 3. Assemble only tracks that exist on disk
+    final List<YoutubeTrack> downloaded = [];
+    for (final id in ids) {
+      if (savedMap.containsKey(id)) {
+        downloaded.add(savedMap[id]!);
+      } else {
+        // Fallback placeholder with track id if metadata file was wiped
+        downloaded.add(
+          YoutubeTrack(
+            id: id,
+            title: 'Offline Track $id',
+            artist: 'Saved Audio',
+            durationSeconds: 180,
+          ),
+        );
+      }
+    }
+
     if (mounted) {
       setState(() {
-        _cachedTrackIds = ids;
+        _downloadedTracks = downloaded;
         _cacheSizeBytes = size;
         _isLoading = false;
       });
@@ -49,18 +83,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final audioProvider = context.watch<AudioProvider>();
-
-    // Match cached IDs with our curated catalog
-    final allTracks = [
-      ...CuratedTracks.jumpBackInTracks,
-      ...CuratedTracks.trendingTracks,
-      ...CuratedTracks.madeForYouTracks,
-    ];
-
-    final downloadedTracks = allTracks.where(
-      (t) => _cachedTrackIds.contains(t.id),
-    ).toList();
+    final audioProvider = context.read<AudioProvider>();
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -74,142 +97,148 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Offline Vault',
-                    style: AppTextStyles.h1.copyWith(fontSize: 26),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Offline Vault',
+                        style: AppTextStyles.h1.copyWith(fontSize: 26),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Zero-latency, zero-bandwidth playback',
+                        style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                      ),
+                    ],
                   ),
-                  if (_cachedTrackIds.isNotEmpty)
-                    TextButton.icon(
-                      icon: const Icon(
-                        Icons.delete_outline_rounded,
-                        color: AppColors.sunsetPink,
-                        size: 20,
-                      ),
-                      label: Text(
-                        'Clear',
-                        style: AppTextStyles.caption.copyWith(
-                          color: AppColors.sunsetPink,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      onPressed: () async {
-                        HapticFeedback.mediumImpact();
-                        await AudioCacheService.clearCache();
-                        _loadCacheInfo();
-                      },
+                  if (_downloadedTracks.isNotEmpty)
+                    IconButton(
+                      icon: const Icon(Icons.delete_sweep_rounded, color: AppColors.iconIdle),
+                      onPressed: () => _confirmClearCache(context),
                     ),
                 ],
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 16),
 
-              // Storage Info Pill
+              // Storage info bar
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppColors.surface1,
+                  color: AppColors.surface1.withValues(alpha: 0.7),
                   borderRadius: AppRadii.borderMedium,
-                  border: Border.all(
-                    color: AppColors.primarySoft.withValues(alpha: 0.2),
-                    width: 1,
-                  ),
+                  border: Border.all(color: AppColors.surface2),
                 ),
                 child: Row(
                   children: [
-                    const Icon(
-                      Icons.offline_pin_rounded,
-                      color: AppColors.primarySoft,
-                      size: 20,
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: AppColors.primarySoft.withValues(alpha: 0.15),
+                        borderRadius: AppRadii.borderSmall,
+                      ),
+                      child: const Icon(
+                        Icons.offline_pin_rounded,
+                        color: AppColors.primarySoft,
+                        size: 24,
+                      ),
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${_cachedTrackIds.length} Songs Downloaded • ${_formatBytes(_cacheSizeBytes)} of Cache',
-                      style: AppTextStyles.caption.copyWith(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w600,
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${_downloadedTracks.length} Songs Downloaded',
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Using ${_formatBytes(_cacheSizeBytes)} of 1 GB Auto-LRU Disk Vault',
+                            style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
-              // Track List or Empty State
+              // Track List
               Expanded(
                 child: _isLoading
                     ? const Center(
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            AppColors.primarySoft,
-                          ),
-                        ),
+                        child: CircularProgressIndicator(color: AppColors.primarySoft),
                       )
-                    : downloadedTracks.isEmpty
+                    : _downloadedTracks.isEmpty
                         ? _buildEmptyState()
-                        : ListView.builder(
-                            itemCount: downloadedTracks.length,
+                        : ListView.separated(
+                            padding: const EdgeInsets.only(bottom: 160), // Space for MiniPlayer
+                            itemCount: _downloadedTracks.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: 8),
                             itemBuilder: (context, index) {
-                              final track = downloadedTracks[index];
-                              final isCurrent =
-                                  audioProvider.currentTrack?.id == track.id;
+                              final track = _downloadedTracks[index];
 
-                              return Container(
-                                margin: const EdgeInsets.only(bottom: 8),
-                                decoration: BoxDecoration(
-                                  color: isCurrent
-                                      ? AppColors.surface2
-                                      : AppColors.surface1.withValues(alpha: 0.6),
-                                  borderRadius: AppRadii.borderMedium,
-                                ),
-                                child: ListTile(
-                                  leading: ClipRRect(
-                                    borderRadius: AppRadii.borderSmall,
-                                    child: SizedBox(
-                                      width: 44,
-                                      height: 44,
-                                      child: CachedNetworkImage(
-                                        imageUrl: track.thumbnailUrl,
-                                        fit: BoxFit.cover,
-                                        memCacheWidth: 120,
+                              return Selector<AudioProvider, bool>(
+                                selector: (_, ap) =>
+                                    ap.currentTrack?.id == track.id && ap.isPlaying,
+                                builder: (context, isPlayingThis, child) {
+                                  return Container(
+                                    decoration: BoxDecoration(
+                                      color: AppColors.surface1.withValues(alpha: 0.6),
+                                      borderRadius: AppRadii.borderMedium,
+                                      border: isPlayingThis
+                                          ? Border.all(color: AppColors.primarySoft.withValues(alpha: 0.5))
+                                          : null,
+                                    ),
+                                    child: ListTile(
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                      leading: ClipRRect(
+                                        borderRadius: AppRadii.borderSmall,
+                                        child: track.thumbnailUrl.isNotEmpty
+                                            ? CachedNetworkImage(
+                                                imageUrl: track.thumbnailUrl,
+                                                width: 48,
+                                                height: 48,
+                                                fit: BoxFit.cover,
+                                                errorWidget: (_, __, ___) => _buildFallbackThumbnail(),
+                                              )
+                                            : _buildFallbackThumbnail(),
                                       ),
+                                      title: Text(
+                                        track.title,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: AppTextStyles.bodyMedium.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: isPlayingThis ? AppColors.primarySoft : AppColors.textPrimary,
+                                        ),
+                                      ),
+                                      subtitle: Text(
+                                        '${track.artist} • 0ms Local Playback',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                                      ),
+                                      trailing: Icon(
+                                        isPlayingThis
+                                            ? Icons.pause_circle_filled_rounded
+                                            : Icons.play_circle_fill_rounded,
+                                        color: isPlayingThis ? AppColors.primarySoft : AppColors.iconIdle,
+                                        size: 32,
+                                      ),
+                                      onTap: () {
+                                        HapticFeedback.lightImpact();
+                                        audioProvider.playTrack(track, _downloadedTracks);
+                                      },
                                     ),
-                                  ),
-                                  title: Text(
-                                    track.title,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: AppTextStyles.bodyMedium.copyWith(
-                                      color: isCurrent
-                                          ? AppColors.primarySoft
-                                          : AppColors.textPrimary,
-                                      fontWeight: isCurrent
-                                          ? FontWeight.bold
-                                          : FontWeight.w500,
-                                    ),
-                                  ),
-                                  subtitle: Text(
-                                    '${track.artist} • 0ms Direct Disk Audio',
-                                    style: AppTextStyles.caption.copyWith(
-                                      color: AppColors.textSecondary,
-                                    ),
-                                  ),
-                                  trailing: Icon(
-                                    isCurrent && audioProvider.isPlaying
-                                        ? Icons.pause_circle_filled_rounded
-                                        : Icons.play_circle_fill_rounded,
-                                    color: isCurrent
-                                        ? AppColors.primarySoft
-                                        : AppColors.iconIdle,
-                                    size: 28,
-                                  ),
-                                  onTap: () {
-                                    HapticFeedback.lightImpact();
-                                    audioProvider.playTrack(
-                                      track,
-                                      downloadedTracks,
-                                    );
-                                  },
-                                ),
+                                  );
+                                },
                               );
                             },
                           ),
@@ -221,6 +250,15 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
     );
   }
 
+  Widget _buildFallbackThumbnail() {
+    return Container(
+      width: 48,
+      height: 48,
+      color: AppColors.surface2,
+      child: const Icon(Icons.music_note_rounded, color: AppColors.primarySoft),
+    );
+  }
+
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -229,26 +267,65 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
           Container(
             width: 72,
             height: 72,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: AppColors.surface1,
               shape: BoxShape.circle,
             ),
             child: const Icon(
-              Icons.download_for_offline_outlined,
+              Icons.download_for_offline_rounded,
               size: 36,
-              color: AppColors.textMuted,
+              color: AppColors.primarySoft,
             ),
           ),
           const SizedBox(height: 16),
           Text(
-            'No Offline Songs Yet',
+            'Your Offline Vault is Empty',
             style: AppTextStyles.h3.copyWith(color: AppColors.textPrimary),
           ),
           const SizedBox(height: 6),
           Text(
-            'Tap the download icon on any track to save it\nfor instant offline listening with zero internet',
+            'Search and tap download on any song to save it for 0ms offline playback.',
             textAlign: TextAlign.center,
             style: AppTextStyles.caption.copyWith(color: AppColors.textMuted),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmClearCache(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface1,
+        shape: RoundedRectangleBorder(borderRadius: AppRadii.borderLarge),
+        title: Text('Clear Offline Vault?', style: AppTextStyles.h3),
+        content: Text(
+          'This will delete all locally cached music files. Songs can be re-streamed or re-downloaded at any time.',
+          style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancel', style: AppTextStyles.bodySmall),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE53935),
+              shape: RoundedRectangleBorder(borderRadius: AppRadii.borderPill),
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await AudioCacheService.clearCache();
+              _loadCacheInfo();
+            },
+            child: Text(
+              'Clear All',
+              style: AppTextStyles.bodySmall.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
           ),
         ],
       ),

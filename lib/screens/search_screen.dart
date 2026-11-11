@@ -5,11 +5,11 @@ import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../providers/audio_provider.dart';
 import '../features/music/models/music_models.dart';
+import '../widgets/app_search_field.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radii.dart';
 import '../theme/app_text_styles.dart';
 import '../theme/app_shadows.dart';
-import '../widgets/app_search_field.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -20,28 +20,25 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _searchController = TextEditingController();
-  List<YoutubeTrack> _searchResults = [];
-  bool _isLoading = false;
-  String _selectedCategory = 'Trending';
   Timer? _debounceTimer;
 
+  bool _isSearching = false;
+  String _lastQuery = '';
+  List<YoutubeTrack> _searchResults = [];
+  String _errorMessage = '';
+
+  // Quick Chips
   final List<String> _quickCategories = [
     'Trending',
-    'Lo-Fi',
     'Romance',
+    'Lo-Fi',
     'Acoustic',
-    'Hip Hop',
-    'Chillout',
-    'Electronic',
-    'Rock',
+    'Chill',
+    'Bollywood',
+    'EDM',
+    'Workout',
   ];
-
-  @override
-  void initState() {
-    super.initState();
-    // Initial fetch for the default category
-    _executeSearch('Top Trending Songs');
-  }
+  String? _selectedCategory;
 
   @override
   void dispose() {
@@ -51,34 +48,46 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   void _onQueryChanged(String query) {
+    if (query == _lastQuery) return;
     _debounceTimer?.cancel();
-    if (query.trim().isEmpty) {
-      setState(() {
-        _searchResults = [];
-        _isLoading = false;
-      });
-      return;
-    }
-
-    _debounceTimer = Timer(const Duration(milliseconds: 350), () {
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
       _executeSearch(query);
     });
   }
 
   Future<void> _executeSearch(String query) async {
-    setState(() => _isLoading = true);
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) {
+      setState(() {
+        _lastQuery = '';
+        _searchResults = [];
+        _errorMessage = '';
+        _isSearching = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _lastQuery = trimmed;
+      _isSearching = true;
+      _errorMessage = '';
+    });
+
     try {
-      final musicService = context.read<AudioProvider>().musicService;
-      final results = await musicService.searchTracks(query);
+      final audioProvider = context.read<AudioProvider>();
+      final results = await audioProvider.musicService.searchTracks(trimmed);
       if (mounted) {
         setState(() {
           _searchResults = results;
-          _isLoading = false;
+          _isSearching = false;
         });
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isSearching = false;
+          _errorMessage = 'Failed to find tracks. Check your network.';
+        });
       }
     }
   }
@@ -91,7 +100,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final audioProvider = context.watch<AudioProvider>();
+    final audioProvider = context.read<AudioProvider>();
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -135,20 +144,15 @@ class _SearchScreenState extends State<SearchScreen> {
                         color: isSelected ? AppColors.primarySoft : AppColors.surface1,
                         borderRadius: AppRadii.borderPill,
                         border: Border.all(
-                          color: isSelected
-                              ? AppColors.primarySoft
-                              : AppColors.surface2,
+                          color: isSelected ? AppColors.primarySoft : AppColors.surface2,
                           width: 1,
                         ),
                       ),
                       child: Text(
                         cat,
                         style: AppTextStyles.bodySmall.copyWith(
-                          color: isSelected
-                              ? AppColors.textPrimary
-                              : AppColors.textSecondary,
-                          fontWeight:
-                              isSelected ? FontWeight.w600 : FontWeight.normal,
+                          color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                         ),
                       ),
                     ),
@@ -159,140 +163,134 @@ class _SearchScreenState extends State<SearchScreen> {
 
             const SizedBox(height: 8),
 
-            // Main Results or Loading State
+            // Results / Empty / Loading State
             Expanded(
-              child: _isLoading
+              child: _isSearching
                   ? const Center(
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          AppColors.primarySoft,
-                        ),
-                      ),
+                      child: CircularProgressIndicator(color: AppColors.primarySoft),
                     )
-                  : _searchResults.isEmpty
-                      ? _buildEmptyState()
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: _searchResults.length,
-                          itemBuilder: (context, index) {
-                            final track = _searchResults[index];
-                            final isPlayingCurrent =
-                                audioProvider.currentTrack?.id == track.id;
+                  : _errorMessage.isNotEmpty
+                      ? Center(
+                          child: Text(
+                            _errorMessage,
+                            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textMuted),
+                          ),
+                        )
+                      : _searchResults.isEmpty
+                          ? _buildEmptyState()
+                          : ListView.separated(
+                              padding: const EdgeInsets.only(
+                                left: 16,
+                                right: 16,
+                                top: 8,
+                                bottom: 160, // Prevents MiniPlayer from obscuring bottom songs
+                              ),
+                              itemCount: _searchResults.length,
+                              separatorBuilder: (_, __) => const SizedBox(height: 6),
+                              itemBuilder: (context, index) {
+                                final track = _searchResults[index];
 
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              decoration: BoxDecoration(
-                                color: isPlayingCurrent
-                                    ? AppColors.surface2
-                                    : AppColors.surface1.withValues(alpha: 0.6),
-                                borderRadius: AppRadii.borderMedium,
-                                border: Border.all(
-                                  color: isPlayingCurrent
-                                      ? AppColors.primarySoft.withValues(alpha: 0.4)
-                                      : Colors.transparent,
-                                  width: 1,
-                                ),
-                              ),
-                              child: ListTile(
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 4,
-                                ),
-                                leading: ClipRRect(
-                                  borderRadius: AppRadii.borderSmall,
-                                  child: Container(
-                                    width: 48,
-                                    height: 48,
-                                    color: AppColors.surface2,
-                                    child: track.thumbnailUrl.isNotEmpty
-                                        ? CachedNetworkImage(
-                                            imageUrl: track.thumbnailUrl,
-                                            fit: BoxFit.cover,
-                                            memCacheWidth: 120,
-                                            errorWidget: (_, __, ___) =>
-                                                const Icon(
-                                              Icons.music_note,
-                                              color: AppColors.primarySoft,
-                                            ),
-                                          )
-                                        : const Icon(
-                                            Icons.music_note,
-                                            color: AppColors.primarySoft,
-                                          ),
+                                return Selector<AudioProvider, (bool, bool)>(
+                                  selector: (_, ap) => (
+                                    ap.currentTrack?.id == track.id,
+                                    ap.isPlaying,
                                   ),
-                                ),
-                                title: Text(
-                                  track.title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: AppTextStyles.bodyMedium.copyWith(
-                                    fontWeight: isPlayingCurrent
-                                        ? FontWeight.bold
-                                        : FontWeight.w500,
-                                    color: isPlayingCurrent
-                                        ? AppColors.primarySoft
-                                        : AppColors.textPrimary,
-                                  ),
-                                ),
-                                subtitle: Text(
-                                  '${track.artist} • ${_formatDuration(track.durationSeconds)}',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: AppTextStyles.caption.copyWith(
-                                    color: AppColors.textSecondary,
-                                  ),
-                                ),
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.download_rounded,
-                                        size: 20,
-                                        color: AppColors.iconIdle,
+                                  builder: (context, state, child) {
+                                    final (isCurrent, isPlaying) = state;
+
+                                    return Container(
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surface1.withValues(alpha: 0.7),
+                                        borderRadius: AppRadii.borderMedium,
+                                        border: isCurrent
+                                            ? Border.all(color: AppColors.primarySoft.withValues(alpha: 0.6))
+                                            : null,
                                       ),
-                                      onPressed: () {
-                                        HapticFeedback.lightImpact();
-                                        audioProvider
-                                            .downloadTrackForOffline(track);
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              'Downloading "${track.title}" for offline playback',
-                                              style: AppTextStyles.bodySmall,
-                                            ),
-                                            backgroundColor: AppColors.surface1,
-                                            duration: const Duration(seconds: 2),
+                                      child: ListTile(
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                        leading: ClipRRect(
+                                          borderRadius: AppRadii.borderSmall,
+                                          child: track.thumbnailUrl.isNotEmpty
+                                              ? CachedNetworkImage(
+                                                  imageUrl: track.thumbnailUrl,
+                                                  width: 48,
+                                                  height: 48,
+                                                  fit: BoxFit.cover,
+                                                  errorWidget: (_, __, ___) => _buildFallbackThumbnail(),
+                                                )
+                                              : _buildFallbackThumbnail(),
+                                        ),
+                                        title: Text(
+                                          track.title,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: AppTextStyles.bodyMedium.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                            color: isCurrent ? AppColors.primarySoft : AppColors.textPrimary,
                                           ),
-                                        );
-                                      },
-                                    ),
-                                    Icon(
-                                      isPlayingCurrent && audioProvider.isPlaying
-                                          ? Icons.pause_circle_filled_rounded
-                                          : Icons.play_circle_fill_rounded,
-                                      size: 32,
-                                      color: isPlayingCurrent
-                                          ? AppColors.primarySoft
-                                          : AppColors.iconIdle,
-                                    ),
-                                  ],
-                                ),
-                                onTap: () {
-                                  HapticFeedback.lightImpact();
-                                  audioProvider.playTrack(
-                                    track,
-                                    _searchResults,
-                                  );
-                                },
-                              ),
-                            );
-                          },
-                        ),
+                                        ),
+                                        subtitle: Text(
+                                          '${track.artist} • ${_formatDuration(track.durationSeconds)}',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                                        ),
+                                        trailing: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            IconButton(
+                                              icon: const Icon(
+                                                Icons.download_rounded,
+                                                size: 20,
+                                                color: AppColors.iconIdle,
+                                              ),
+                                              onPressed: () {
+                                                HapticFeedback.lightImpact();
+                                                audioProvider.downloadTrackForOffline(track);
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(
+                                                      'Downloading "${track.title}" to Offline Vault',
+                                                      style: AppTextStyles.bodySmall,
+                                                    ),
+                                                    backgroundColor: AppColors.surface1,
+                                                    duration: const Duration(seconds: 2),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                            Icon(
+                                              isCurrent && isPlaying
+                                                  ? Icons.pause_circle_filled_rounded
+                                                  : Icons.play_circle_fill_rounded,
+                                              size: 32,
+                                              color: isCurrent ? AppColors.primarySoft : AppColors.iconIdle,
+                                            ),
+                                          ],
+                                        ),
+                                        onTap: () {
+                                          HapticFeedback.lightImpact();
+                                          audioProvider.playTrack(track, _searchResults);
+                                        },
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                            ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildFallbackThumbnail() {
+    return Container(
+      width: 48,
+      height: 48,
+      color: AppColors.surface2,
+      child: const Icon(Icons.music_note_rounded, color: AppColors.primarySoft),
     );
   }
 
@@ -324,9 +322,7 @@ class _SearchScreenState extends State<SearchScreen> {
           Text(
             'Search over 100M+ ad-free tracks with instant streaming',
             textAlign: TextAlign.center,
-            style: AppTextStyles.caption.copyWith(
-              color: AppColors.textMuted,
-            ),
+            style: AppTextStyles.caption.copyWith(color: AppColors.textMuted),
           ),
         ],
       ),
