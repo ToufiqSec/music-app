@@ -96,8 +96,7 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
       } else {
         await _player.setUrl(
           resolvedUrl,
-          headers: {'Accept-Ranges': 'bytes'},
-        ).timeout(const Duration(seconds: 12));
+        ).timeout(const Duration(seconds: 20));
       }
       await _player.play();
     } catch (e) {

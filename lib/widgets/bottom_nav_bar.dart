@@ -29,9 +29,9 @@ class TwilightBottomNavBar extends StatelessWidget {
     return Container(
       width: double.infinity,
       height: barHeight + bottomSafe,
-      padding: EdgeInsets.only(bottom: bottomSafe),
+      padding: EdgeInsets.only(bottom: bottomSafe, left: 12, right: 12),
       decoration: BoxDecoration(
-        color: AppColors.surface1.withValues(alpha: 0.98),
+        color: const Color(0xFF1B1633).withValues(alpha: 0.98),
         borderRadius: const BorderRadius.vertical(
           top: Radius.circular(24),
         ),
@@ -44,84 +44,63 @@ class TwilightBottomNavBar extends StatelessWidget {
         ],
         border: Border(
           top: BorderSide(
-            color: AppColors.surface2.withValues(alpha: 0.8),
+            color: AppColors.surface2.withValues(alpha: 0.6),
             width: 1,
           ),
         ),
       ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final itemWidth = constraints.maxWidth / icons.length;
-          final pillSize = 52.0;
-          final pillLeft = (currentIndex * itemWidth) + (itemWidth - pillSize) / 2;
-
-          return Stack(
-            clipBehavior: Clip.none,
-            children: [
-              // Gliding Active Raised Circular Pill (rising slightly above bar)
-              AnimatedPositioned(
-                duration: AppMotion.durationMedium,
-                curve: AppMotion.curveEmphasizedDecelerate,
-                left: pillLeft,
-                top: -10,
-                child: Container(
-                  width: pillSize,
-                  height: pillSize,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: List.generate(icons.length, (index) {
+          final isActive = index == currentIndex;
+          return Expanded(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                if (!isActive) {
+                  HapticFeedback.lightImpact();
+                  onTap(index);
+                }
+              },
+              child: Center(
+                child: AnimatedContainer(
+                  duration: AppMotion.durationBase,
+                  curve: AppMotion.curveStandard,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isActive ? 16 : 8,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
-                    color: AppColors.bgDeep,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primarySoft.withValues(alpha: 0.4),
-                        blurRadius: 14,
-                        spreadRadius: 1,
-                        offset: const Offset(0, 2),
-                      ),
-                      const BoxShadow(
-                        color: Colors.black45,
-                        blurRadius: 8,
-                        offset: Offset(0, 4),
-                      ),
-                    ],
+                    color: isActive
+                        ? AppColors.primarySoft.withValues(alpha: 0.22)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: AppColors.primarySoft,
-                      width: 2,
+                      color: isActive
+                          ? AppColors.primarySoft.withValues(alpha: 0.45)
+                          : Colors.transparent,
+                      width: 1,
                     ),
+                    boxShadow: isActive
+                        ? [
+                            BoxShadow(
+                              color: AppColors.primary.withValues(alpha: 0.25),
+                              blurRadius: 10,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Icon(
+                    icons[index],
+                    size: 24,
+                    color: isActive ? Colors.white : AppColors.iconIdle,
                   ),
                 ),
               ),
-
-              // Icon Row
-              Row(
-                children: List.generate(icons.length, (index) {
-                  final isActive = index == currentIndex;
-                  return Expanded(
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () {
-                        if (!isActive) {
-                          HapticFeedback.lightImpact();
-                          onTap(index);
-                        }
-                      },
-                      child: Center(
-                        child: AnimatedContainer(
-                          duration: AppMotion.durationBase,
-                          transform: Matrix4.translationValues(0, isActive ? -10 : 0, 0),
-                          child: Icon(
-                            icons[index],
-                            size: 26,
-                            color: isActive ? AppColors.iconActive : AppColors.iconIdle,
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                }),
-              ),
-            ],
+            ),
           );
-        },
+        }),
       ),
     );
   }

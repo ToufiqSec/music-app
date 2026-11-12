@@ -17,21 +17,55 @@ class AudioTypeDetector {
     final lowerTitle = title.toLowerCase();
     final lowerArtist = artist.toLowerCase();
 
-    if (lowerTitle.contains('audiobook') || lowerTitle.contains('audio book') || lowerTitle.contains('chapter')) {
+    // Check Audiobook keywords
+    if (lowerTitle.contains('audiobook') ||
+        lowerTitle.contains('audio book') ||
+        lowerTitle.contains('chapter') ||
+        lowerTitle.contains('audio story') ||
+        lowerTitle.contains('golpo') ||
+        lowerTitle.contains('galpo') ||
+        lowerTitle.contains('novel') ||
+        lowerTitle.contains('upanyas') ||
+        lowerTitle.contains('kahani') ||
+        lowerTitle.contains('katha')) {
       return AudioContentType.audiobook;
     }
-    if (lowerTitle.contains('suspense') || lowerTitle.contains('drama') || lowerTitle.contains('sunday suspense') || lowerTitle.contains('natok') || lowerTitle.contains('radio show')) {
+
+    // Check Audio Show / Drama keywords (including Sunday Suspense)
+    if (lowerTitle.contains('suspense') ||
+        lowerTitle.contains('sunday suspense') ||
+        lowerTitle.contains('shonibar suspense') ||
+        lowerTitle.contains('drama') ||
+        lowerTitle.contains('natok') ||
+        lowerTitle.contains('radio show') ||
+        lowerTitle.contains('audio show') ||
+        lowerTitle.contains('radio mirchi') ||
+        lowerArtist.contains('mirchi')) {
       return AudioContentType.show;
     }
-    if (lowerTitle.contains('podcast') || lowerTitle.contains('episode') || lowerArtist.contains('podcast')) {
+
+    // Check Podcast
+    if (lowerTitle.contains('podcast') ||
+        lowerTitle.contains('episode') ||
+        lowerTitle.contains('ep.') ||
+        lowerArtist.contains('podcast') ||
+        lowerTitle.contains('talk show')) {
       return AudioContentType.podcast;
     }
+
+    // Live concert
     if (lowerTitle.contains('live') || lowerTitle.contains('concert') || lowerTitle.contains('unplugged')) {
       return AudioContentType.live;
     }
-    if (durationSeconds > 1800) {
+
+    // Duration-based fallback: >15 min is narrative audio / podcast
+    if (durationSeconds > 900) {
+      if (lowerTitle.contains('story') || lowerTitle.contains('part') || lowerTitle.contains('vol')) {
+        return AudioContentType.audiobook;
+      }
       return AudioContentType.podcast;
     }
+
     return AudioContentType.song;
   }
 

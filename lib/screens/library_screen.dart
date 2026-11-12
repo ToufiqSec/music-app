@@ -11,6 +11,7 @@ import '../widgets/twilight_scene_background.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radii.dart';
 import '../theme/app_text_styles.dart';
+import 'downloads_screen.dart';
 
 class LibraryScreen extends StatelessWidget {
   final VoidCallback? onNavigateToDownloads;

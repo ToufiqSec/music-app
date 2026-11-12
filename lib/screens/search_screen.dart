@@ -292,6 +292,13 @@ class _SearchScreenState extends State<SearchScreen> {
                       onTap: () {
                         HapticFeedback.selectionClick();
                         setState(() => _selectedFilterIndex = idx);
+                        if (idx > 0 && _lastQuery.trim().isNotEmpty) {
+                          final currentFiltered = _filteredResults;
+                          if (currentFiltered.isEmpty) {
+                            final tabKeyword = tab.toLowerCase().replaceAll('&', '').trim();
+                            _executeSearch('$_lastQuery $tabKeyword');
+                          }
+                        }
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
@@ -368,10 +375,43 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget _buildResultsList(AudioProvider audioProvider) {
     final list = _filteredResults;
     if (list.isEmpty) {
+      final tabName = _contentFilterTabs[_selectedFilterIndex];
       return Center(
-        child: Text(
-          'No items found in ${_contentFilterTabs[_selectedFilterIndex]} tab.',
-          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textMuted),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.search_off_rounded,
+                size: 48,
+                color: AppColors.iconIdle.withValues(alpha: 0.6),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'No items found in $tabName tab.',
+                style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textMuted),
+                textAlign: TextAlign.center,
+              ),
+              if (_lastQuery.trim().isNotEmpty) ...[
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.surface2,
+                    foregroundColor: AppColors.primarySoft,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    side: BorderSide(color: AppColors.primarySoft.withValues(alpha: 0.5)),
+                  ),
+                  icon: const Icon(Icons.search_rounded, size: 18),
+                  label: Text('Search "$_lastQuery $tabName"'),
+                  onPressed: () {
+                    final tabKeyword = tabName.toLowerCase().replaceAll('&', '').trim();
+                    _executeSearch('$_lastQuery $tabKeyword');
+                  },
+                ),
+              ],
+            ],
+          ),
         ),
       );
     }

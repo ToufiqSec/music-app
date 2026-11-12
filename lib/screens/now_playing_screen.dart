@@ -85,38 +85,68 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                     children: [
                       const SizedBox(height: 8),
 
-                      // Top Navigation Header
+                      // Top Navigation Header (Matching Twilight Reference)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           GlassIconButton(
-                            icon: Icons.keyboard_arrow_down_rounded,
+                            icon: Icons.close_rounded,
                             onTap: () => Navigator.of(context).pop(),
                           ),
-                          Column(
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(
-                                'PLAYING FROM QUEUE',
-                                style: AppTextStyles.caption.copyWith(
-                                  letterSpacing: 1.5,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textSecondary,
-                                ),
+                              // Like Button
+                              Selector<AudioProvider, bool>(
+                                selector: (_, ap) => ap.isTrackLiked(track.id),
+                                builder: (context, isLiked, _) {
+                                  return GlassIconButton(
+                                    icon: isLiked
+                                        ? Icons.favorite_rounded
+                                        : Icons.favorite_border_rounded,
+                                    iconColor: isLiked
+                                        ? AppColors.sunsetPink
+                                        : AppColors.iconIdle,
+                                    onTap: () {
+                                      HapticFeedback.selectionClick();
+                                      audioProvider.toggleFavorite(track);
+                                    },
+                                  );
+                                },
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Personal Flow',
-                                style: AppTextStyles.bodySmall.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textPrimary,
-                                ),
+                              const SizedBox(width: 8),
+                              // Download Button
+                              Selector<AudioProvider, double?>(
+                                selector: (_, ap) => ap.downloadProgress[track.id],
+                                builder: (context, dlProgress, _) {
+                                  return FutureBuilder<bool>(
+                                    future: AudioCacheService.isTrackCached(track.id),
+                                    builder: (context, snapshot) {
+                                      final isCached = snapshot.data ?? false;
+                                      return GlassIconButton(
+                                        icon: isCached
+                                            ? Icons.download_done_rounded
+                                            : Icons.download_rounded,
+                                        iconColor: isCached
+                                            ? AppColors.success
+                                            : AppColors.iconIdle,
+                                        onTap: () async {
+                                          HapticFeedback.lightImpact();
+                                          if (!isCached && dlProgress == null) {
+                                            await audioProvider.downloadTrackForOffline(track);
+                                          }
+                                        },
+                                      );
+                                    },
+                                  );
+                                },
+                              ),
+                              const SizedBox(width: 8),
+                              GlassIconButton(
+                                icon: Icons.more_horiz_rounded,
+                                onTap: () => _showTrackOptions(context, track, audioProvider),
                               ),
                             ],
-                          ),
-                          GlassIconButton(
-                            icon: Icons.more_horiz_rounded,
-                            onTap: () => _showTrackOptions(context, track, audioProvider),
                           ),
                         ],
                       ),

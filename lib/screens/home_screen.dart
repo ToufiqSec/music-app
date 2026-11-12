@@ -382,7 +382,46 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
+
+          // Explore Search Bar (Directly matching Twilight Mockup)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: GestureDetector(
+              onTap: widget.onNavigateToSearch,
+              child: Container(
+                height: 46,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: AppColors.surface1.withValues(alpha: 0.9),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: AppColors.surface2,
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Find the key to balance, songs, artists...',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                    ),
+                    const Icon(
+                      Icons.search_rounded,
+                      color: AppColors.iconIdle,
+                      size: 20,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 14),
 
           // 2. Filter / Mood Chips (Horizontal Scroll)
           SizedBox(

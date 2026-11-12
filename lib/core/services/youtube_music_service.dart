@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 import '../../features/music/models/music_models.dart';
@@ -144,7 +145,7 @@ class YoutubeMusicService {
     // 2. YouTube Explode stream extraction for YouTube IDs
     try {
       final manifest = await _yt.videos.streamsClient.getManifest(trackId).timeout(
-        const Duration(seconds: 8),
+        const Duration(seconds: 15),
       );
       final audioOnlyStreams = manifest.audioOnly;
       if (audioOnlyStreams.isNotEmpty) {
