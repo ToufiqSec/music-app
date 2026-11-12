@@ -61,6 +61,9 @@ jobs:
       - name: Install Project Dependencies
         run: flutter pub get
 
+      - name: Analyze Project Code
+        run: flutter analyze
+
       - name: Extract App Version from pubspec.yaml
         id: get_version
         run: |
@@ -71,14 +74,11 @@ jobs:
       - name: Build Android Release APK
         run: |
           echo "Building Android Release APK via Flutter..."
-          flutter build apk --release --android-skip-build-dependency-validation || true
-          
-          APK_FOUND=$(find . -name "*release*.apk" -type f | head -n 1)
-          if [ -z "$APK_FOUND" ]; then
-            echo "Release APK not found after flutter build. Attempting direct Gradle build..."
-            cd android && ./gradlew assembleRelease --no-daemon
+          flutter build apk --release --android-skip-build-dependency-validation || {
+            echo "Flutter build failed, capturing gradle output..."
+            cd android && ./gradlew assembleRelease --stacktrace --info --no-daemon
             cd ..
-          fi
+          }
           
           FINAL_APK=$(find . -name "*release*.apk" -type f | head -n 1)
           if [ -z "$FINAL_APK" ]; then
