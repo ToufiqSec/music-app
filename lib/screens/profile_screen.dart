@@ -14,6 +14,7 @@ import '../core/services/mood_recommendation_engine.dart';
 import '../widgets/update_dialog.dart';
 import 'login_screen.dart';
 import 'artist_onboarding_screen.dart';
+import 'downloads_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -211,10 +212,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.iconIdle, size: 20),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        leading: Navigator.of(context).canPop()
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.iconIdle, size: 20),
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
         title: Text('Account & Settings', style: AppTextStyles.screenTitle.copyWith(fontSize: 20)),
         centerTitle: true,
       ),
@@ -956,6 +959,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       child: Column(
         children: [
+          ListTile(
+            leading: const Icon(Icons.download_done_rounded, color: AppColors.primarySoft),
+            title: const Text('Offline Downloads & Vault', style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
+            subtitle: const Text(
+              'Manage and play saved offline tracks',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+            ),
+            trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.iconIdle),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const DownloadsScreen()),
+              );
+            },
+          ),
+          Divider(color: AppColors.surface2, height: 1),
           ListTile(
             leading: const Icon(Icons.disc_full_rounded, color: AppColors.primarySoft),
             title: const Text('Audio Cache & Offline Storage', style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),

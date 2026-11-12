@@ -95,9 +95,9 @@ class LibraryScreen extends StatelessWidget {
                         ),
                         onTap: () {
                           HapticFeedback.lightImpact();
-                          if (onNavigateToDownloads != null) {
-                            onNavigateToDownloads!();
-                          }
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const DownloadsScreen()),
+                          );
                         },
                       ),
                     ),
@@ -113,13 +113,42 @@ class LibraryScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
 
-            // Real Listening History
+            // Real Listening History (Zero hardcoding)
             Selector<AudioProvider, List<YoutubeTrack>>(
               selector: (_, ap) => ap.historyTracks,
               builder: (context, history, child) {
-                final displayHistory = history.isNotEmpty
-                    ? history.take(5).toList()
-                    : CuratedTracks.jumpBackInTracks.take(4).toList();
+                if (history.isEmpty) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface1.withValues(alpha: 0.5),
+                      borderRadius: AppRadii.borderMedium,
+                      border: Border.all(color: AppColors.surface2),
+                    ),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.history_rounded, size: 36, color: AppColors.iconIdle),
+                        const SizedBox(height: 8),
+                        Text(
+                          'No listening history yet',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Songs and episodes you play will appear here automatically.',
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                final displayHistory = history.take(6).toList();
 
                 return Column(
                   children: displayHistory.map((track) {

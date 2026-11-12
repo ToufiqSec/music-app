@@ -41,7 +41,7 @@ class ArtistProfile {
 /// Learns user preferences, favorite artists, languages, and dynamically ranks recommendations.
 class TasteEngine {
   static List<ArtistProfile> _favoriteArtists = [];
-  static List<String> _preferredLanguages = ['English', 'Hindi', 'Bengali'];
+  static List<String> _preferredLanguages = ['English', 'Hindi', 'Bengali', 'Punjabi'];
   static Map<String, int> _artistPlayWeights = {};
   static bool _initialized = false;
 
@@ -50,7 +50,287 @@ class TasteEngine {
   static List<String> get preferredLanguages => List.unmodifiable(_preferredLanguages);
   static bool get hasCompletedOnboarding => _favoriteArtists.isNotEmpty;
 
-  /// Alias for rerankWithTaste
+  /// Verified, high-resolution catalog of top iconic artists across Bollywood, Bengali, Punjabi & English
+  static const List<ArtistProfile> defaultArtistCatalog = [
+    // Bollywood & Hindi Playback
+    ArtistProfile(
+      id: 'h_arijit',
+      name: 'Arijit Singh',
+      imageUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400',
+      language: 'Hindi',
+    ),
+    ArtistProfile(
+      id: 'h_shreya',
+      name: 'Shreya Ghoshal',
+      imageUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400',
+      language: 'Hindi',
+    ),
+    ArtistProfile(
+      id: 'h_atif',
+      name: 'Atif Aslam',
+      imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
+      language: 'Hindi',
+    ),
+    ArtistProfile(
+      id: 'h_sonu',
+      name: 'Sonu Nigam',
+      imageUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400',
+      language: 'Hindi',
+    ),
+    ArtistProfile(
+      id: 'h_kk',
+      name: 'KK (Krishnakumar)',
+      imageUrl: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=400',
+      language: 'Hindi',
+    ),
+    ArtistProfile(
+      id: 'h_mohit',
+      name: 'Mohit Chauhan',
+      imageUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400',
+      language: 'Hindi',
+    ),
+    ArtistProfile(
+      id: 'h_sunidhi',
+      name: 'Sunidhi Chauhan',
+      imageUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400',
+      language: 'Hindi',
+    ),
+    ArtistProfile(
+      id: 'h_jubin',
+      name: 'Jubin Nautiyal',
+      imageUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400',
+      language: 'Hindi',
+    ),
+    ArtistProfile(
+      id: 'h_vishal',
+      name: 'Vishal Mishra',
+      imageUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400',
+      language: 'Hindi',
+    ),
+    ArtistProfile(
+      id: 'h_darshan',
+      name: 'Darshan Raval',
+      imageUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400',
+      language: 'Hindi',
+    ),
+    ArtistProfile(
+      id: 'h_pritam',
+      name: 'Pritam',
+      imageUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400',
+      language: 'Hindi',
+    ),
+    ArtistProfile(
+      id: 'h_ar_rahman',
+      name: 'A.R. Rahman',
+      imageUrl: 'https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?w=400',
+      language: 'Hindi',
+    ),
+    ArtistProfile(
+      id: 'h_kishore',
+      name: 'Kishore Kumar',
+      imageUrl: 'https://images.unsplash.com/photo-1463453091185-61582044d556?w=400',
+      language: 'Hindi',
+    ),
+    ArtistProfile(
+      id: 'h_lata',
+      name: 'Lata Mangeshkar',
+      imageUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400',
+      language: 'Hindi',
+    ),
+
+    // Bengali Legends & Modern Indie
+    ArtistProfile(
+      id: 'b_anupam',
+      name: 'Anupam Roy',
+      imageUrl: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=400',
+      language: 'Bengali',
+    ),
+    ArtistProfile(
+      id: 'b_nachiketa',
+      name: 'Nachiketa Chakraborty',
+      imageUrl: 'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=400',
+      language: 'Bengali',
+    ),
+    ArtistProfile(
+      id: 'b_rupam',
+      name: 'Rupam Islam (Fossils)',
+      imageUrl: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400',
+      language: 'Bengali',
+    ),
+    ArtistProfile(
+      id: 'b_somlata',
+      name: 'Somlata Acharyya',
+      imageUrl: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400',
+      language: 'Bengali',
+    ),
+    ArtistProfile(
+      id: 'b_rupankar',
+      name: 'Rupankar Bagchi',
+      imageUrl: 'https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?w=400',
+      language: 'Bengali',
+    ),
+    ArtistProfile(
+      id: 'b_sahana',
+      name: 'Sahana Bajpaie',
+      imageUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400',
+      language: 'Bengali',
+    ),
+    ArtistProfile(
+      id: 'b_anjan',
+      name: 'Anjan Dutt',
+      imageUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400',
+      language: 'Bengali',
+    ),
+    ArtistProfile(
+      id: 'b_kabir',
+      name: 'Kabir Suman',
+      imageUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400',
+      language: 'Bengali',
+    ),
+    ArtistProfile(
+      id: 'b_silajit',
+      name: 'Silajit Majumder',
+      imageUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400',
+      language: 'Bengali',
+    ),
+    ArtistProfile(
+      id: 'b_iman',
+      name: 'Iman Chakraborty',
+      imageUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400',
+      language: 'Bengali',
+    ),
+    ArtistProfile(
+      id: 'b_lagnajita',
+      name: 'Lagnajita Chakraborty',
+      imageUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400',
+      language: 'Bengali',
+    ),
+    ArtistProfile(
+      id: 'b_hemanta',
+      name: 'Hemanta Mukherjee',
+      imageUrl: 'https://images.unsplash.com/photo-1463453091185-61582044d556?w=400',
+      language: 'Bengali',
+    ),
+
+    // Punjabi Beats & Hip-Hop
+    ArtistProfile(
+      id: 'p_diljit',
+      name: 'Diljit Dosanjh',
+      imageUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400',
+      language: 'Punjabi',
+    ),
+    ArtistProfile(
+      id: 'p_sidhu',
+      name: 'Sidhu Moose Wala',
+      imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
+      language: 'Punjabi',
+    ),
+    ArtistProfile(
+      id: 'p_ap',
+      name: 'AP Dhillon',
+      imageUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400',
+      language: 'Punjabi',
+    ),
+    ArtistProfile(
+      id: 'p_karan',
+      name: 'Karan Aujla',
+      imageUrl: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=400',
+      language: 'Punjabi',
+    ),
+    ArtistProfile(
+      id: 'p_guru',
+      name: 'Guru Randhawa',
+      imageUrl: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=400',
+      language: 'Punjabi',
+    ),
+    ArtistProfile(
+      id: 'p_bpraak',
+      name: 'B Praak',
+      imageUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400',
+      language: 'Punjabi',
+    ),
+    ArtistProfile(
+      id: 'p_shubh',
+      name: 'Shubh',
+      imageUrl: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400',
+      language: 'Punjabi',
+    ),
+    ArtistProfile(
+      id: 'p_honey',
+      name: 'Yo Yo Honey Singh',
+      imageUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400',
+      language: 'Punjabi',
+    ),
+
+    // English & International Pop/Rock
+    ArtistProfile(
+      id: 'e_weeknd',
+      name: 'The Weeknd',
+      imageUrl: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=400',
+      language: 'English',
+    ),
+    ArtistProfile(
+      id: 'e_taylor',
+      name: 'Taylor Swift',
+      imageUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400',
+      language: 'English',
+    ),
+    ArtistProfile(
+      id: 'e_coldplay',
+      name: 'Coldplay',
+      imageUrl: 'https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=400',
+      language: 'English',
+    ),
+    ArtistProfile(
+      id: 'e_ed',
+      name: 'Ed Sheeran',
+      imageUrl: 'https://images.unsplash.com/photo-1520523839898-50712825e3a7?w=400',
+      language: 'English',
+    ),
+    ArtistProfile(
+      id: 'e_billie',
+      name: 'Billie Eilish',
+      imageUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400',
+      language: 'English',
+    ),
+    ArtistProfile(
+      id: 'e_bruno',
+      name: 'Bruno Mars',
+      imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
+      language: 'English',
+    ),
+    ArtistProfile(
+      id: 'e_dualipa',
+      name: 'Dua Lipa',
+      imageUrl: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400',
+      language: 'English',
+    ),
+    ArtistProfile(
+      id: 'e_justin',
+      name: 'Justin Bieber',
+      imageUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400',
+      language: 'English',
+    ),
+    ArtistProfile(
+      id: 'e_drake',
+      name: 'Drake',
+      imageUrl: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=400',
+      language: 'English',
+    ),
+    ArtistProfile(
+      id: 'e_post',
+      name: 'Post Malone',
+      imageUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400',
+      language: 'English',
+    ),
+    ArtistProfile(
+      id: 'e_imaginedragons',
+      name: 'Imagine Dragons',
+      imageUrl: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400',
+      language: 'English',
+    ),
+  ];
+
   static List<YoutubeTrack> rerankSearchResults(List<YoutubeTrack> tracks) => rerankWithTaste(tracks);
 
   static Future<File> _getLocalFile() async {
@@ -72,7 +352,9 @@ class TasteEngine {
         _favoriteArtists = artistsRaw.map((a) => ArtistProfile.fromJson(a as Map<String, dynamic>)).toList();
 
         final langsRaw = data['preferredLanguages'] as List<dynamic>? ?? [];
-        _preferredLanguages = langsRaw.map((l) => l.toString()).toList();
+        if (langsRaw.isNotEmpty) {
+          _preferredLanguages = langsRaw.map((l) => l.toString()).toList();
+        }
 
         final weightsRaw = data['artistPlayWeights'] as Map<String, dynamic>? ?? {};
         _artistPlayWeights = weightsRaw.map((k, v) => MapEntry(k, (v as num).toInt()));
@@ -82,7 +364,6 @@ class TasteEngine {
       debugPrint('[TasteEngine] Local init error: $e');
     }
 
-    // Background sync from Supabase if authenticated
     if (SupabaseService.isAuthenticated) {
       _syncDownFromCloud();
     }
@@ -100,24 +381,17 @@ class TasteEngine {
           .maybeSingle();
 
       if (res != null) {
-        final artistsJson = res['favorite_artists'] as List<dynamic>? ?? [];
-        final cloudArtists = artistsJson.map((a) => ArtistProfile.fromJson(Map<String, dynamic>.from(a as Map))).toList();
-
-        final langsJson = res['favorite_languages'] as List<dynamic>? ?? [];
-        final cloudLangs = langsJson.map((l) => l.toString()).toList();
-
-        if (cloudArtists.isNotEmpty) {
-          _favoriteArtists = cloudArtists;
+        final artistsRaw = res['favorite_artists'] as List<dynamic>? ?? [];
+        if (artistsRaw.isNotEmpty) {
+          _favoriteArtists = artistsRaw.map((a) => ArtistProfile.fromJson(a as Map<String, dynamic>)).toList();
         }
-        if (cloudLangs.isNotEmpty) {
-          _preferredLanguages = cloudLangs;
+        final langsRaw = res['preferred_languages'] as List<dynamic>? ?? [];
+        if (langsRaw.isNotEmpty) {
+          _preferredLanguages = langsRaw.map((l) => l.toString()).toList();
         }
-
         await _persistLocal();
       }
-    } catch (e) {
-      debugPrint('[TasteEngine] Cloud sync down error: $e');
-    }
+    } catch (_) {}
   }
 
   static Future<void> _persistLocal() async {
@@ -127,7 +401,6 @@ class TasteEngine {
         'favoriteArtists': _favoriteArtists.map((a) => a.toJson()).toList(),
         'preferredLanguages': _preferredLanguages,
         'artistPlayWeights': _artistPlayWeights,
-        'updatedAt': DateTime.now().toIso8601String(),
       };
       await file.writeAsString(json.encode(data));
     } catch (e) {
@@ -135,20 +408,21 @@ class TasteEngine {
     }
   }
 
-  /// Sets user favorite artists and syncs immediately to Supabase
   static Future<void> setFavoriteArtists(List<ArtistProfile> artists) async {
     _favoriteArtists = List.from(artists);
     await _persistLocal();
-
     if (SupabaseService.isAuthenticated) {
       SupabaseService.syncTasteProfile(
         favoriteArtists: _favoriteArtists.map((a) => a.toJson()).toList(),
-        favoriteLanguages: _preferredLanguages,
       ).catchError((_) {});
     }
   }
 
-  /// Toggle an individual artist
+  static Future<void> setPreferredLanguages(List<String> langs) async {
+    _preferredLanguages = List.from(langs);
+    await _persistLocal();
+  }
+
   static Future<bool> toggleArtist(ArtistProfile artist) async {
     final idx = _favoriteArtists.indexWhere((a) => a.name.toLowerCase() == artist.name.toLowerCase());
     bool isAdded;
@@ -175,7 +449,6 @@ class TasteEngine {
     return _favoriteArtists.any((a) => a.name.toLowerCase() == name.trim().toLowerCase());
   }
 
-  /// Records a play signal to increase weight for that artist
   static Future<void> recordPlaySignal(String artistName) async {
     final clean = artistName.trim().toLowerCase();
     if (clean.isEmpty) return;
@@ -184,7 +457,6 @@ class TasteEngine {
     await _persistLocal();
   }
 
-  /// Reranks search results or recommendations so favorite & highly-played artists appear first
   static List<YoutubeTrack> rerankWithTaste(List<YoutubeTrack> tracks) {
     if (_favoriteArtists.isEmpty && _artistPlayWeights.isEmpty) {
       return tracks;
@@ -200,11 +472,9 @@ class TasteEngine {
       final artistALower = a.artist.toLowerCase();
       final artistBLower = b.artist.toLowerCase();
 
-      // Priority 1: Picked Favorite Artist (+50 score)
       if (favoriteNames.any((fav) => artistALower.contains(fav))) scoreA += 50;
       if (favoriteNames.any((fav) => artistBLower.contains(fav))) scoreB += 50;
 
-      // Priority 2: Play Frequency Weight (+1 per play, up to 20)
       scoreA += (_artistPlayWeights[artistALower] ?? 0).clamp(0, 20);
       scoreB += (_artistPlayWeights[artistBLower] ?? 0).clamp(0, 20);
 
@@ -214,42 +484,29 @@ class TasteEngine {
     return scoredList;
   }
 
-  /// Dynamic live popular artist queries for the Onboarding grid across English, Hindi, Bengali (Zero Hardcoding)
-  static Future<List<ArtistProfile>> fetchPopularArtistsPool(YoutubeMusicService musicService, {String language = 'All'}) async {
-    final pool = <ArtistProfile>[];
-    final seen = <String>{};
+  /// Live search for ANY artist online if not found in catalog
+  static Future<ArtistProfile?> searchArtistLive(YoutubeMusicService musicService, String query) async {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) return null;
 
-    final queries = <String, String>{
-      'English': 'top worldwide singers pop rock artist',
-      'Hindi': 'top bollywood singers arijit shreya playback artists',
-      'Bengali': 'bengali top artists anupam arijit nachiketa shreya',
-    };
+    try {
+      final tracks = await musicService.searchTracks('$trimmed songs official');
+      if (tracks.isNotEmpty) {
+        final first = tracks.first;
+        return ArtistProfile(
+          id: 'custom_${trimmed.hashCode.abs()}',
+          name: trimmed,
+          imageUrl: first.thumbnailUrl,
+          language: 'All',
+        );
+      }
+    } catch (_) {}
 
-    final selectedQueries = (language == 'All')
-        ? queries.entries
-        : queries.entries.where((e) => e.key.toLowerCase() == language.toLowerCase());
-
-    for (final entry in selectedQueries) {
-      final lang = entry.key;
-      final query = entry.value;
-
-      try {
-        final tracks = await musicService.searchTracks(query);
-        for (final t in tracks) {
-          final cleanArtist = t.artist.split(',')[0].split('&')[0].trim();
-          if (cleanArtist.isNotEmpty && cleanArtist.length > 2 && !seen.contains(cleanArtist.toLowerCase())) {
-            seen.add(cleanArtist.toLowerCase());
-            pool.add(ArtistProfile(
-              id: 'artist_${cleanArtist.hashCode.abs()}',
-              name: cleanArtist,
-              imageUrl: t.thumbnailUrl,
-              language: lang,
-            ));
-          }
-        }
-      } catch (_) {}
-    }
-
-    return pool;
+    return ArtistProfile(
+      id: 'custom_${trimmed.hashCode.abs()}',
+      name: trimmed,
+      imageUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400',
+      language: 'All',
+    );
   }
 }

@@ -47,7 +47,7 @@ class VibeMixResult {
 class MoodRecommendationEngine {
   final YoutubeMusicService _musicService;
 
-  // Configurable Groq AI Provider (Never hardcoded; loaded via env, Supabase, or settings)
+  // Configurable Groq AI Provider (Loaded via dart-define or Profile settings)
   static const String _envGroqKey = String.fromEnvironment('GROQ_API_KEY');
   static String _runtimeApiKey = _envGroqKey;
 
@@ -142,11 +142,18 @@ class MoodRecommendationEngine {
     });
 
     final batchResults = await Future.wait(futures);
+    final titleClusterCount = <String, int>{};
+
     for (final list in batchResults) {
       for (final track in list) {
         final key = '${track.title.toLowerCase()}_${track.artist.toLowerCase()}';
-        if (!seenKeys.contains(key)) {
+        final cleanTitle = track.title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+        final prefix = cleanTitle.length > 8 ? cleanTitle.substring(0, 8) : cleanTitle;
+        final count = titleClusterCount[prefix] ?? 0;
+
+        if (!seenKeys.contains(key) && count < 2) {
           seenKeys.add(key);
+          titleClusterCount[prefix] = count + 1;
           if (_matchesStyle(track, style)) {
             results.add(track);
           }

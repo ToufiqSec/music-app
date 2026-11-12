@@ -44,6 +44,18 @@ class AudioProvider extends ChangeNotifier {
   // Download states for offline tracks
   final Map<String, double> _downloadProgress = {};
   StreamSubscription<double>? _currentDownloadSubscription;
+  Timer? _bufferingWatchdogTimer;
+
+  void _startBufferingWatchdog() {
+    _bufferingWatchdogTimer?.cancel();
+    _bufferingWatchdogTimer = Timer(const Duration(seconds: 10), () {
+      if (_isBuffering) {
+        debugPrint('[AudioProvider] Watchdog: Buffering timed out.');
+        _isBuffering = false;
+        notifyListeners();
+      }
+    });
+  }
 
   // Persistent Favorites & Playlists state
   Set<String> _favoriteIds = {};
@@ -108,8 +120,14 @@ class AudioProvider extends ChangeNotifier {
   void _initListeners() {
     _audioHandler.playbackState.listen((state) {
       _isPlaying = state.playing;
+      final wasBuffering = _isBuffering;
       _isBuffering = state.processingState == AudioProcessingState.buffering ||
           state.processingState == AudioProcessingState.loading;
+      if (_isBuffering && !wasBuffering) {
+        _startBufferingWatchdog();
+      } else if (!_isBuffering) {
+        _bufferingWatchdogTimer?.cancel();
+      }
       notifyListeners();
     });
 
@@ -259,6 +277,7 @@ class AudioProvider extends ChangeNotifier {
     _currentTrack = track;
     _preFetchedNextTrack = false;
     _isBuffering = true;
+    _startBufferingWatchdog();
     notifyListeners();
 
     // Check long audio resume position (Issue 6 Part A)
@@ -328,9 +347,12 @@ class AudioProvider extends ChangeNotifier {
         });
       }
     } catch (e) {
-      debugPrint('Playback error: $e');
+      debugPrint('[AudioProvider] Playback error: $e');
+      _isBuffering = false;
+      _bufferingWatchdogTimer?.cancel();
     } finally {
       _isBuffering = false;
+      _bufferingWatchdogTimer?.cancel();
       notifyListeners();
     }
   }

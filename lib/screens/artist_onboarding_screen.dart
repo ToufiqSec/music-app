@@ -24,11 +24,11 @@ class _ArtistOnboardingScreenState extends State<ArtistOnboardingScreen> {
   final Map<String, ArtistProfile> _selectedArtistProfiles = {};
 
   List<ArtistProfile> _artistPool = [];
-  bool _isLoading = true;
   String _activeLanguage = 'All';
   String _searchFilter = '';
+  bool _isSearchingLive = false;
 
-  final List<String> _languages = ['All', 'English', 'Hindi', 'Bengali'];
+  final List<String> _languages = ['All', 'Hindi', 'Bengali', 'Punjabi', 'English'];
 
   @override
   void initState() {
@@ -49,13 +49,18 @@ class _ArtistOnboardingScreenState extends State<ArtistOnboardingScreen> {
       _selectedArtistProfiles[a.name.toLowerCase()] = a;
     }
 
-    final audio = context.read<AudioProvider>();
-    final pool = await TasteEngine.fetchPopularArtistsPool(audio.musicService, language: 'All');
+    // Pre-populate with verified default catalog immediately
+    _artistPool = List.from(TasteEngine.defaultArtistCatalog);
+
+    // Also include any user-added favorite artists not in the default catalog
+    for (final a in TasteEngine.favoriteArtists) {
+      if (!_artistPool.any((p) => p.name.toLowerCase() == a.name.toLowerCase())) {
+        _artistPool.insert(0, a);
+      }
+    }
+
     if (mounted) {
-      setState(() {
-        _artistPool = pool;
-        _isLoading = false;
-      });
+      setState(() {});
     }
   }
 
@@ -71,6 +76,41 @@ class _ArtistOnboardingScreenState extends State<ArtistOnboardingScreen> {
         _selectedArtistProfiles[key] = artist;
       }
     });
+  }
+
+  Future<void> _handleCustomAddArtist() async {
+    final query = _searchFilter.trim();
+    if (query.isEmpty) return;
+
+    setState(() => _isSearchingLive = true);
+    HapticFeedback.lightImpact();
+
+    final audio = context.read<AudioProvider>();
+    final customArtist = await TasteEngine.searchArtistLive(audio.musicService, query);
+
+    if (mounted && customArtist != null) {
+      setState(() {
+        _isSearchingLive = false;
+        if (!_artistPool.any((a) => a.name.toLowerCase() == customArtist.name.toLowerCase())) {
+          _artistPool.insert(0, customArtist);
+        }
+        _selectedArtistNames.add(customArtist.name.toLowerCase());
+        _selectedArtistProfiles[customArtist.name.toLowerCase()] = customArtist;
+        _searchCtrl.clear();
+        _searchFilter = '';
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Added "${customArtist.name}" to your favorites!'),
+          backgroundColor: AppColors.surface2,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } else {
+      if (mounted) setState(() => _isSearchingLive = false);
+    }
   }
 
   Future<void> _handleSave() async {
@@ -113,7 +153,7 @@ class _ArtistOnboardingScreenState extends State<ArtistOnboardingScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      if (widget.isModal)
+                      if (widget.isModal || Navigator.of(context).canPop())
                         IconButton(
                           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.iconIdle, size: 20),
                           onPressed: () => Navigator.of(context).pop(false),
@@ -125,12 +165,19 @@ class _ArtistOnboardingScreenState extends State<ArtistOnboardingScreen> {
                         style: AppTextStyles.screenTitle.copyWith(fontSize: 18),
                       ),
                       TextButton(
-                        onPressed: _selectedArtistNames.isNotEmpty ? _handleSave : () => Navigator.of(context).pop(false),
+                        onPressed: _selectedArtistNames.isNotEmpty
+                            ? _handleSave
+                            : () => Navigator.of(context).pop(false),
                         child: Text(
-                          _selectedArtistNames.isNotEmpty ? 'Save' : 'Skip',
+                          _selectedArtistNames.isNotEmpty
+                              ? 'Done (${_selectedArtistNames.length})'
+                              : 'Skip',
                           style: TextStyle(
-                            color: _selectedArtistNames.isNotEmpty ? AppColors.primarySoft : AppColors.textMuted,
+                            color: _selectedArtistNames.isNotEmpty
+                                ? AppColors.primarySoft
+                                : AppColors.textMuted,
                             fontWeight: FontWeight.bold,
+                            fontSize: 15,
                           ),
                         ),
                       ),
@@ -140,24 +187,27 @@ class _ArtistOnboardingScreenState extends State<ArtistOnboardingScreen> {
 
                 // Title & Instructions
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'Pick Your Favorite Artists',
-                        style: AppTextStyles.displayTitle.copyWith(fontSize: 24),
+                        style: AppTextStyles.displayTitle.copyWith(fontSize: 22),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'We\'ll tailor your personal recommendations, home discovery, and search ranking to your taste.',
-                        style: AppTextStyles.subtitle.copyWith(color: AppColors.textSecondary),
+                        'Your Home Feed, mixes, and recommendations will be personalized to your selection.',
+                        style: AppTextStyles.subtitle.copyWith(
+                          color: AppColors.textSecondary,
+                          fontSize: 13,
+                        ),
                       ),
                     ],
                   ),
                 ),
 
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
 
                 // Search Bar
                 Padding(
@@ -173,7 +223,7 @@ class _ArtistOnboardingScreenState extends State<ArtistOnboardingScreen> {
                       onChanged: (val) => setState(() => _searchFilter = val.trim()),
                       style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
                       decoration: InputDecoration(
-                        hintText: 'Search artist by name...',
+                        hintText: 'Search or add any artist...',
                         hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 14),
                         prefixIcon: const Icon(Icons.search_rounded, color: AppColors.iconIdle, size: 20),
                         suffixIcon: _searchFilter.isNotEmpty
@@ -192,11 +242,55 @@ class _ArtistOnboardingScreenState extends State<ArtistOnboardingScreen> {
                   ),
                 ),
 
-                const SizedBox(height: 12),
+                // Live Search / Add Artist Banner if typing something not in list
+                if (_searchFilter.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                    child: InkWell(
+                      borderRadius: AppRadii.borderMedium,
+                      onTap: _isSearchingLive ? null : _handleCustomAddArtist,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface2.withValues(alpha: 0.8),
+                          borderRadius: AppRadii.borderMedium,
+                          border: Border.all(
+                            color: AppColors.primarySoft.withValues(alpha: 0.4),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.add_circle_outline_rounded, color: AppColors.primarySoft, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _isSearchingLive
+                                    ? 'Finding "$_searchFilter" online...'
+                                    : 'Add "$_searchFilter" as favorite artist',
+                                style: const TextStyle(
+                                  color: AppColors.textPrimary,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                            if (_isSearchingLive)
+                              const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primarySoft),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                const SizedBox(height: 8),
 
                 // Language Filter Tabs
                 SizedBox(
-                  height: 38,
+                  height: 36,
                   child: ListView.separated(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     scrollDirection: Axis.horizontal,
@@ -232,168 +326,121 @@ class _ArtistOnboardingScreenState extends State<ArtistOnboardingScreen> {
                   ),
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
 
                 // Artists Grid
                 Expanded(
-                  child: _isLoading
-                      ? const Center(
-                          child: CircularProgressIndicator(color: AppColors.primarySoft),
-                        )
-                      : _filteredArtists.isEmpty
-                          ? Center(
-                              child: Text(
-                                'No artists matching "$_searchFilter"',
-                                style: const TextStyle(color: AppColors.textMuted),
-                              ),
-                            )
-                          : GridView.builder(
-                              physics: const BouncingScrollPhysics(),
-                              padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 3,
-                                crossAxisSpacing: 14,
-                                mainAxisSpacing: 16,
-                                childAspectRatio: 0.82,
-                              ),
-                              itemCount: _filteredArtists.length,
-                              itemBuilder: (context, index) {
-                                final artist = _filteredArtists[index];
-                                final isSelected = _selectedArtistNames.contains(artist.name.toLowerCase());
+                  child: GridView.builder(
+                    padding: const EdgeInsets.only(left: 20, right: 20, bottom: 40),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      mainAxisSpacing: 16,
+                      crossAxisSpacing: 12,
+                      childAspectRatio: 0.76,
+                    ),
+                    itemCount: _filteredArtists.length,
+                    itemBuilder: (context, idx) {
+                      final artist = _filteredArtists[idx];
+                      final isSelected = _selectedArtistNames.contains(artist.name.toLowerCase());
 
-                                return GestureDetector(
-                                  onTap: () => _toggleArtist(artist),
-                                  child: Column(
-                                    children: [
-                                      Stack(
-                                        alignment: Alignment.center,
-                                        children: [
-                                          AnimatedContainer(
-                                            duration: const Duration(milliseconds: 220),
-                                            width: 86,
-                                            height: 86,
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              border: Border.all(
-                                                color: isSelected ? AppColors.primary : Colors.transparent,
-                                                width: 3,
-                                              ),
-                                              boxShadow: isSelected
-                                                  ? [
-                                                      BoxShadow(
-                                                        color: AppColors.primary.withValues(alpha: 0.45),
-                                                        blurRadius: 12,
-                                                        spreadRadius: 2,
-                                                      ),
-                                                    ]
-                                                  : null,
+                      return GestureDetector(
+                        onTap: () => _toggleArtist(artist),
+                        child: Column(
+                          children: [
+                            Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  width: 86,
+                                  height: 86,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? AppColors.primarySoft
+                                          : Colors.transparent,
+                                      width: 2.5,
+                                    ),
+                                    boxShadow: isSelected
+                                        ? [
+                                            BoxShadow(
+                                              color: AppColors.primarySoft.withValues(alpha: 0.45),
+                                              blurRadius: 12,
+                                              spreadRadius: 2,
                                             ),
-                                            child: ClipOval(
-                                              child: artist.imageUrl.isNotEmpty
-                                                  ? CachedNetworkImage(
-                                                      imageUrl: artist.imageUrl,
-                                                      fit: BoxFit.cover,
-                                                      errorWidget: (_, __, ___) => _buildFallbackAvatar(artist.name),
-                                                    )
-                                                  : _buildFallbackAvatar(artist.name),
-                                            ),
-                                          ),
-
-                                          // Selected Checkmark Badge
-                                          if (isSelected)
-                                            Positioned(
-                                              bottom: 2,
-                                              right: 2,
-                                              child: Container(
-                                                padding: const EdgeInsets.all(4),
-                                                decoration: const BoxDecoration(
-                                                  shape: BoxShape.circle,
-                                                  color: AppColors.primary,
-                                                ),
-                                                child: const Icon(
-                                                  Icons.check_rounded,
-                                                  size: 14,
-                                                  color: Colors.white,
-                                                ),
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        artist.name,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          color: isSelected ? AppColors.primarySoft : AppColors.textPrimary,
-                                          fontSize: 12,
-                                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                          ]
+                                        : null,
+                                  ),
+                                  child: ClipOval(
+                                    child: CachedNetworkImage(
+                                      imageUrl: artist.imageUrl,
+                                      fit: BoxFit.cover,
+                                      placeholder: (_, __) => Container(
+                                        color: AppColors.surface2,
+                                        child: const Center(
+                                          child: Icon(Icons.person_rounded, color: AppColors.iconIdle, size: 36),
                                         ),
                                       ),
-                                    ],
+                                      errorWidget: (_, __, ___) => Container(
+                                        color: AppColors.surface2,
+                                        child: Center(
+                                          child: Text(
+                                            artist.name.isNotEmpty ? artist.name[0].toUpperCase() : '?',
+                                            style: const TextStyle(
+                                              color: AppColors.primarySoft,
+                                              fontSize: 28,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                );
-                              },
+                                ),
+
+                                // Checkmark Badge when Selected
+                                if (isSelected)
+                                  Positioned(
+                                    right: 0,
+                                    bottom: 0,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: const BoxDecoration(
+                                        color: AppColors.primarySoft,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.check_rounded,
+                                        size: 14,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
+                            const SizedBox(height: 6),
+                            Text(
+                              artist.name,
+                              maxLines: 2,
+                              textAlign: TextAlign.center,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: isSelected ? Colors.white : AppColors.textPrimary,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                fontSize: 12.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ],
             ),
           ),
-
-          // Floating Bottom Save Pill Button
-          if (_selectedArtistNames.isNotEmpty)
-            Positioned(
-              bottom: 24,
-              left: 24,
-              right: 24,
-              child: GestureDetector(
-                onTap: _handleSave,
-                child: Container(
-                  height: 52,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppColors.primary, AppColors.primarySoft],
-                    ),
-                    borderRadius: AppRadii.borderPill,
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.4),
-                        blurRadius: 16,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Text(
-                      'Done (${_selectedArtistNames.length} Selected) • Start Listening',
-                      style: AppTextStyles.buttonLabel.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildFallbackAvatar(String name) {
-    return Container(
-      color: AppColors.surface2,
-      child: Center(
-        child: Text(
-          name.isNotEmpty ? name[0].toUpperCase() : 'A',
-          style: const TextStyle(
-            color: AppColors.primarySoft,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
       ),
     );
   }

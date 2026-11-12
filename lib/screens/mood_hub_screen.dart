@@ -26,6 +26,7 @@ class _MoodHubScreenState extends State<MoodHubScreen> {
   final TextEditingController _customVibeController = TextEditingController();
   final Set<String> _selectedMoodIds = {'chill'};
   MoodContentStyle _selectedStyle = MoodContentStyle.all;
+  bool _showAllMoods = false;
 
   bool _isGenerating = false;
   List<YoutubeTrack> _recommendedTracks = [];
@@ -233,7 +234,10 @@ class _MoodHubScreenState extends State<MoodHubScreen> {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: MoodRecommendationEngine.availableMoods.map((mood) {
+          children: (_showAllMoods
+                  ? MoodRecommendationEngine.availableMoods
+                  : MoodRecommendationEngine.availableMoods.take(6))
+              .map((mood) {
             final isSelected = _selectedMoodIds.contains(mood.id);
             return GestureDetector(
               onTap: () {
@@ -283,6 +287,36 @@ class _MoodHubScreenState extends State<MoodHubScreen> {
               ),
             );
           }).toList(),
+        ),
+        const SizedBox(height: 8),
+        GestureDetector(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            setState(() => _showAllMoods = !_showAllMoods);
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  _showAllMoods ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                  size: 18,
+                  color: AppColors.primarySoft,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  _showAllMoods
+                      ? 'Show Fewer Vibes'
+                      : '+ More Vibes (${MoodRecommendationEngine.availableMoods.length - 6} more)',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.primarySoft,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ],
     );

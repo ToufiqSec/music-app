@@ -60,12 +60,14 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _checkArtistOnboardingOnFirstLaunch() async {
     await TasteEngine.init();
     if (!TasteEngine.hasCompletedOnboarding && mounted) {
-      // First-launch onboarding check (Issue 4)
-      Navigator.of(context).push(
+      await Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => const ArtistOnboardingScreen(isModal: false),
         ),
       );
+      if (mounted) {
+        setState(() {});
+      }
     }
   }
 
@@ -107,14 +109,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SearchScreen(),
                 const MoodHubScreen(),
                 LibraryScreen(
-                  onNavigateToDownloads: () => setState(() => _currentTabIndex = 4),
+                  onNavigateToDownloads: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const DownloadsScreen()),
+                    );
+                  },
                 ),
-                const DownloadsScreen(),
+                const ProfileScreen(),
               ],
             ),
           ),
 
-          // Docked Mini-Player and Floating Navigation Bar pinned to bottom
+          // Docked Mini-Player and Stationary Bottom Navigation Bar pinned to bottom
           Positioned(
             left: 0,
             right: 0,
@@ -125,16 +131,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 // Persistent Docked Mini-Player
                 const MiniPlayer(),
 
-                // 5-Tab Floating Bottom Navigation Bar (Issue 7 Step 1)
+                // 5-Tab Stationary Bottom Navigation Bar
                 TwilightBottomNavBar(
                   currentIndex: _currentTabIndex,
                   onTap: (index) => setState(() => _currentTabIndex = index),
                   icons: const [
-                    Icons.home_filled,
+                    Icons.home_rounded,
                     Icons.search_rounded,
                     Icons.auto_awesome_rounded,
                     Icons.library_music_rounded,
-                    Icons.cloud_download_rounded,
+                    Icons.person_rounded,
                   ],
                 ),
               ],
@@ -162,6 +168,11 @@ class _HomeDiscoveryView extends StatefulWidget {
 
 class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
   String _activeFilter = 'All';
+  bool _isLoadingContent = false;
+
+  List<YoutubeTrack> _quickPickTracks = [];
+  List<YoutubeTrack> _carousel1Tracks = [];
+  List<YoutubeTrack> _carousel2Tracks = [];
 
   final List<String> _filters = [
     'All',
@@ -173,6 +184,99 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
     'Liked Songs',
     'Downloaded',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _quickPickTracks = List.from(CuratedTracks.jumpBackInTracks);
+    _carousel1Tracks = List.from(CuratedTracks.madeForYouTracks);
+    _carousel2Tracks = List.from(CuratedTracks.trendingTracks);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadDynamicContent();
+    });
+  }
+
+  Future<void> _loadDynamicContent() async {
+    if (!mounted) return;
+    setState(() => _isLoadingContent = true);
+
+    await TasteEngine.init();
+    final audioProvider = context.read<AudioProvider>();
+    final favArtists = TasteEngine.favoriteArtists.map((a) => a.name).toList();
+
+    String quickQuery;
+    String carousel1Query;
+    String carousel2Query;
+
+    switch (_activeFilter) {
+      case 'Trending':
+        quickQuery = 'top trending songs hits 2026';
+        carousel1Query = 'latest trending songs chartbusters';
+        carousel2Query = 'viral hits billboard';
+        break;
+      case 'Chill':
+        quickQuery = 'acoustic lofi chill relaxing songs';
+        carousel1Query = 'soothing acoustic coffeehouse hits';
+        carousel2Query = 'lofi chill sunset beats';
+        break;
+      case 'Late Night':
+        quickQuery = 'late night slow reverb melancholy vibes';
+        carousel1Query = 'midnight slow ambient acoustic';
+        carousel2Query = 'dark pop late night session';
+        break;
+      case 'Workout':
+        quickQuery = 'gym workout energy gym motivation tracks';
+        carousel1Query = 'high bpm workout running EDM';
+        carousel2Query = 'power cardio motivation bass';
+        break;
+      case 'Focus':
+        quickQuery = 'lofi study focus deep concentration ambient';
+        carousel1Query = 'binaural focus ambient study music';
+        carousel2Query = 'coding deep work lofi beats';
+        break;
+      case 'All':
+      default:
+        if (favArtists.isNotEmpty) {
+          final top = favArtists.take(3).join(' ');
+          quickQuery = '$top best hits official';
+          carousel1Query = '${favArtists.first} top hit songs';
+          carousel2Query = favArtists.length > 1
+              ? '${favArtists[1]} latest songs'
+              : 'top trending melodious hits';
+        } else {
+          quickQuery = 'popular hindi bengali english songs';
+          carousel1Query = 'arijit shreya coldplay songs';
+          carousel2Query = 'trending songs 2026';
+        }
+        break;
+    }
+
+    try {
+      final results = await Future.wait([
+        audioProvider.musicService.searchTracks(quickQuery).catchError((_) => <YoutubeTrack>[]),
+        audioProvider.musicService.searchTracks(carousel1Query).catchError((_) => <YoutubeTrack>[]),
+        audioProvider.musicService.searchTracks(carousel2Query).catchError((_) => <YoutubeTrack>[]),
+      ]);
+
+      if (mounted) {
+        setState(() {
+          if (results[0].isNotEmpty) {
+            _quickPickTracks = TasteEngine.rerankSearchResults(results[0]).take(6).toList();
+          }
+          if (results[1].isNotEmpty) {
+            _carousel1Tracks = TasteEngine.rerankSearchResults(results[1]).take(10).toList();
+          }
+          if (results[2].isNotEmpty) {
+            _carousel2Tracks = TasteEngine.rerankSearchResults(results[2]).take(10).toList();
+          }
+          _isLoadingContent = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingContent = false);
+    }
+  }
 
   String _getTimeGreeting() {
     final hour = DateTime.now().hour;
@@ -202,50 +306,9 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Text(
-                          _getTimeGreeting(),
-                          style: AppTextStyles.h2.copyWith(fontSize: 22),
-                        ),
-                        const SizedBox(width: 8),
-                        // Status Pill ("Hi-Res • Ad-Free")
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.surface1,
-                            borderRadius: AppRadii.borderPill,
-                            border: Border.all(
-                              color: AppColors.primarySoft.withValues(alpha: 0.3),
-                              width: 1,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 5,
-                                height: 5,
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFF4CAF50),
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 5),
-                              Text(
-                                'Hi-Res • Ad-Free',
-                                style: AppTextStyles.caption.copyWith(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textPrimary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                    Text(
+                      _getTimeGreeting(),
+                      style: AppTextStyles.h2.copyWith(fontSize: 22),
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -335,12 +398,17 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
                 return GestureDetector(
                   onTap: () {
                     HapticFeedback.selectionClick();
-                    setState(() => _activeFilter = filter);
                     if (filter == 'Liked Songs') {
-                      widget.onNavigateToTab(3); // Jump to Library (Tab 3 in 5-tab shell)
+                      widget.onNavigateToTab(3); // Jump to Library
+                      return;
                     } else if (filter == 'Downloaded') {
-                      widget.onNavigateToTab(4); // Jump to Downloads (Tab 4 in 5-tab shell)
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const DownloadsScreen()),
+                      );
+                      return;
                     }
+                    setState(() => _activeFilter = filter);
+                    _loadDynamicContent();
                   },
                   child: AnimatedContainer(
                     duration: AppMotion.durationFast,
@@ -550,21 +618,9 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
   }
 
   List<YoutubeTrack> _getCarousel1Tracks() {
-    switch (_activeFilter) {
-      case 'Trending':
-        return CuratedTracks.trendingTracks;
-      case 'Chill':
-        return CuratedTracks.chillTracks;
-      case 'Late Night':
-        return CuratedTracks.lateNightTracks;
-      case 'Workout':
-        return CuratedTracks.workoutTracks;
-      case 'Focus':
-        return CuratedTracks.focusTracks;
-      case 'All':
-      default:
-        return CuratedTracks.madeForYouTracks;
-    }
+    return _carousel1Tracks.isNotEmpty
+        ? _carousel1Tracks
+        : CuratedTracks.getTracksForFilter(_activeFilter);
   }
 
   String _getCarousel2Title() {
@@ -586,21 +642,9 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
   }
 
   List<YoutubeTrack> _getCarousel2Tracks() {
-    switch (_activeFilter) {
-      case 'Trending':
-        return CuratedTracks.madeForYouTracks;
-      case 'Chill':
-        return CuratedTracks.madeForYouTracks;
-      case 'Late Night':
-        return CuratedTracks.chillTracks;
-      case 'Workout':
-        return CuratedTracks.trendingTracks;
-      case 'Focus':
-        return CuratedTracks.chillTracks;
-      case 'All':
-      default:
-        return CuratedTracks.trendingTracks;
-    }
+    return _carousel2Tracks.isNotEmpty
+        ? _carousel2Tracks
+        : CuratedTracks.trendingTracks;
   }
 
   /// 2x3 Grid of Compact Glass-Tinted Tiles
@@ -608,7 +652,9 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
     BuildContext context,
     AudioProvider audioProvider,
   ) {
-    final tracks = CuratedTracks.getTracksForFilter(_activeFilter).take(6).toList();
+    final tracks = _quickPickTracks.isNotEmpty
+        ? _quickPickTracks
+        : CuratedTracks.getTracksForFilter(_activeFilter).take(6).toList();
 
     return GridView.builder(
       physics: const NeverScrollableScrollPhysics(),
@@ -707,7 +753,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
               HapticFeedback.lightImpact();
               audioProvider.playTrack(
                 track,
-                CuratedTracks.trendingTracks,
+                _getCarousel2Tracks(),
               );
             },
             child: Stack(
@@ -787,10 +833,14 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
   /// Circular Artist Avatar Item
   Widget _buildArtistCirclesRow(AudioProvider audioProvider) {
     final userFavs = TasteEngine.favoriteArtists;
+    final artistsToShow = userFavs.isNotEmpty
+        ? userFavs
+        : TasteEngine.defaultArtistCatalog.take(12).toList();
+
     return ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       scrollDirection: Axis.horizontal,
-      itemCount: userFavs.length + 1,
+      itemCount: artistsToShow.length + 1,
       separatorBuilder: (_, __) => const SizedBox(width: 16),
       itemBuilder: (context, index) {
         if (index == 0) {
@@ -800,7 +850,10 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
               await Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const ArtistOnboardingScreen(isModal: true)),
               );
-              setState(() {});
+              if (mounted) {
+                setState(() {});
+                _loadDynamicContent();
+              }
             },
             child: Column(
               children: [
@@ -818,7 +871,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Add More',
+                  userFavs.isEmpty ? 'Pick Artists' : 'Add More',
                   style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary, fontSize: 11),
                 ),
               ],
@@ -826,7 +879,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
           );
         }
 
-        final artist = userFavs[index - 1];
+        final artist = artistsToShow[index - 1];
         return GestureDetector(
           onTap: () async {
             HapticFeedback.lightImpact();
