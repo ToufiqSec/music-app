@@ -154,6 +154,24 @@ class MoodRecommendationEngine {
       }
     }
 
+    // 4.5. Enforce minimum floor of 5 verified results (Issue 7 Step 2)
+    if (results.length < 5) {
+      final fallbackQuery = queries.isNotEmpty
+          ? '${queries.first} trending'
+          : 'top acoustic ambient hits';
+      try {
+        final extra = await _musicService.searchTracks(fallbackQuery);
+        for (final track in extra) {
+          final key = '${track.title.toLowerCase()}_${track.artist.toLowerCase()}';
+          if (!seenKeys.contains(key)) {
+            seenKeys.add(key);
+            results.add(track);
+            if (results.length >= 5) break;
+          }
+        }
+      } catch (_) {}
+    }
+
     // 5. Rerank through user's taste engine
     final reranked = TasteEngine.rerankSearchResults(results);
 
