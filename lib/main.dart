@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:audio_service/audio_service.dart';
 import 'services/audio_handler.dart';
@@ -12,6 +13,19 @@ void main() {
   // 1. Ensure Flutter binding is initialized first
   WidgetsFlutterBinding.ensureInitialized();
   debugPrint('[Startup] WidgetsFlutterBinding initialized.');
+
+  // Truly Edge-to-Edge display (transparent system bars, no black strips)
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      statusBarBrightness: Brightness.dark,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarDividerColor: Colors.transparent,
+      systemNavigationBarIconBrightness: Brightness.light,
+    ),
+  );
 
   // 2. Global release mode error presentation to prevent blank/black screens
   FlutterError.onError = (FlutterErrorDetails details) {
