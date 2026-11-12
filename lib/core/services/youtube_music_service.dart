@@ -143,7 +143,9 @@ class YoutubeMusicService {
 
     // 2. YouTube Explode stream extraction for YouTube IDs
     try {
-      final manifest = await _yt.videos.streamsClient.getManifest(trackId);
+      final manifest = await _yt.videos.streamsClient.getManifest(trackId).timeout(
+        const Duration(seconds: 8),
+      );
       final audioOnlyStreams = manifest.audioOnly;
       if (audioOnlyStreams.isNotEmpty) {
         final bestAudio = audioOnlyStreams.withHighestBitrate();
@@ -151,7 +153,16 @@ class YoutubeMusicService {
         _streamCache[trackId] = url;
         return url;
       }
-    } catch (_) {}
+      // Fallback: Check muxed streams if audioOnly is empty
+      if (manifest.muxed.isNotEmpty) {
+        final bestMuxed = manifest.muxed.withHighestBitrate();
+        final url = bestMuxed.url.toString();
+        _streamCache[trackId] = url;
+        return url;
+      }
+    } catch (e) {
+      debugPrint('[YoutubeMusicService] getAudioStreamUrl error for $trackId: $e');
+    }
 
     return null;
   }

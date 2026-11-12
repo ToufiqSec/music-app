@@ -90,15 +90,20 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
     mediaItem.add(item);
     queue.add([item]);
 
-    if (File(resolvedUrl).existsSync()) {
-      await _player.setFilePath(resolvedUrl);
-    } else {
-      await _player.setUrl(
-        resolvedUrl,
-        headers: {'Accept-Ranges': 'bytes'},
-      );
+    try {
+      if (File(resolvedUrl).existsSync()) {
+        await _player.setFilePath(resolvedUrl);
+      } else {
+        await _player.setUrl(
+          resolvedUrl,
+          headers: {'Accept-Ranges': 'bytes'},
+        ).timeout(const Duration(seconds: 12));
+      }
+      await _player.play();
+    } catch (e) {
+      await _player.stop();
+      rethrow;
     }
-    await _player.play();
   }
 
   /// Smoothly fades volume up or down over [duration] to prevent harsh audio pops or clicks (Issue 8)

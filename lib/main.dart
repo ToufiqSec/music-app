@@ -6,6 +6,7 @@ import 'services/audio_handler.dart';
 import 'providers/audio_provider.dart';
 import 'providers/auth_provider.dart';
 import 'core/services/supabase_service.dart';
+import 'core/services/notification_service.dart';
 import 'screens/home_screen.dart';
 import 'theme/app_theme.dart';
 
@@ -96,6 +97,15 @@ class _MusicAppBootstrapState extends State<MusicAppBootstrap> {
       debugPrint('[Startup] Supabase initialized.');
     } catch (e, stack) {
       debugPrint('[Startup] Supabase initialization failed: $e\n$stack');
+    }
+
+    // 2. Initialize Firebase Cloud Messaging & Notifications
+    try {
+      debugPrint('[Startup] Initializing NotificationService...');
+      await NotificationService.instance.initialize();
+      debugPrint('[Startup] NotificationService initialized.');
+    } catch (e, stack) {
+      debugPrint('[Startup] NotificationService initialization failed: $e\n$stack');
     }
 
     // 2. Initialize native AudioService
