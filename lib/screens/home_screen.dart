@@ -21,6 +21,8 @@ import 'search_screen.dart';
 import 'library_screen.dart';
 import 'downloads_screen.dart';
 import 'profile_screen.dart';
+import 'artist_onboarding_screen.dart';
+import '../core/services/taste_engine.dart';
 import '../providers/auth_provider.dart';
 
 /// Main Discovery Hub and Navigation Shell for Music App.
@@ -468,31 +470,42 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
 
           const SizedBox(height: 28),
 
-          // 6. Horizontal Circle Row ("Your Top Artists")
+          // 6. Horizontal Circle Row ("Recommended Artists" - Issue 4)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Text(
-              'Your Top Artists',
-              style: AppTextStyles.h3.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.bold,
-              ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Recommended Artists',
+                  style: AppTextStyles.h3.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ArtistOnboardingScreen(isModal: true)),
+                    );
+                    setState(() {});
+                  },
+                  child: Text(
+                    TasteEngine.favoriteArtists.isEmpty ? '+ Pick Taste' : 'Edit',
+                    style: AppTextStyles.meta.copyWith(
+                      color: AppColors.primarySoft,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 14),
 
           SizedBox(
             height: 110,
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              scrollDirection: Axis.horizontal,
-              itemCount: CuratedTracks.topArtists.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 16),
-              itemBuilder: (context, index) {
-                final artist = CuratedTracks.topArtists[index];
-                return _buildArtistCircle(artist);
-              },
-            ),
+            child: _buildArtistCirclesRow(audioProvider),
           ),
         ],
       ),
@@ -753,42 +766,111 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
   }
 
   /// Circular Artist Avatar Item
-  Widget _buildArtistCircle(Map<String, String> artist) {
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        widget.onNavigateToSearch();
+  Widget _buildArtistCirclesRow(AudioProvider audioProvider) {
+    final userFavs = TasteEngine.favoriteArtists;
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      scrollDirection: Axis.horizontal,
+      itemCount: userFavs.length + 1,
+      separatorBuilder: (_, __) => const SizedBox(width: 16),
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          // Add Artist Pill
+          return GestureDetector(
+            onTap: () async {
+              await Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ArtistOnboardingScreen(isModal: true)),
+              );
+              setState(() {});
+            },
+            child: Column(
+              children: [
+                Container(
+                  width: 70,
+                  height: 70,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.surface1,
+                    border: Border.all(color: AppColors.primarySoft.withValues(alpha: 0.5), width: 1.5),
+                  ),
+                  child: const Center(
+                    child: Icon(Icons.add_rounded, color: AppColors.primarySoft, size: 28),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Add More',
+                  style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary, fontSize: 11),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final artist = userFavs[index - 1];
+        return GestureDetector(
+          onTap: () async {
+            HapticFeedback.lightImpact();
+            final songs = await audioProvider.musicService.searchTracks('${artist.name} top hits');
+            if (songs.isNotEmpty) {
+              await audioProvider.playTrack(songs.first, songs);
+            }
+          },
+          child: Column(
+            children: [
+              Container(
+                width: 70,
+                height: 70,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.primary, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: ClipOval(
+                  child: artist.imageUrl.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: artist.imageUrl,
+                          fit: BoxFit.cover,
+                          errorWidget: (_, __, ___) => _buildArtistAvatarFallback(artist.name),
+                        )
+                      : _buildArtistAvatarFallback(artist.name),
+                ),
+              ),
+              const SizedBox(height: 6),
+              SizedBox(
+                width: 76,
+                child: Text(
+                  artist.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
       },
-      child: Column(
-        children: [
-          Container(
-            width: 70,
-            height: 70,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: const [AppShadows.shadowSoft],
-              border: Border.all(
-                color: AppColors.surface2,
-                width: 1.5,
-              ),
-            ),
-            child: ClipOval(
-              child: CachedNetworkImage(
-                imageUrl: artist['image']!,
-                fit: BoxFit.cover,
-                memCacheWidth: 150,
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            artist['name']!,
-            style: AppTextStyles.caption.copyWith(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
+    );
+  }
+
+  Widget _buildArtistAvatarFallback(String name) {
+    return Container(
+      color: AppColors.surface2,
+      child: Center(
+        child: Text(
+          name.isNotEmpty ? name[0].toUpperCase() : 'A',
+          style: const TextStyle(color: AppColors.primarySoft, fontWeight: FontWeight.bold, fontSize: 20),
+        ),
       ),
     );
   }

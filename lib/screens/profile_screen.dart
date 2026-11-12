@@ -9,7 +9,9 @@ import '../providers/audio_provider.dart';
 import '../core/services/supabase_service.dart';
 import '../core/services/app_update_service.dart';
 import '../core/services/audio_cache_service.dart';
+import '../core/services/taste_engine.dart';
 import 'login_screen.dart';
+import 'artist_onboarding_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -624,6 +626,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       child: Column(
         children: [
+          // Favorite Artists & Taste Profile (Issue 4)
+          ListTile(
+            leading: const Icon(Icons.people_alt_rounded, color: AppColors.primarySoft),
+            title: const Text('Favorite Artists & Taste', style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
+            subtitle: Text(
+              '${TasteEngine.favoriteArtists.length} Artists Selected',
+              style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+            ),
+            trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.iconIdle),
+            onTap: () async {
+              await Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ArtistOnboardingScreen(isModal: true)),
+              );
+              setState(() {});
+            },
+          ),
+          Divider(color: AppColors.surface2, height: 1),
+
           // Audio Quality
           ListTile(
             leading: const Icon(Icons.high_quality_rounded, color: AppColors.primarySoft),
