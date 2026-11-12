@@ -135,7 +135,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onPressed: () async {
                 Navigator.pop(ctx);
                 final updated = await auth.updateProfile(
-                  displayName: nameCtrl.text.trim().isEmpty ? (auth.user?.name ?? 'Listener') : nameCtrl.text.trim(),
+                  displayName: nameCtrl.text.trim().isEmpty ? auth.displayName : nameCtrl.text.trim(),
                   avatarUrl: avatarCtrl.text.trim().isEmpty ? null : avatarCtrl.text.trim(),
                 );
                 if (mounted && updated) {
