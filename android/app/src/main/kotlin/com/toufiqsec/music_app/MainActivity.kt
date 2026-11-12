@@ -30,12 +30,8 @@ class MainActivity : FlutterActivity() {
             when (call.method) {
                 "getAppVersion" -> {
                     try {
-                        val pInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            packageManager.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0))
-                        } else {
-                            @Suppress("DEPRECATION")
-                            packageManager.getPackageInfo(packageName, 0)
-                        }
+                        @Suppress("DEPRECATION")
+                        val pInfo = packageManager.getPackageInfo(packageName, 0)
                         val versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                             pInfo.longVersionCode
                         } else {

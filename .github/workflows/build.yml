@@ -74,9 +74,15 @@ jobs:
       - name: Build Android Release APK
         run: |
           echo "Building Android Release APK via Flutter..."
-          flutter build apk --release --android-skip-build-dependency-validation || {
-            echo "Flutter build failed, capturing gradle output..."
-            cd android && ./gradlew assembleRelease --stacktrace --info --no-daemon
+          flutter build apk --release --android-skip-build-dependency-validation --verbose > build.log 2>&1 || {
+            echo "::error::Flutter build failed! Printing tail of build.log:"
+            tail -n 120 build.log
+            echo "Attempting Gradle assembleRelease to pinpoint failure..."
+            cd android
+            ./gradlew assembleRelease --stacktrace --no-daemon > gradle.log 2>&1 || {
+              echo "::error::Gradle assembleRelease failed! Printing tail of gradle.log:"
+              tail -n 120 gradle.log
+            }
             cd ..
           }
           
@@ -87,6 +93,16 @@ jobs:
             exit 1
           fi
           echo "Release APK successfully generated at: $FINAL_APK"
+
+      - name: Upload Build Logs on Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: |
+            build.log
+            android/gradle.log
+          retention-days: 7
 
       - name: Prepare Release Artifact
         run: |
