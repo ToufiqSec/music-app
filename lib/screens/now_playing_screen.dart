@@ -12,6 +12,7 @@ import '../theme/app_text_styles.dart';
 import '../theme/app_shadows.dart';
 import '../theme/app_motion.dart';
 import '../widgets/glass_icon_button.dart';
+import '../widgets/twilight_scene_background.dart';
 
 /// Full-Screen Now Playing Sanctuary Player from Universal UI Design System: Twilight Calm.
 class NowPlayingScreen extends StatefulWidget {
@@ -62,25 +63,10 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
       backgroundColor: AppColors.bgBase,
       body: Stack(
         children: [
-          // Background Glow
-          Positioned(
-            top: -60,
-            left: 0,
-            right: 0,
-            height: screenHeight * 0.5,
-            child: Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  center: Alignment.topCenter,
-                  radius: 0.9,
-                  colors: [
-                    AppColors.primarySoft.withValues(alpha: 0.18),
-                    AppColors.primarySoft.withValues(alpha: 0.05),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
+          // Background Full-Bleed Twilight Illustrated Landscape (Issue 2)
+          const Positioned.fill(
+            child: TwilightSceneBackground(
+              mode: TwilightSceneMode.fullBleed,
             ),
           ),
 

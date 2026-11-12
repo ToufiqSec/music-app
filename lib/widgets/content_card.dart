@@ -50,7 +50,15 @@ class _ContentCardState extends State<ContentCard> {
                 child: Container(
                   width: 156,
                   height: 112,
-                  color: AppColors.surface1,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface1,
+                    borderRadius: AppRadii.borderMedium,
+                    border: Border.all(
+                      color: AppColors.primarySoft.withValues(alpha: 0.15),
+                      width: 1,
+                    ),
+                    boxShadow: AppShadows.card,
+                  ),
                   child: Stack(
                     fit: StackFit.expand,
                     children: [

@@ -15,6 +15,7 @@ import '../widgets/mini_player.dart';
 import '../widgets/bottom_nav_bar.dart';
 import '../widgets/content_card.dart';
 import '../widgets/update_dialog.dart';
+import '../widgets/twilight_scene_background.dart';
 import '../core/services/app_update_service.dart';
 import 'search_screen.dart';
 import 'library_screen.dart';
@@ -68,36 +69,10 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: AppColors.bgDeep,
       body: Stack(
         children: [
-          // L0: Adaptive Base Page Gradient
-          Positioned.fill(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: AppColors.pageGradient,
-              ),
-            ),
-          ),
-
-          // L1: Soft Ambient Hero Glow at top 35% with 450ms smooth transition
-          Positioned(
-            top: -60,
-            left: 0,
-            right: 0,
-            height: MediaQuery.of(context).size.height * 0.38,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 450),
-              curve: Curves.easeOutCubic,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  center: Alignment.topCenter,
-                  radius: 0.9,
-                  colors: [
-                    AppColors.primarySoft.withValues(alpha: 0.18),
-                    AppColors.primarySoft.withValues(alpha: 0.05),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
+          // L0 & L1: Illustrated Multi-Layered Twilight Mountain Landscape (Issue 2)
+          const Positioned.fill(
+            child: TwilightSceneBackground(
+              mode: TwilightSceneMode.header,
             ),
           ),
 
