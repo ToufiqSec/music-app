@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "286608319896",
+    "project_id": "music-app-a5168",
+    "storage_bucket": "music-app-a5168.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:286608319896:android:c3fdf546df01130f16b7ed",
+        "android_client_info": {
+          "package_name": "com.toufiqsec.music_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDZMtrAGjjzpoYZpgNRYFgDtOeBkBb5Ev4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
