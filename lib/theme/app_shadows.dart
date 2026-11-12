@@ -23,4 +23,8 @@ class AppShadows {
   static const Color glassFill = Color(0x1AFFFFFF); // #FFFFFF at 10%
   static const Color glassBorderColor = Color(0x2EFFFFFF); // #FFFFFF at 18%
   static const double glassBorderWidth = 1.0;
+
+  // Semantic card shadows
+  static List<BoxShadow> get card => const [shadowSoft];
+  static const BoxShadow cardShadow = shadowSoft;
 }

@@ -163,6 +163,12 @@ class AudioCacheService {
     }
   }
 
+  /// Calculates total size in megabytes
+  static Future<double> getTotalCacheSizeMb() async {
+    final bytes = await getCacheSizeBytes();
+    return bytes / (1024 * 1024);
+  }
+
   /// Clears all cached tracks asynchronously
   static Future<void> clearCache() async {
     try {
@@ -178,6 +184,11 @@ class AudioCacheService {
         }
       }
     } catch (_) {}
+  }
+
+  /// Alias for clearCache
+  static Future<void> clearAllCache() async {
+    await clearCache();
   }
 }
 

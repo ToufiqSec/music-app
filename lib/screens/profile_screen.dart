@@ -11,6 +11,7 @@ import '../core/services/app_update_service.dart';
 import '../core/services/audio_cache_service.dart';
 import '../core/services/taste_engine.dart';
 import '../core/services/mood_recommendation_engine.dart';
+import '../widgets/update_dialog.dart';
 import 'login_screen.dart';
 import 'artist_onboarding_screen.dart';
 
@@ -134,7 +135,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onPressed: () async {
                 Navigator.pop(ctx);
                 final updated = await auth.updateProfile(
-                  displayName: nameCtrl.text.trim().isEmpty ? null : nameCtrl.text.trim(),
+                  displayName: nameCtrl.text.trim().isEmpty ? (auth.user?.name ?? 'Listener') : nameCtrl.text.trim(),
                   avatarUrl: avatarCtrl.text.trim().isEmpty ? null : avatarCtrl.text.trim(),
                 );
                 if (mounted && updated) {
@@ -260,7 +261,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 16),
 
                 // 2. Library Stats Row
-                _buildStatsRow(audioProvider),
+                _buildStatsRow(context, audioProvider),
 
                 const SizedBox(height: 20),
 
@@ -482,7 +483,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildStatsRow(AudioProvider audio) {
+  Widget _buildStatsRow(BuildContext context, AudioProvider audio) {
     return Row(
       children: [
         Expanded(
@@ -491,6 +492,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             iconColor: AppColors.sunsetPink,
             count: audio.favoriteIds.length.toString(),
             label: 'Liked Songs',
+            onTap: () {
+              Navigator.pop(context);
+              // Switch to Library tab (Index 3)
+            },
           ),
         ),
         const SizedBox(width: 10),
@@ -500,6 +505,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             iconColor: AppColors.primarySoft,
             count: audio.userPlaylists.length.toString(),
             label: 'Playlists',
+            onTap: () {
+              Navigator.pop(context);
+            },
           ),
         ),
         const SizedBox(width: 10),
@@ -509,9 +517,85 @@ class _ProfileScreenState extends State<ProfileScreen> {
             iconColor: AppColors.warning,
             count: audio.historyTracks.length.toString(),
             label: 'History',
+            onTap: () {
+              _showHistorySheet(context, audio);
+            },
           ),
         ),
       ],
+    );
+  }
+
+  void _showHistorySheet(BuildContext context, AudioProvider audio) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        final history = audio.historyTracks;
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.65,
+          padding: const EdgeInsets.all(AppSpacing.x16),
+          decoration: const BoxDecoration(
+            color: AppColors.surface1,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.xlarge)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Listening History (${history.length})', style: AppTextStyles.h3),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, color: AppColors.iconIdle),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: history.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No recently played tracks yet.',
+                          style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: history.length,
+                        itemBuilder: (context, idx) {
+                          final track = history[idx];
+                          return ListTile(
+                            leading: ClipRRect(
+                              borderRadius: AppRadii.borderSmall,
+                              child: Image.network(
+                                track.thumbnailUrl,
+                                width: 44,
+                                height: 44,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(
+                                  width: 44,
+                                  height: 44,
+                                  color: AppColors.surface2,
+                                  child: const Icon(Icons.music_note, color: AppColors.primarySoft),
+                                ),
+                              ),
+                            ),
+                            title: Text(track.title, style: AppTextStyles.bodyMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
+                            subtitle: Text(track.artist, style: AppTextStyles.caption, maxLines: 1, overflow: TextOverflow.ellipsis),
+                            onTap: () {
+                              Navigator.pop(ctx);
+                              audio.playTrack(track, history);
+                            },
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -520,28 +604,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required Color iconColor,
     required String count,
     required String label,
+    VoidCallback? onTap,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
-      decoration: BoxDecoration(
-        color: AppColors.surface1,
-        borderRadius: AppRadii.borderMedium,
-        border: Border.all(color: AppColors.surface2),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: iconColor, size: 22),
-          const SizedBox(height: 6),
-          Text(
-            count,
-            style: AppTextStyles.cardTitle.copyWith(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: AppTextStyles.meta.copyWith(color: AppColors.textSecondary, fontSize: 11),
-          ),
-        ],
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+        decoration: BoxDecoration(
+          color: AppColors.surface1,
+          borderRadius: AppRadii.borderMedium,
+          border: Border.all(color: AppColors.surface2),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: iconColor, size: 22),
+            const SizedBox(height: 6),
+            Text(
+              count,
+              style: AppTextStyles.cardTitle.copyWith(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: AppTextStyles.meta.copyWith(color: AppColors.textSecondary, fontSize: 11),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -668,6 +756,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onChanged: (val) {
                 if (val != null) {
                   auth.updateSettings(audioQuality: val);
+                }
+              },
+            ),
+          ),
+          Divider(color: AppColors.surface2, height: 1),
+
+          // Search Cache Timer (Issue 1 & 3)
+          ListTile(
+            leading: const Icon(Icons.timer_outlined, color: AppColors.primarySoft),
+            title: const Text('Search & Mood Cache Timer', style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
+            subtitle: Text(
+              '${settings.searchCacheHours} hours (Fast local repeat & offline)',
+              style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+            ),
+            trailing: DropdownButton<int>(
+              value: settings.searchCacheHours,
+              dropdownColor: AppColors.surface2,
+              underline: const SizedBox(),
+              icon: const Icon(Icons.arrow_drop_down, color: AppColors.iconIdle),
+              style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+              items: const [
+                DropdownMenuItem(value: 1, child: Text('1 hour')),
+                DropdownMenuItem(value: 6, child: Text('6 hours (Default)')),
+                DropdownMenuItem(value: 12, child: Text('12 hours')),
+                DropdownMenuItem(value: 24, child: Text('24 hours')),
+                DropdownMenuItem(value: 72, child: Text('3 days')),
+              ],
+              onChanged: (val) {
+                if (val != null) {
+                  auth.updateSettings(searchCacheHours: val);
                 }
               },
             ),
@@ -892,7 +1010,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
               icon: const Icon(Icons.system_update_rounded, size: 16, color: AppColors.primarySoft),
               label: const Text('Check Updates', style: TextStyle(color: AppColors.primarySoft, fontSize: 12)),
               onPressed: () async {
-                await AppUpdateService.checkForUpdate(context: context, force: true);
+                final info = await AppUpdateService.checkForUpdate(force: true);
+                if (mounted) {
+                  if (info != null) {
+                    UpdateDialog.show(context, info);
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Music App is up to date!'),
+                        backgroundColor: AppColors.surface1,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                }
               },
             ),
           ),

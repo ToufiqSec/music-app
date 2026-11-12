@@ -11,6 +11,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_radii.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/generated_cover_art.dart';
+import '../widgets/twilight_scene_background.dart';
 
 class DownloadsScreen extends StatefulWidget {
   const DownloadsScreen({super.key});
@@ -87,13 +88,21 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
     final audioProvider = context.read<AudioProvider>();
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+      backgroundColor: AppColors.bgDeep,
+      body: Stack(
+        children: [
+          const Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: TwilightSceneBackground(mode: TwilightSceneMode.header),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
               // Header
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -263,6 +272,8 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
             ],
           ),
         ),
+      ),
+        ],
       ),
     );
   }

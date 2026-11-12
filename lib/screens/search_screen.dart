@@ -486,10 +486,6 @@ class _SearchScreenState extends State<SearchScreen> {
                     ),
                   ],
                 ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
-                ),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [

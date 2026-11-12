@@ -241,14 +241,41 @@ class _CoverPalette {
 }
 
 final List<_CoverPalette> _coverPalettes = [
+  // Deep Twilight & Violet (Music & Ambience)
   const _CoverPalette([Color(0xFF4A2B78), Color(0xFF1E1438), Color(0xFF0F0B1A)]),
   const _CoverPalette([Color(0xFF6B3A82), Color(0xFF2C1645), Color(0xFF140B22)]),
-  const _CoverPalette([Color(0xFF2E3A6E), Color(0xFF192147), Color(0xFF0D1126)]),
-  const _CoverPalette([Color(0xFF7A365D), Color(0xFF381530), Color(0xFF190918)]),
-  const _CoverPalette([Color(0xFF3B566E), Color(0xFF1B2C3D), Color(0xFF0D1721)]),
   const _CoverPalette([Color(0xFF5B327A), Color(0xFF2E1545), Color(0xFF150A21)]),
-  const _CoverPalette([Color(0xFF6E472A), Color(0xFF3B2312), Color(0xFF1C1008)]),
+  const _CoverPalette([Color(0xFF3D1E6D), Color(0xFF220F43), Color(0xFF110724)]),
+  
+  // Midnight Ocean & Slate (Podcasts & Deep Talks)
+  const _CoverPalette([Color(0xFF2E3A6E), Color(0xFF192147), Color(0xFF0D1126)]),
+  const _CoverPalette([Color(0xFF3B566E), Color(0xFF1B2C3D), Color(0xFF0D1721)]),
+  const _CoverPalette([Color(0xFF254B62), Color(0xFF132836), Color(0xFF09141C)]),
+  const _CoverPalette([Color(0xFF1E3A5F), Color(0xFF102035), Color(0xFF08101C)]),
+
+  // Sunset Coral & Rose (Acoustic, Romance, Live)
+  const _CoverPalette([Color(0xFF7A365D), Color(0xFF381530), Color(0xFF190918)]),
+  const _CoverPalette([Color(0xFF8C3E56), Color(0xFF481C2B), Color(0xFF240E16)]),
+  const _CoverPalette([Color(0xFF6E2D52), Color(0xFF351227), Color(0xFF1A0813)]),
+  const _CoverPalette([Color(0xFF823963), Color(0xFF3D162F), Color(0xFF1E0A17)]),
+
+  // Forest Pines & Emerald Dusk (Audiobooks & Nature Soundscapes)
   const _CoverPalette([Color(0xFF285E5A), Color(0xFF143330), Color(0xFF091A18)]),
+  const _CoverPalette([Color(0xFF214E4A), Color(0xFF102B29), Color(0xFF081615)]),
+  const _CoverPalette([Color(0xFF2C5542), Color(0xFF162D23), Color(0xFF0B1712)]),
+  const _CoverPalette([Color(0xFF1F443B), Color(0xFF0F241F), Color(0xFF081210)]),
+
+  // Warm Amber & Vintage Leather (Audio Dramas, Suspense, Classic Shows)
+  const _CoverPalette([Color(0xFF6E472A), Color(0xFF3B2312), Color(0xFF1C1008)]),
+  const _CoverPalette([Color(0xFF5A3922), Color(0xFF2F1D11), Color(0xFF170E08)]),
+  const _CoverPalette([Color(0xFF734226), Color(0xFF3C2012), Color(0xFF1E1009)]),
+  const _CoverPalette([Color(0xFF633B23), Color(0xFF331D11), Color(0xFF1A0F08)]),
+
+  // Cosmic Lavender & Aurora (Euphoric, Lo-Fi, Modern Hits)
+  const _CoverPalette([Color(0xFF56396B), Color(0xFF2B1B36), Color(0xFF160D1B)]),
+  const _CoverPalette([Color(0xFF433261), Color(0xFF231934), Color(0xFF110C1A)]),
+  const _CoverPalette([Color(0xFF603C78), Color(0xFF311C3E), Color(0xFF180E1F)]),
+  const _CoverPalette([Color(0xFF4E2C6A), Color(0xFF271536), Color(0xFF140B1B)]),
 ];
 
 class _CoverPatternPainter extends CustomPainter {

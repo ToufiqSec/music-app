@@ -80,12 +80,12 @@ jobs:
           fi
           flutter build apk --release --android-skip-build-dependency-validation $EXTRA_FLAGS --verbose > build.log 2>&1 || {
             echo "::error::Flutter build failed! Printing tail of build.log:"
-            tail -n 120 build.log
+            tail -n 250 build.log
             echo "Attempting Gradle assembleRelease to pinpoint failure..."
             cd android
-            ./gradlew assembleRelease --stacktrace --no-daemon > gradle.log 2>&1 || {
+            ./gradlew assembleRelease --stacktrace --no-daemon -Pandroid.skipBuildDependencyValidation=true > gradle.log 2>&1 || {
               echo "::error::Gradle assembleRelease failed! Printing tail of gradle.log:"
-              tail -n 120 gradle.log
+              tail -n 250 gradle.log
             }
             cd ..
           }

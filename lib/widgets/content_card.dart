@@ -4,6 +4,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_radii.dart';
 import '../theme/app_text_styles.dart';
 import '../theme/app_motion.dart';
+import '../theme/app_shadows.dart';
 
 /// Content card from Section 7 of Universal UI Design System: Twilight Calm.
 class ContentCard extends StatefulWidget {

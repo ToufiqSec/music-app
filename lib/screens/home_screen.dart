@@ -42,15 +42,28 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       AppUpdateService.getInstalledVersionName();
       _checkForUpdates(force: false);
+      _checkArtistOnboardingOnFirstLaunch();
 
       // Periodic background check while the app remains open (every 4 hours)
       _periodicUpdateTimer = Timer.periodic(const Duration(hours: 4), (_) {
         _checkForUpdates(force: false);
       });
     });
+  }
+
+  Future<void> _checkArtistOnboardingOnFirstLaunch() async {
+    await TasteEngine.init();
+    if (!TasteEngine.hasCompletedOnboarding && mounted) {
+      // First-launch onboarding check (Issue 4)
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const ArtistOnboardingScreen(isModal: false),
+        ),
+      );
+    }
   }
 
   @override

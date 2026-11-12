@@ -12,6 +12,17 @@ class AppSpacing {
   static const double s40 = 40.0;
   static const double s56 = 56.0;
 
+  // Aliases for x-prefixed tokens
+  static const double x4 = s4;
+  static const double x8 = s8;
+  static const double x12 = s12;
+  static const double x16 = s16;
+  static const double x20 = s20;
+  static const double x24 = s24;
+  static const double x32 = s32;
+  static const double x40 = s40;
+  static const double x56 = s56;
+
   // Semantic Spacing
   static const double screenHorizontal = 20.0;
   static const double sectionSpacing = 24.0;

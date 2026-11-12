@@ -7,6 +7,7 @@ import '../core/services/curated_tracks.dart';
 import '../core/services/track_metadata_store.dart';
 import '../features/music/models/music_models.dart';
 import '../widgets/generated_cover_art.dart';
+import '../widgets/twilight_scene_background.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radii.dart';
 import '../theme/app_text_styles.dart';
@@ -21,16 +22,25 @@ class LibraryScreen extends StatelessWidget {
     final audioProvider = context.read<AudioProvider>();
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.only(
-            left: 16,
-            right: 16,
-            top: 12,
-            bottom: 160, // Clear mini-player & bottom nav
+      backgroundColor: AppColors.bgDeep,
+      body: Stack(
+        children: [
+          const Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: TwilightSceneBackground(mode: TwilightSceneMode.header),
           ),
-          children: [
+          SafeArea(
+            child: ListView(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 12,
+                bottom: 160, // Clear mini-player & bottom nav
+              ),
+              children: [
             // Top Bar
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -288,6 +298,8 @@ class LibraryScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+        ],
       ),
     );
   }
