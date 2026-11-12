@@ -74,7 +74,11 @@ jobs:
       - name: Build Android Release APK
         run: |
           echo "Building Android Release APK via Flutter..."
-          flutter build apk --release --android-skip-build-dependency-validation --verbose > build.log 2>&1 || {
+          EXTRA_FLAGS=""
+          if [ -n "${{ secrets.GROQ_API_KEY }}" ]; then
+            EXTRA_FLAGS="--dart-define=GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}"
+          fi
+          flutter build apk --release --android-skip-build-dependency-validation $EXTRA_FLAGS --verbose > build.log 2>&1 || {
             echo "::error::Flutter build failed! Printing tail of build.log:"
             tail -n 120 build.log
             echo "Attempting Gradle assembleRelease to pinpoint failure..."

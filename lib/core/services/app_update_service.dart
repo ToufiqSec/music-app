@@ -98,6 +98,7 @@ class AppUpdateService {
 
   /// Synchronous fallback for display (initialized on launch)
   static String get currentVersionDisplay => _cachedVersionName ?? '1.0.0';
+  static String get currentVersion => currentVersionDisplay;
 
   /// Background, failure-silent check for updates from GitHub Releases.
   /// Set [force] to true when user explicitly taps 'Check for Updates' in Profile Settings.

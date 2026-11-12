@@ -31,7 +31,6 @@ class LyricsResult {
 /// Dynamic Lyrics Engine using LRCLIB API with JioSaavn Fallback & Disk Caching
 class LyricsService {
   static final Map<String, LyricsResult> _memCache = {};
-  static bool _initialized = false;
 
   static Future<Directory> _getCacheDir() async {
     final appDir = await getApplicationDocumentsDirectory();
@@ -47,9 +46,9 @@ class LyricsService {
     return rawTitle
         .replaceAll(RegExp(r'\([^)]*\)'), '')
         .replaceAll(RegExp(r'\[[^\]]*\]'), '')
-        .replaceAll(RegExp(r'(?i)official\s+(audio|video|music\s+video|lyric\s+video)'), '')
-        .replaceAll(RegExp(r'(?i)(full\s+song|remastered|hd|4k|audio)'), '')
-        .replaceAll(RegExp(r'[\-|\|]'), '')
+        .replaceAll(RegExp(r'official\s+(audio|video|music\s+video|lyric\s+video)', caseSensitive: false), '')
+        .replaceAll(RegExp(r'(full\s+song|remastered|hd|4k|audio)', caseSensitive: false), '')
+        .replaceAll(RegExp(r'[-|]'), '')
         .trim();
   }
 

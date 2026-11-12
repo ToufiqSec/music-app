@@ -29,6 +29,7 @@ class _MoodHubScreenState extends State<MoodHubScreen> {
 
   bool _isGenerating = false;
   List<YoutubeTrack> _recommendedTracks = [];
+  String _companionMessage = '';
   String _statusMessage = '';
 
   late final MoodRecommendationEngine _engine;
@@ -54,7 +55,7 @@ class _MoodHubScreenState extends State<MoodHubScreen> {
     });
 
     try {
-      final tracks = await _engine.generateRecommendations(
+      final mixResult = await _engine.generateRecommendations(
         selectedMoodIds: _selectedMoodIds,
         customDescription: _customVibeController.text,
         style: _selectedStyle,
@@ -62,9 +63,10 @@ class _MoodHubScreenState extends State<MoodHubScreen> {
 
       if (mounted) {
         setState(() {
-          _recommendedTracks = tracks;
+          _recommendedTracks = mixResult.tracks;
+          _companionMessage = mixResult.companionMessage;
           _isGenerating = false;
-          _statusMessage = tracks.isEmpty ? 'No tracks found for this vibe. Try a different mood!' : '';
+          _statusMessage = mixResult.tracks.isEmpty ? 'No tracks found for this vibe. Try a different mood!' : '';
         });
       }
     } catch (e) {
@@ -405,6 +407,34 @@ class _MoodHubScreenState extends State<MoodHubScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (_companionMessage.isNotEmpty)
+          Container(
+            margin: const EdgeInsets.only(bottom: 14),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.surface1.withValues(alpha: 0.8),
+              borderRadius: AppRadii.borderMedium,
+              border: Border.all(
+                color: AppColors.primarySoft.withValues(alpha: 0.35),
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.auto_awesome_rounded, color: AppColors.primarySoft, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    _companionMessage,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textPrimary,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [

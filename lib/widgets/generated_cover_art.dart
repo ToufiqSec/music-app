@@ -1,9 +1,7 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radii.dart';
-import '../theme/app_text_styles.dart';
 
 enum AudioContentType {
   song,
@@ -48,7 +46,6 @@ class AudioTypeDetector {
       case AudioContentType.live:
         return 'LIVE CONCERT';
       case AudioContentType.song:
-      default:
         return '320k HI-RES';
     }
   }
@@ -64,7 +61,6 @@ class AudioTypeDetector {
       case AudioContentType.live:
         return Icons.mic_external_on_rounded;
       case AudioContentType.song:
-      default:
         return Icons.music_note_rounded;
     }
   }

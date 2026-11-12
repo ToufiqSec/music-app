@@ -46,8 +46,12 @@ class TasteEngine {
   static bool _initialized = false;
 
   static List<ArtistProfile> get favoriteArtists => List.unmodifiable(_favoriteArtists);
+  static List<ArtistProfile> get selectedArtists => List.unmodifiable(_favoriteArtists);
   static List<String> get preferredLanguages => List.unmodifiable(_preferredLanguages);
   static bool get hasCompletedOnboarding => _favoriteArtists.isNotEmpty;
+
+  /// Alias for rerankWithTaste
+  static List<YoutubeTrack> rerankSearchResults(List<YoutubeTrack> tracks) => rerankWithTaste(tracks);
 
   static Future<File> _getLocalFile() async {
     final dir = await getApplicationDocumentsDirectory();

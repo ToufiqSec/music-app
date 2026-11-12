@@ -10,6 +10,7 @@ import '../core/services/supabase_service.dart';
 import '../core/services/app_update_service.dart';
 import '../core/services/audio_cache_service.dart';
 import '../core/services/taste_engine.dart';
+import '../core/services/mood_recommendation_engine.dart';
 import 'login_screen.dart';
 import 'artist_onboarding_screen.dart';
 
@@ -744,8 +745,87 @@ class _ProfileScreenState extends State<ProfileScreen> {
               },
             ),
           ),
+          Divider(color: AppColors.surface2, height: 1),
+
+          // Groq AI API Key (Issue 7 Step 2 & 3)
+          ListTile(
+            leading: const Icon(Icons.auto_awesome_rounded, color: AppColors.primarySoft),
+            title: const Text('AI Vibe Companion Key (Groq)', style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
+            subtitle: Text(
+              MoodRecommendationEngine.hasGroqKey
+                  ? 'Configured • Llama 3.3 70B'
+                  : 'Tap to configure Groq API Key',
+              style: TextStyle(
+                color: MoodRecommendationEngine.hasGroqKey ? AppColors.success : AppColors.textSecondary,
+                fontSize: 12,
+              ),
+            ),
+            trailing: const Icon(Icons.edit_rounded, color: AppColors.iconIdle, size: 18),
+            onTap: () => _showGroqKeyDialog(context),
+          ),
         ],
       ),
+    );
+  }
+
+  void _showGroqKeyDialog(BuildContext context) {
+    final ctrl = TextEditingController(text: MoodRecommendationEngine.groqApiKey);
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: AppColors.surface1,
+          shape: const RoundedRectangleBorder(borderRadius: AppRadii.borderLarge),
+          title: const Text('Groq AI API Key', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Powers the real-time AI companion in Vibe Hub using Llama 3.3. Key is stored securely on device.',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: ctrl,
+                obscureText: true,
+                style: const TextStyle(color: AppColors.textPrimary),
+                decoration: const InputDecoration(
+                  hintText: 'gsk_...',
+                  hintStyle: TextStyle(color: AppColors.textMuted),
+                  enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.surface2)),
+                  focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary)),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                shape: const RoundedRectangleBorder(borderRadius: AppRadii.borderPill),
+              ),
+              onPressed: () {
+                MoodRecommendationEngine.groqApiKey = ctrl.text.trim();
+                Navigator.pop(ctx);
+                setState(() {});
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Groq AI Key saved successfully!'),
+                    backgroundColor: AppColors.surface2,
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              },
+              child: const Text('Save', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
     );
   }
 

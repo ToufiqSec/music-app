@@ -8,6 +8,7 @@ import '../features/music/models/music_models.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radii.dart';
 import '../theme/app_text_styles.dart';
+import '../theme/app_shadows.dart';
 
 class SyncedLyricsView extends StatefulWidget {
   final YoutubeTrack track;
@@ -212,7 +213,7 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> {
                   return GestureDetector(
                     onTap: () {
                       HapticFeedback.lightImpact();
-                      audioProvider.seek(line.timestamp);
+                      audioProvider.seekTo(line.timestamp);
                       setState(() => _userScrolled = false);
                     },
                     child: AnimatedContainer(
@@ -264,7 +265,7 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> {
                         color: AppColors.surface2,
                         borderRadius: AppRadii.borderPill,
                         border: Border.all(color: AppColors.primarySoft.withValues(alpha: 0.5)),
-                        boxShadow: const [AppShadows.shadowSoft],
+                        boxShadow: [AppShadows.shadowSoft],
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,

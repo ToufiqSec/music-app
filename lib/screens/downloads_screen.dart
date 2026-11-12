@@ -267,15 +267,6 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
     );
   }
 
-  Widget _buildFallbackThumbnail() {
-    return Container(
-      width: 48,
-      height: 48,
-      color: AppColors.surface2,
-      child: const Icon(Icons.music_note_rounded, color: AppColors.primarySoft),
-    );
-  }
-
   Widget _buildEmptyState() {
     return Center(
       child: Column(

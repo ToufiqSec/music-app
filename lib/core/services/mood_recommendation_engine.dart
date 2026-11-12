@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import '../../features/music/models/music_models.dart';
 import '../../widgets/generated_cover_art.dart';
 import 'youtube_music_service.dart';
@@ -32,8 +34,28 @@ class VibeMoodOption {
   });
 }
 
+class VibeMixResult {
+  final String companionMessage;
+  final List<YoutubeTrack> tracks;
+
+  const VibeMixResult({
+    required this.companionMessage,
+    required this.tracks,
+  });
+}
+
 class MoodRecommendationEngine {
   final YoutubeMusicService _musicService;
+
+  // Configurable Groq AI Provider (Never hardcoded; loaded via env, Supabase, or settings)
+  static const String _envGroqKey = String.fromEnvironment('GROQ_API_KEY');
+  static String _runtimeApiKey = _envGroqKey;
+
+  static String get groqApiKey => _runtimeApiKey;
+  static set groqApiKey(String key) => _runtimeApiKey = key.trim();
+  static bool get hasGroqKey => _runtimeApiKey.isNotEmpty;
+  static const String groqModel = 'llama-3.3-70b-versatile';
+  static const String groqEndpoint = 'https://api.groq.com/openai/v1/chat/completions';
 
   MoodRecommendationEngine(this._musicService);
 
@@ -53,45 +75,64 @@ class MoodRecommendationEngine {
     VibeMoodOption(id: 'sleep', label: 'Sleep & Starlight', queryPrompt: 'deep sleep delta waves peaceful ambient'),
   ];
 
-  /// Generates real playable tracks from live queries matching the mixed vibe profile.
+  /// Generates real playable tracks using Groq AI inference with instant fallback to dynamic query synthesis.
   /// ZERO hardcoding. Merges, de-duplicates, and ranks using taste profile.
-  Future<List<YoutubeTrack>> generateRecommendations({
+  Future<VibeMixResult> generateRecommendations({
     required Set<String> selectedMoodIds,
     required String customDescription,
     required MoodContentStyle style,
     List<String>? userLanguages,
   }) async {
+    String companionMessage = 'Tuned directly into your emotional frequency.';
     final queries = <String>[];
 
-    // 1. Build queries from selected mood options
-    final selectedMoods = availableMoods.where((m) => selectedMoodIds.contains(m.id)).toList();
-    if (selectedMoods.isNotEmpty) {
-      final combinedMoodWords = selectedMoods.map((m) => m.queryPrompt).join(' ');
-      queries.add(combinedMoodWords);
-      for (final m in selectedMoods.take(2)) {
-        queries.add(m.queryPrompt);
+    // 1. Try Groq AI Inference
+    if (groqApiKey.isNotEmpty) {
+      try {
+        final aiResult = await _queryGroqAI(
+          selectedMoodIds: selectedMoodIds,
+          customDescription: customDescription,
+          style: style,
+        ).timeout(const Duration(seconds: 4));
+
+        if (aiResult != null && aiResult.queries.isNotEmpty) {
+          companionMessage = aiResult.message;
+          queries.addAll(aiResult.queries);
+        }
+      } catch (_) {
+        // Quiet fallback to rule-based synthesis
       }
     }
 
-    // 2. Add custom vibe text if provided
-    final cleanCustom = customDescription.trim();
-    if (cleanCustom.isNotEmpty) {
-      queries.insert(0, cleanCustom);
-    }
-
-    // 3. Fallback query if no inputs provided (Bare tap guarantee: at least 5 results)
+    // 2. Fallback / Supplement: Dynamic query synthesis
     if (queries.isEmpty) {
-      queries.add('trending chill soothing hits');
+      final selectedMoods = availableMoods.where((m) => selectedMoodIds.contains(m.id)).toList();
+      if (selectedMoods.isNotEmpty) {
+        final combinedMoodWords = selectedMoods.map((m) => m.queryPrompt).join(' ');
+        queries.add(combinedMoodWords);
+        for (final m in selectedMoods.take(2)) {
+          queries.add(m.queryPrompt);
+        }
+      }
+
+      final cleanCustom = customDescription.trim();
+      if (cleanCustom.isNotEmpty) {
+        queries.insert(0, cleanCustom);
+      }
+
+      if (queries.isEmpty) {
+        queries.add('trending chill soothing hits');
+      }
     }
 
-    // 4. Apply style modifier
+    // 3. Apply style modifier
     final styleModifier = _getStyleModifier(style);
 
-    // 5. Query sources concurrently
+    // 4. Query sources concurrently
     final results = <YoutubeTrack>[];
     final seenKeys = <String>{};
 
-    final futures = queries.take(3).map((baseQuery) async {
+    final futures = queries.take(4).map((baseQuery) async {
       final finalQuery = styleModifier.isNotEmpty ? '$baseQuery $styleModifier' : baseQuery;
       try {
         return await _musicService.searchTracks(finalQuery);
@@ -106,8 +147,6 @@ class MoodRecommendationEngine {
         final key = '${track.title.toLowerCase()}_${track.artist.toLowerCase()}';
         if (!seenKeys.contains(key)) {
           seenKeys.add(key);
-
-          // Content style filtering
           if (_matchesStyle(track, style)) {
             results.add(track);
           }
@@ -115,13 +154,82 @@ class MoodRecommendationEngine {
       }
     }
 
-    // 6. Rerank through user's taste engine
+    // 5. Rerank through user's taste engine
     final reranked = TasteEngine.rerankSearchResults(results);
 
-    // 7. Save session metadata to Supabase / local cache for taste adaptation
-    _recordMoodSession(selectedMoodIds, cleanCustom, style.label, reranked.length);
+    // 6. Save session metadata to Supabase / local cache for taste adaptation
+    _recordMoodSession(selectedMoodIds, customDescription.trim(), style.label, reranked.length);
 
-    return reranked;
+    return VibeMixResult(
+      companionMessage: companionMessage,
+      tracks: reranked,
+    );
+  }
+
+  /// Calls Groq API with specialist companion system prompt
+  Future<({String message, List<String> queries})?> _queryGroqAI({
+    required Set<String> selectedMoodIds,
+    required String customDescription,
+    required MoodContentStyle style,
+  }) async {
+    final moods = selectedMoodIds.join(', ');
+    final tasteArtists = TasteEngine.favoriteArtists.map((a) => a.name).take(4).join(', ');
+
+    final systemPrompt = '''
+You are the user's audio companion inside a personal music app: part music therapist, part curator, part close friend with great taste.
+Your task is to understand the user's feelings and recommend real audio tracks, audio dramas, stories, and podcasts.
+Output strictly valid JSON with this format:
+{
+  "companionMessage": "1-2 warm empathetic sentences explaining what you picked",
+  "suggestions": [
+    {"searchQuery": "song or show title with artist name for search", "type": "song|show|podcast"}
+  ]
+}
+''';
+
+    final userPrompt = '''
+Current feelings: $moods
+Personal description: $customDescription
+Content preference: ${style.label}
+Favorite artists: $tasteArtists
+Recommend 5 to 7 real audio picks.
+''';
+
+    final response = await http.post(
+      Uri.parse(groqEndpoint),
+      headers: {
+        'Authorization': 'Bearer $groqApiKey',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'model': groqModel,
+        'messages': [
+          {'role': 'system', 'content': systemPrompt},
+          {'role': 'user', 'content': userPrompt},
+        ],
+        'temperature': 0.7,
+        'response_format': {'type': 'json_object'},
+      }),
+    );
+
+    if (response.statusCode != 200) return null;
+
+    final data = jsonDecode(response.body);
+    final content = data['choices']?[0]?['message']?['content']?.toString() ?? '';
+    if (content.isEmpty) return null;
+
+    final parsed = jsonDecode(content);
+    final msg = parsed['companionMessage']?.toString() ?? 'Curated for your state of mind.';
+    final suggestions = parsed['suggestions'] as List<dynamic>? ?? [];
+
+    final qList = <String>[];
+    for (final s in suggestions) {
+      if (s is Map && s['searchQuery'] != null) {
+        qList.add(s['searchQuery'].toString());
+      }
+    }
+
+    return (message: msg, queries: qList);
   }
 
   String _getStyleModifier(MoodContentStyle style) {
@@ -135,7 +243,6 @@ class MoodRecommendationEngine {
       case MoodContentStyle.ambient:
         return 'ambient soundscape background instrumental';
       case MoodContentStyle.all:
-      default:
         return '';
     }
   }
@@ -153,7 +260,6 @@ class MoodRecommendationEngine {
       case MoodContentStyle.ambient:
         return true;
       case MoodContentStyle.all:
-      default:
         return true;
     }
   }
