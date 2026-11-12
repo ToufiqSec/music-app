@@ -51,8 +51,9 @@ class DownloadProgressState {
 
   String get formattedProgress {
     final curMb = (bytesDownloaded / (1024 * 1024)).toStringAsFixed(1);
-    final totMb = (bytesTotal / (1024 * 1024)).toStringAsFixed(1);
-    final pct = (progress * 100).toInt();
+    final tot = bytesTotal > 0 ? bytesTotal : 74197766;
+    final totMb = (tot / (1024 * 1024)).toStringAsFixed(1);
+    final pct = (progress * 100).toInt().clamp(0, 100);
     return '$pct% ($curMb MB / $totMb MB)';
   }
 }
@@ -73,6 +74,8 @@ class AppUpdateService {
   static int? _activeDownloadId;
   static Timer? _pollTimer;
   static StreamController<DownloadProgressState>? _progressController;
+  static http.Client? _activeHttpClient;
+  static bool _isCancelled = false;
 
   /// Returns the dynamically resolved installed version (e.g. 1.0.0) from Android PackageManager.
   static Future<String> getInstalledVersionName() async {
@@ -190,153 +193,121 @@ class AppUpdateService {
     return false;
   }
 
-  /// Downloads the APK using Android's native DownloadManager.
-  /// Runs as an OS service: survives app switching, screen off, and shows native progress notification.
+  /// Downloads the APK using high-speed in-app HTTP streaming.
+  /// Streams directly to local storage with real-time byte counters and progress updates.
   static Stream<DownloadProgressState> startDownload(UpdateInfo info) {
     _progressController?.close();
     _progressController = StreamController<DownloadProgressState>.broadcast();
     _pollTimer?.cancel();
+    _isCancelled = false;
 
-    _runDownloadFlow(info);
+    _runDirectHttpDownload(info);
 
     return _progressController!.stream;
   }
 
-  static Future<void> _runDownloadFlow(UpdateInfo info) async {
+  static Future<void> _runDirectHttpDownload(UpdateInfo info) async {
     final fileName = 'music-app-v${info.latestVersion}.apk';
 
-    try {
-      final startRes = await _channel.invokeMapMethod<String, dynamic>('startDownload', {
-        'url': info.apkDownloadUrl,
-        'fileName': fileName,
-        'title': 'Music App Update v${info.latestVersion}',
-        'description': 'Downloading lossless music player update...',
-      });
-
-      if (startRes == null || !startRes.containsKey('downloadId')) {
-        // Fallback to Dart stream download if DownloadManager is unavailable
-        await _fallbackHttpDownload(info, fileName);
-        return;
-      }
-
-      final downloadId = (startRes['downloadId'] as num).toInt();
-      final expectedPath = startRes['filePath']?.toString();
-      _activeDownloadId = downloadId;
-
-      _pollTimer = Timer.periodic(const Duration(milliseconds: 300), (timer) async {
-        try {
-          final queryRes = await _channel.invokeMapMethod<String, dynamic>('getDownloadProgress', {
-            'downloadId': downloadId,
-          });
-
-          if (queryRes == null) return;
-
-          final status = queryRes['status']?.toString() ?? 'unknown';
-          final bytesDownloaded = (queryRes['bytesDownloaded'] as num?)?.toInt() ?? 0;
-          final bytesTotal = (queryRes['bytesTotal'] as num?)?.toInt() ?? info.apkSizeBytes;
-
-          final progress = bytesTotal > 0
-              ? (bytesDownloaded / bytesTotal).clamp(0.0, 1.0)
-              : 0.0;
-
-          if (status == 'successful') {
-            timer.cancel();
-
-            // Verify downloaded file size
-            final file = expectedPath != null ? File(expectedPath) : null;
-            final fileExists = file != null && await file.exists();
-            final actualLength = fileExists ? await file.length() : 0;
-
-            if (fileExists && actualLength > 0) {
-              _progressController?.add(DownloadProgressState(
-                bytesDownloaded: actualLength,
-                bytesTotal: actualLength,
-                progress: 1.0,
-                status: 'completed',
-                filePath: file.path,
-              ));
-            } else {
-              _progressController?.add(const DownloadProgressState(
-                bytesDownloaded: 0,
-                bytesTotal: 0,
-                progress: 0.0,
-                status: 'failed',
-                errorMessage: 'Downloaded file verification failed. Please retry.',
-              ));
-            }
-          } else if (status == 'failed') {
-            timer.cancel();
-            _progressController?.add(const DownloadProgressState(
-              bytesDownloaded: 0,
-              bytesTotal: 0,
-              progress: 0.0,
-              status: 'failed',
-              errorMessage: 'Network interrupted during download. Tap Retry.',
-            ));
-          } else if (status == 'running' || status == 'pending' || status == 'paused') {
-            _progressController?.add(DownloadProgressState(
-              bytesDownloaded: bytesDownloaded,
-              bytesTotal: bytesTotal,
-              progress: progress,
-              status: 'downloading',
-            ));
-          }
-        } catch (_) {}
-      });
-    } catch (e) {
-      await _fallbackHttpDownload(info, fileName);
-    }
-  }
-
-  /// Resilient fallback HTTP downloader with range resume support
-  static Future<void> _fallbackHttpDownload(UpdateInfo info, String fileName) async {
     try {
       final tempDir = await getTemporaryDirectory();
       final targetFile = File('${tempDir.path}/$fileName');
       final tempFile = File('${tempDir.path}/$fileName.part');
+
+      // Check if target file already exists and is fully downloaded
+      if (await targetFile.exists()) {
+        final existingTargetLen = await targetFile.length();
+        if (info.apkSizeBytes > 0 && existingTargetLen == info.apkSizeBytes) {
+          _progressController?.add(DownloadProgressState(
+            bytesDownloaded: existingTargetLen,
+            bytesTotal: existingTargetLen,
+            progress: 1.0,
+            status: 'completed',
+            filePath: targetFile.path,
+          ));
+          return;
+        }
+      }
 
       int existingBytes = 0;
       if (await tempFile.exists()) {
         existingBytes = await tempFile.length();
       }
 
+      final expectedTotal = info.apkSizeBytes > 0 ? info.apkSizeBytes : 74197766;
+
+      // Initial progress reporting
+      _progressController?.add(DownloadProgressState(
+        bytesDownloaded: existingBytes,
+        bytesTotal: expectedTotal,
+        progress: (existingBytes / expectedTotal).clamp(0.0, 1.0),
+        status: 'downloading',
+      ));
+
+      _activeHttpClient?.close();
+      _activeHttpClient = http.Client();
+
       final request = http.Request('GET', Uri.parse(info.apkDownloadUrl));
+      request.followRedirects = true;
+      request.maxRedirects = 5;
+      request.headers['User-Agent'] =
+          'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36';
+
       if (existingBytes > 0) {
         request.headers['Range'] = 'bytes=$existingBytes-';
       }
 
-      final response = await http.Client().send(request);
+      final response = await _activeHttpClient!.send(request);
+
+      if (_isCancelled) return;
+
+      if (response.statusCode != 200 && response.statusCode != 206) {
+        throw Exception('Server returned HTTP ${response.statusCode}');
+      }
+
       final isPartial = response.statusCode == 206;
       final totalBytes = isPartial
           ? existingBytes + (response.contentLength ?? 0)
-          : (response.contentLength ?? info.apkSizeBytes);
+          : (response.contentLength ?? expectedTotal);
 
       if (!isPartial && existingBytes > 0) {
-        // Server did not support range, restart cleanly
         existingBytes = 0;
         if (await tempFile.exists()) await tempFile.delete();
       }
 
       final sink = tempFile.openWrite(mode: isPartial ? FileMode.append : FileMode.write);
       int bytesReceived = existingBytes;
+      int lastReportTime = 0;
 
       await for (final chunk in response.stream) {
+        if (_isCancelled) {
+          await sink.close();
+          return;
+        }
+
         sink.add(chunk);
         bytesReceived += chunk.length;
-        final progress = totalBytes > 0
-            ? (bytesReceived / totalBytes).clamp(0.0, 1.0)
-            : 0.0;
 
-        _progressController?.add(DownloadProgressState(
-          bytesDownloaded: bytesReceived,
-          bytesTotal: totalBytes,
-          progress: progress,
-          status: 'downloading',
-        ));
+        final now = DateTime.now().millisecondsSinceEpoch;
+        if (now - lastReportTime > 150 || bytesReceived >= totalBytes) {
+          lastReportTime = now;
+          final progress = totalBytes > 0
+              ? (bytesReceived / totalBytes).clamp(0.0, 1.0)
+              : 0.0;
+
+          _progressController?.add(DownloadProgressState(
+            bytesDownloaded: bytesReceived,
+            bytesTotal: totalBytes,
+            progress: progress,
+            status: 'downloading',
+          ));
+        }
       }
 
       await sink.flush();
       await sink.close();
+
+      if (_isCancelled) return;
 
       if (await targetFile.exists()) await targetFile.delete();
       await tempFile.rename(targetFile.path);
@@ -349,19 +320,27 @@ class AppUpdateService {
         filePath: targetFile.path,
       ));
     } catch (e) {
-      _progressController?.add(const DownloadProgressState(
+      if (_isCancelled) return;
+      debugPrint('[AppUpdateService] HTTP download error: $e');
+      _progressController?.add(DownloadProgressState(
         bytesDownloaded: 0,
         bytesTotal: 0,
         progress: 0.0,
         status: 'failed',
-        errorMessage: 'Download failed. Please check connection and retry.',
+        errorMessage: 'Download error: $e. Tap Retry or Download in Browser.',
       ));
+    } finally {
+      _activeHttpClient?.close();
+      _activeHttpClient = null;
     }
   }
 
   /// Cancels any active download cleanly
   static Future<void> cancelActiveDownload() async {
+    _isCancelled = true;
     _pollTimer?.cancel();
+    _activeHttpClient?.close();
+    _activeHttpClient = null;
     if (_activeDownloadId != null) {
       try {
         await _channel.invokeMethod('cancelDownload', {
@@ -376,6 +355,16 @@ class AppUpdateService {
       progress: 0.0,
       status: 'cancelled',
     ));
+  }
+
+  /// Opens the direct APK download URL in the device's external browser (fallback)
+  static Future<bool> openInBrowser(String url) async {
+    try {
+      final res = await _channel.invokeMethod<bool>('openUrl', {'url': url});
+      return res ?? false;
+    } catch (_) {
+      return false;
+    }
   }
 
   /// Checks if Android has granted "Install Unknown Apps" permission

@@ -393,22 +393,55 @@ class _UpdateDialogState extends State<UpdateDialog> with WidgetsBindingObserver
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            GestureDetector(
-              onTap: _cancelDownload,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.surface2,
-                  borderRadius: AppRadii.borderPill,
-                ),
-                child: Text(
-                  'Cancel',
-                  style: AppTextStyles.caption.copyWith(
-                    color: const Color(0xFFE53935),
-                    fontWeight: FontWeight.w600,
+            Row(
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    AppUpdateService.openInBrowser(widget.updateInfo.apkDownloadUrl);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface2,
+                      borderRadius: AppRadii.borderPill,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.open_in_browser_rounded, size: 13, color: AppColors.primarySoft),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Browser',
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.primarySoft,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 10.5,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
+                const SizedBox(width: 6),
+                GestureDetector(
+                  onTap: _cancelDownload,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface2,
+                      borderRadius: AppRadii.borderPill,
+                    ),
+                    child: Text(
+                      'Cancel',
+                      style: AppTextStyles.caption.copyWith(
+                        color: const Color(0xFFE53935),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 10.5,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -636,12 +669,18 @@ class _UpdateDialogState extends State<UpdateDialog> with WidgetsBindingObserver
               onPressed: () => Navigator.of(context).pop(),
               child: Text('Dismiss', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted)),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
+            TextButton.icon(
+              icon: const Icon(Icons.open_in_browser_rounded, size: 16, color: AppColors.primarySoft),
+              label: Text('Browser', style: AppTextStyles.bodySmall.copyWith(color: AppColors.primarySoft, fontWeight: FontWeight.w600)),
+              onPressed: () => AppUpdateService.openInBrowser(widget.updateInfo.apkDownloadUrl),
+            ),
+            const SizedBox(width: 8),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primarySoft,
                 shape: RoundedRectangleBorder(borderRadius: AppRadii.borderPill),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               ),
               icon: const Icon(Icons.refresh_rounded, size: 18),
               label: Text(

@@ -66,6 +66,22 @@ class MainActivity : FlutterActivity() {
                         result.success(true)
                     }
                 }
+                "openUrl" -> {
+                    val url = call.argument<String>("url")
+                    if (url != null) {
+                        try {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                            }
+                            startActivity(intent)
+                            result.success(true)
+                        } catch (e: Exception) {
+                            result.error("OPEN_ERROR", e.localizedMessage, null)
+                        }
+                    } else {
+                        result.error("INVALID_URL", "URL cannot be null", null)
+                    }
+                }
                 "startDownload" -> {
                     val url = call.argument<String>("url")
                     val fileName = call.argument<String>("fileName") ?: "music-app-update.apk"
