@@ -19,24 +19,18 @@ class MiniPlayer extends StatelessWidget {
   Widget build(BuildContext context) {
     final audioProvider = context.read<AudioProvider>();
 
-    return Selector<AudioProvider, (YoutubeTrack?, bool, bool, Duration, Duration)>(
+    return Selector<AudioProvider, (YoutubeTrack?, bool, bool)>(
       selector: (_, ap) => (
         ap.currentTrack,
         ap.isPlaying,
         ap.isBuffering,
-        ap.position,
-        ap.duration,
       ),
       builder: (context, data, child) {
-        final (track, isPlaying, isBuffering, position, duration) = data;
+        final (track, isPlaying, isBuffering) = data;
 
         if (track == null) {
           return const SizedBox.shrink();
         }
-
-        final progress = (duration.inMilliseconds > 0)
-            ? (position.inMilliseconds / duration.inMilliseconds).clamp(0.0, 1.0)
-            : 0.0;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
@@ -78,17 +72,22 @@ class MiniPlayer extends StatelessWidget {
             borderRadius: AppRadii.borderMedium,
             child: Stack(
               children: [
-                // Live progress bar along top edge
+                // Live progress bar along top edge (isolated Selector to avoid rebuilding entire MiniPlayer)
                 Positioned(
                   top: 0,
                   left: 0,
                   right: 0,
                   height: 2.5,
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    backgroundColor: Colors.transparent,
-                    valueColor: const AlwaysStoppedAnimation<Color>(
-                      AppColors.primarySoft,
+                  child: Selector<AudioProvider, double>(
+                    selector: (_, ap) => (ap.duration.inMilliseconds > 0)
+                        ? (ap.position.inMilliseconds / ap.duration.inMilliseconds).clamp(0.0, 1.0)
+                        : 0.0,
+                    builder: (_, progress, __) => LinearProgressIndicator(
+                      value: progress,
+                      backgroundColor: Colors.transparent,
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        AppColors.primarySoft,
+                      ),
                     ),
                   ),
                 ),

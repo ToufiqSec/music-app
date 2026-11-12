@@ -346,11 +346,11 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
 
           const SizedBox(height: 20),
 
-          // 3. Quick-Pick 2x3 Grid ("Jump Back In")
+          // 3. Quick-Pick Grid
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Text(
-              'Jump Back In',
+              _activeFilter == 'All' ? 'Jump Back In' : '$_activeFilter Mixes',
               style: AppTextStyles.h3.copyWith(
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.bold,
@@ -366,14 +366,14 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
 
           const SizedBox(height: 28),
 
-          // 4. Horizontal Card Carousel 1 ("Made For You")
+          // 4. Horizontal Card Carousel 1
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Made For You',
+                  _getCarousel1Title(),
                   style: AppTextStyles.h3.copyWith(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.bold,
@@ -396,10 +396,10 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               scrollDirection: Axis.horizontal,
-              itemCount: CuratedTracks.madeForYouTracks.length,
+              itemCount: _getCarousel1Tracks().length,
               separatorBuilder: (_, __) => const SizedBox(width: 12),
               itemBuilder: (context, index) {
-                final track = CuratedTracks.madeForYouTracks[index];
+                final track = _getCarousel1Tracks()[index];
                 return ContentCard(
                   title: track.title,
                   subtitle: track.artist,
@@ -408,7 +408,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
                     HapticFeedback.lightImpact();
                     audioProvider.playTrack(
                       track,
-                      CuratedTracks.madeForYouTracks,
+                      _getCarousel1Tracks(),
                     );
                   },
                 );
@@ -418,14 +418,14 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
 
           const SizedBox(height: 28),
 
-          // 5. Horizontal Card Carousel 2 ("Trending & New For You")
+          // 5. Horizontal Card Carousel 2
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Trending & New For You',
+                  _getCarousel2Title(),
                   style: AppTextStyles.h3.copyWith(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.bold,
@@ -448,10 +448,10 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               scrollDirection: Axis.horizontal,
-              itemCount: CuratedTracks.trendingTracks.length,
+              itemCount: _getCarousel2Tracks().length,
               separatorBuilder: (_, __) => const SizedBox(width: 12),
               itemBuilder: (context, index) {
-                final track = CuratedTracks.trendingTracks[index];
+                final track = _getCarousel2Tracks()[index];
                 return _buildTrendingCard(context, track, audioProvider);
               },
             ),
@@ -490,12 +490,84 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
     );
   }
 
+  String _getCarousel1Title() {
+    switch (_activeFilter) {
+      case 'Trending':
+        return 'Trending Hits';
+      case 'Chill':
+        return 'Chill Acoustic & Lo-Fi';
+      case 'Late Night':
+        return 'Midnight Sessions';
+      case 'Workout':
+        return 'High-BPM Energy';
+      case 'Focus':
+        return 'Deep Work & Study';
+      case 'All':
+      default:
+        return 'Made For You';
+    }
+  }
+
+  List<YoutubeTrack> _getCarousel1Tracks() {
+    switch (_activeFilter) {
+      case 'Trending':
+        return CuratedTracks.trendingTracks;
+      case 'Chill':
+        return CuratedTracks.chillTracks;
+      case 'Late Night':
+        return CuratedTracks.lateNightTracks;
+      case 'Workout':
+        return CuratedTracks.workoutTracks;
+      case 'Focus':
+        return CuratedTracks.focusTracks;
+      case 'All':
+      default:
+        return CuratedTracks.madeForYouTracks;
+    }
+  }
+
+  String _getCarousel2Title() {
+    switch (_activeFilter) {
+      case 'Trending':
+        return 'Viral Today';
+      case 'Chill':
+        return 'Mellow Waves';
+      case 'Late Night':
+        return 'Dark Ambient';
+      case 'Workout':
+        return 'Cardio Pulse';
+      case 'Focus':
+        return 'Binaural Focus';
+      case 'All':
+      default:
+        return 'Trending & New For You';
+    }
+  }
+
+  List<YoutubeTrack> _getCarousel2Tracks() {
+    switch (_activeFilter) {
+      case 'Trending':
+        return CuratedTracks.madeForYouTracks;
+      case 'Chill':
+        return CuratedTracks.madeForYouTracks;
+      case 'Late Night':
+        return CuratedTracks.chillTracks;
+      case 'Workout':
+        return CuratedTracks.trendingTracks;
+      case 'Focus':
+        return CuratedTracks.chillTracks;
+      case 'All':
+      default:
+        return CuratedTracks.trendingTracks;
+    }
+  }
+
   /// 2x3 Grid of Compact Glass-Tinted Tiles
   Widget _buildQuickPickGrid(
     BuildContext context,
     AudioProvider audioProvider,
   ) {
-    final tracks = CuratedTracks.jumpBackInTracks.take(6).toList();
+    final tracks = CuratedTracks.getTracksForFilter(_activeFilter).take(6).toList();
 
     return GridView.builder(
       physics: const NeverScrollableScrollPhysics(),
@@ -673,36 +745,42 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
 
   /// Circular Artist Avatar Item
   Widget _buildArtistCircle(Map<String, String> artist) {
-    return Column(
-      children: [
-        Container(
-          width: 70,
-          height: 70,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            boxShadow: const [AppShadows.shadowSoft],
-            border: Border.all(
-              color: AppColors.surface2,
-              width: 1.5,
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        widget.onNavigateToSearch();
+      },
+      child: Column(
+        children: [
+          Container(
+            width: 70,
+            height: 70,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: const [AppShadows.shadowSoft],
+              border: Border.all(
+                color: AppColors.surface2,
+                width: 1.5,
+              ),
+            ),
+            child: ClipOval(
+              child: CachedNetworkImage(
+                imageUrl: artist['image']!,
+                fit: BoxFit.cover,
+                memCacheWidth: 150,
+              ),
             ),
           ),
-          child: ClipOval(
-            child: CachedNetworkImage(
-              imageUrl: artist['image']!,
-              fit: BoxFit.cover,
-              memCacheWidth: 150,
+          const SizedBox(height: 6),
+          Text(
+            artist['name']!,
+            style: AppTextStyles.caption.copyWith(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w600,
             ),
           ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          artist['name']!,
-          style: AppTextStyles.caption.copyWith(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

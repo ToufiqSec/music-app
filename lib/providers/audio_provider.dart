@@ -30,6 +30,7 @@ class AudioProvider extends ChangeNotifier {
   // Track pre-fetch flag to avoid duplicate trigger per song
   bool _preFetchedNextTrack = false;
   Timer? _seekDebounceTimer;
+  Timer? _backgroundCacheTimer;
 
   // Download states for offline tracks
   final Map<String, double> _downloadProgress = {};
@@ -204,15 +205,20 @@ class AudioProvider extends ChangeNotifier {
       await _audioHandler.playTrackUrl(track.toMediaItem(), resolvedUrl);
 
       // 3. Network protocol check (robust for Windows & Unix)
+      // Debounce background caching by 8s so initial stream buffer is never starved
       final isRemote = resolvedUrl.startsWith('http://') || resolvedUrl.startsWith('https://');
       if (isRemote && !await AudioCacheService.isTrackCached(track.id)) {
-        // Cache in background for zero-delay offline replay
-        _currentDownloadSubscription?.cancel();
-        _currentDownloadSubscription = AudioCacheService.downloadAndCacheTrack(
-          track.id,
-          resolvedUrl,
-          trackMetadata: track,
-        ).listen(null, onError: (_) {});
+        _backgroundCacheTimer?.cancel();
+        _backgroundCacheTimer = Timer(const Duration(seconds: 8), () async {
+          if (_currentTrack?.id == track.id && _isPlaying) {
+            _currentDownloadSubscription?.cancel();
+            _currentDownloadSubscription = AudioCacheService.downloadAndCacheTrack(
+              track.id,
+              resolvedUrl!,
+              trackMetadata: track,
+            ).listen(null, onError: (_) {});
+          }
+        });
       }
     } catch (e) {
       debugPrint('Playback error: $e');
@@ -299,6 +305,23 @@ class AudioProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> removeTrackFromPlaylist(String playlistName, String trackId) async {
+    await TrackMetadataStore.removeTrackFromPlaylist(playlistName, trackId);
+    _userPlaylists = await TrackMetadataStore.getUserPlaylists();
+    notifyListeners();
+  }
+
+  Future<void> deletePlaylist(String playlistName) async {
+    await TrackMetadataStore.deletePlaylist(playlistName);
+    _userPlaylists = await TrackMetadataStore.getUserPlaylists();
+    notifyListeners();
+  }
+
+  Future<List<YoutubeTrack>> getPlaylistTracks(String playlistName) async {
+    final list = await TrackMetadataStore.getPlaylistTracks(playlistName);
+    return list;
+  }
+
   /// Downloads a track for offline storage with progress tracking & metadata preservation
   Future<void> downloadTrackForOffline(YoutubeTrack track) async {
     if (await AudioCacheService.isTrackCached(track.id)) return;
@@ -334,6 +357,7 @@ class AudioProvider extends ChangeNotifier {
   @override
   void dispose() {
     _seekDebounceTimer?.cancel();
+    _backgroundCacheTimer?.cancel();
     _currentDownloadSubscription?.cancel();
     _musicService.dispose();
     super.dispose();

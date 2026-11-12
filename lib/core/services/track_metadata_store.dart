@@ -172,6 +172,37 @@ class TrackMetadataStore {
     }
   }
 
+  static Future<void> removeTrackFromPlaylist(String playlistName, String trackId) async {
+    if (_userPlaylists == null) await init();
+    final list = _userPlaylists![playlistName];
+    if (list != null && list.contains(trackId)) {
+      list.remove(trackId);
+      _userPlaylists![playlistName] = list;
+      await _saveLibraryVault();
+    }
+  }
+
+  static Future<void> deletePlaylist(String playlistName) async {
+    if (_userPlaylists == null) await init();
+    if (_userPlaylists!.containsKey(playlistName)) {
+      _userPlaylists!.remove(playlistName);
+      await _saveLibraryVault();
+    }
+  }
+
+  static Future<List<YoutubeTrack>> getPlaylistTracks(String playlistName) async {
+    if (_userPlaylists == null) await init();
+    final trackIds = _userPlaylists![playlistName] ?? [];
+    final result = <YoutubeTrack>[];
+    for (final id in trackIds) {
+      final t = await getTrackMetadata(id);
+      if (t != null) {
+        result.add(t);
+      }
+    }
+    return result;
+  }
+
   static Future<void> _saveLibraryVault() async {
     try {
       final file = await _getFile(_userLibraryFileName);

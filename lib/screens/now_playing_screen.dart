@@ -720,16 +720,35 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Add to Playlist', style: AppTextStyles.h3),
-                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Add to Playlist', style: AppTextStyles.h3),
+                    TextButton.icon(
+                      icon: const Icon(Icons.add_rounded, size: 18, color: AppColors.primarySoft),
+                      label: Text('New', style: AppTextStyles.bodySmall.copyWith(color: AppColors.primarySoft, fontWeight: FontWeight.bold)),
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _showCreatePlaylistDialog(context, track, audioProvider);
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
                 if (playlists.isEmpty)
                   Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text('No playlists yet. Create one in Library.', style: AppTextStyles.caption),
+                    padding: const EdgeInsets.symmetric(vertical: 16.0),
+                    child: Center(
+                      child: Text(
+                        'No playlists yet. Tap "New" above to create one!',
+                        style: AppTextStyles.caption.copyWith(color: AppColors.textMuted),
+                      ),
+                    ),
                   )
                 else
                   ...playlists.map(
                     (pName) => ListTile(
+                      contentPadding: EdgeInsets.zero,
                       leading: const Icon(Icons.playlist_play_rounded, color: AppColors.primarySoft),
                       title: Text(pName, style: AppTextStyles.bodyMedium),
                       onTap: () {
@@ -750,6 +769,59 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
           ),
         );
       },
+    );
+  }
+
+  void _showCreatePlaylistDialog(BuildContext context, YoutubeTrack track, AudioProvider audioProvider) {
+    final textController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface1,
+        shape: RoundedRectangleBorder(borderRadius: AppRadii.borderLarge),
+        title: Text('New Playlist', style: AppTextStyles.h3),
+        content: TextField(
+          controller: textController,
+          autofocus: true,
+          style: AppTextStyles.bodyMedium,
+          decoration: InputDecoration(
+            hintText: 'Playlist name',
+            hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textMuted),
+            enabledBorder: const UnderlineInputBorder(
+              borderSide: BorderSide(color: AppColors.primarySoft),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancel', style: AppTextStyles.bodySmall),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primarySoft,
+              shape: RoundedRectangleBorder(borderRadius: AppRadii.borderPill),
+            ),
+            onPressed: () async {
+              final name = textController.text.trim();
+              if (name.isNotEmpty) {
+                await audioProvider.createPlaylist(name);
+                await audioProvider.addTrackToPlaylist(name, track);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Created "$name" and added track'),
+                      backgroundColor: AppColors.surface1,
+                    ),
+                  );
+                }
+              }
+              if (ctx.mounted) Navigator.pop(ctx);
+            },
+            child: Text('Create & Add', style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+          ),
+        ],
+      ),
     );
   }
 }
