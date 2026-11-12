@@ -83,7 +83,7 @@ jobs:
           flutter build apk --release --android-skip-build-dependency-validation \
             --build-name=${{ env.APP_VERSION }} \
             --build-number=${{ env.BUILD_NUMBER }} \
-            $EXTRA_FLAGS
+            $EXTRA_FLAGS 2>&1 | tee build.log
           
           FINAL_APK=$(find . -name "*release*.apk" -type f | head -n 1)
           if [ -z "$FINAL_APK" ]; then
