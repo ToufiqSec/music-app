@@ -78,21 +78,11 @@ jobs:
           if [ -n "${{ secrets.GROQ_API_KEY }}" ]; then
             EXTRA_FLAGS="--dart-define=GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}"
           fi
-          flutter build apk --release --android-skip-build-dependency-validation $EXTRA_FLAGS --verbose > build.log 2>&1 || {
-            echo "::error::Flutter build failed! Printing tail of build.log:"
-            tail -n 250 build.log
-            echo "Attempting Gradle assembleRelease to pinpoint failure..."
-            cd android
-            ./gradlew assembleRelease --stacktrace --no-daemon -Pandroid.skipBuildDependencyValidation=true > gradle.log 2>&1 || {
-              echo "::error::Gradle assembleRelease failed! Printing tail of gradle.log:"
-              tail -n 250 gradle.log
-            }
-            cd ..
-          }
+          flutter build apk --release --android-skip-build-dependency-validation $EXTRA_FLAGS
           
           FINAL_APK=$(find . -name "*release*.apk" -type f | head -n 1)
           if [ -z "$FINAL_APK" ]; then
-            echo "FATAL: Neither Flutter nor Gradle produced a release APK."
+            echo "FATAL: Release APK was not generated."
             find . -name "*.apk" -type f
             exit 1
           fi
