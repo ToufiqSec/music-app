@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:audio_service/audio_service.dart';
 import 'services/audio_handler.dart';
 import 'providers/audio_provider.dart';
+import 'providers/auth_provider.dart';
+import 'core/services/supabase_service.dart';
 import 'screens/home_screen.dart';
 import 'theme/app_theme.dart';
 
@@ -63,6 +65,7 @@ class MusicAppBootstrap extends StatefulWidget {
 
 class _MusicAppBootstrapState extends State<MusicAppBootstrap> {
   AudioProvider? _audioProvider;
+  AuthProvider? _authProvider;
 
   @override
   void initState() {
@@ -72,6 +75,16 @@ class _MusicAppBootstrapState extends State<MusicAppBootstrap> {
   }
 
   Future<void> _initServices() async {
+    // 1. Initialize Supabase first for backend Auth & Cloud sync
+    try {
+      debugPrint('[Startup] Initializing Supabase...');
+      await SupabaseService.initialize();
+      debugPrint('[Startup] Supabase initialized.');
+    } catch (e, stack) {
+      debugPrint('[Startup] Supabase initialization failed: $e\n$stack');
+    }
+
+    // 2. Initialize native AudioService
     MyAudioHandler handler;
     try {
       debugPrint('[Startup] Initializing native AudioService...');
@@ -95,8 +108,9 @@ class _MusicAppBootstrapState extends State<MusicAppBootstrap> {
     if (mounted) {
       setState(() {
         _audioProvider = AudioProvider(handler);
+        _authProvider = AuthProvider();
       });
-      debugPrint('[Startup] AudioProvider mounted, rendering HomeScreen.');
+      debugPrint('[Startup] Providers mounted, rendering HomeScreen.');
     }
   }
 
@@ -129,6 +143,7 @@ class _MusicAppBootstrapState extends State<MusicAppBootstrap> {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: _audioProvider!),
+        ChangeNotifierProvider.value(value: _authProvider ?? AuthProvider()),
       ],
       child: const MusicApp(),
     );

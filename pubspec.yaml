@@ -28,6 +28,9 @@ dependencies:
   cached_network_image: ^3.4.1
   cupertino_icons: ^1.0.8
 
+  # Supabase Backend & Authentication
+  supabase_flutter: ^2.8.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

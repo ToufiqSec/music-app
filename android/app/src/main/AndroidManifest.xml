@@ -14,6 +14,14 @@
     <!-- In-App Auto-Update Package Installer Permission -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
 
+    <!-- Android 11+ Package Visibility for Package Installer -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="application/vnd.android.package-archive" />
+        </intent>
+    </queries>
+
     <application
         android:label="Music App"
         android:name="${applicationName}"
@@ -38,6 +46,14 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+
+            <!-- Supabase Auth Deep Link Callback -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="io.supabase.musicapp" android:host="login-callback" />
             </intent-filter>
         </activity>
 

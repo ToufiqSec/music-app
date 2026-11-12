@@ -6,6 +6,7 @@ import '../features/music/models/music_models.dart';
 import '../core/services/audio_cache_service.dart';
 import '../core/services/youtube_music_service.dart';
 import '../core/services/track_metadata_store.dart';
+import '../core/services/supabase_service.dart';
 import '../services/audio_handler.dart';
 
 enum RepeatMode { off, all, one }
@@ -71,6 +72,16 @@ class AudioProvider extends ChangeNotifier {
     _historyTracks = await TrackMetadataStore.getListeningHistory();
     _userPlaylists = await TrackMetadataStore.getUserPlaylists();
     notifyListeners();
+
+    // If authenticated with Supabase, sync down cloud data to local disk cache
+    if (SupabaseService.isAuthenticated) {
+      SupabaseService.syncDownAllUserData().then((_) async {
+        _favoriteIds = await TrackMetadataStore.getFavoriteIds();
+        _historyTracks = await TrackMetadataStore.getListeningHistory();
+        _userPlaylists = await TrackMetadataStore.getUserPlaylists();
+        notifyListeners();
+      });
+    }
   }
 
   void _initListeners() {
@@ -184,6 +195,7 @@ class AudioProvider extends ChangeNotifier {
         notifyListeners();
       });
     });
+    SupabaseService.syncAddListeningHistory(track).catchError((_) {});
 
     try {
       // 1. Resolve stream or local file path
@@ -289,6 +301,7 @@ class AudioProvider extends ChangeNotifier {
     final result = await TrackMetadataStore.toggleFavorite(track);
     _favoriteIds = await TrackMetadataStore.getFavoriteIds();
     notifyListeners();
+    SupabaseService.syncToggleLikedSong(track, result).catchError((_) {});
     return result;
   }
 
@@ -297,24 +310,32 @@ class AudioProvider extends ChangeNotifier {
     await TrackMetadataStore.createPlaylist(name);
     _userPlaylists = await TrackMetadataStore.getUserPlaylists();
     notifyListeners();
+    SupabaseService.syncCreatePlaylist(name).catchError((_) {});
   }
 
   Future<void> addTrackToPlaylist(String playlistName, YoutubeTrack track) async {
     await TrackMetadataStore.addTrackToPlaylist(playlistName, track);
     _userPlaylists = await TrackMetadataStore.getUserPlaylists();
     notifyListeners();
+    SupabaseService.syncAddSongToPlaylist(playlistName, track).catchError((_) {});
   }
 
   Future<void> removeTrackFromPlaylist(String playlistName, String trackId) async {
     await TrackMetadataStore.removeTrackFromPlaylist(playlistName, trackId);
     _userPlaylists = await TrackMetadataStore.getUserPlaylists();
     notifyListeners();
+    SupabaseService.syncRemoveSongFromPlaylist(playlistName, trackId).catchError((_) {});
   }
 
   Future<void> deletePlaylist(String playlistName) async {
     await TrackMetadataStore.deletePlaylist(playlistName);
     _userPlaylists = await TrackMetadataStore.getUserPlaylists();
     notifyListeners();
+    SupabaseService.syncDeletePlaylist(playlistName).catchError((_) {});
+  }
+
+  Future<void> reloadUserLibrary() async {
+    await _loadUserLibrary();
   }
 
   Future<List<YoutubeTrack>> getPlaylistTracks(String playlistName) async {

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -18,6 +19,8 @@ import '../core/services/app_update_service.dart';
 import 'search_screen.dart';
 import 'library_screen.dart';
 import 'downloads_screen.dart';
+import 'profile_screen.dart';
+import '../providers/auth_provider.dart';
 
 /// Main Discovery Hub and Navigation Shell for Music App.
 /// Universal UI Design System: Twilight Calm.
@@ -30,17 +33,30 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentTabIndex = 0;
+  Timer? _periodicUpdateTimer;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkForUpdatesOnLaunch();
+      AppUpdateService.getInstalledVersionName();
+      _checkForUpdates(force: false);
+
+      // Periodic background check while the app remains open (every 4 hours)
+      _periodicUpdateTimer = Timer.periodic(const Duration(hours: 4), (_) {
+        _checkForUpdates(force: false);
+      });
     });
   }
 
-  Future<void> _checkForUpdatesOnLaunch() async {
-    final updateInfo = await AppUpdateService.checkForUpdate();
+  @override
+  void dispose() {
+    _periodicUpdateTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _checkForUpdates({bool force = false}) async {
+    final updateInfo = await AppUpdateService.checkForUpdate(force: force);
     if (updateInfo != null && mounted) {
       UpdateDialog.show(context, updateInfo);
     }
@@ -172,6 +188,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
   @override
   Widget build(BuildContext context) {
     final audioProvider = context.read<AudioProvider>();
+    final authProvider = context.watch<AuthProvider>();
 
     return SafeArea(
       bottom: false,
@@ -264,22 +281,39 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
                       onPressed: () => _showHistorySheet(context, audioProvider),
                     ),
                     GestureDetector(
-                      onTap: () => _showProfileDialog(context),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                        );
+                      },
                       child: Container(
-                        width: 34,
-                        height: 34,
+                        width: 36,
+                        height: 36,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: AppColors.surface2,
                           border: Border.all(
-                            color: AppColors.primarySoft.withValues(alpha: 0.4),
+                            color: authProvider.isAuthenticated
+                                ? AppColors.success.withValues(alpha: 0.6)
+                                : AppColors.primarySoft.withValues(alpha: 0.4),
                             width: 1.5,
                           ),
                         ),
-                        child: const Icon(
-                          Icons.person_rounded,
-                          size: 20,
-                          color: AppColors.primarySoft,
+                        child: Center(
+                          child: authProvider.isAuthenticated && authProvider.displayName.isNotEmpty
+                              ? Text(
+                                  authProvider.displayName[0].toUpperCase(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons.person_rounded,
+                                  size: 20,
+                                  color: AppColors.primarySoft,
+                                ),
                         ),
                       ),
                     ),
