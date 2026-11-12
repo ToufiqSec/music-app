@@ -43,8 +43,11 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      AppUpdateService.getInstalledVersionName();
-      _checkForUpdates(force: false);
+      await AppUpdateService.getInstalledVersionName();
+      await Future.delayed(const Duration(milliseconds: 1200));
+      if (mounted) {
+        _checkForUpdates(force: false);
+      }
       _checkArtistOnboardingOnFirstLaunch();
 
       // Periodic background check while the app remains open (every 4 hours)

@@ -125,9 +125,9 @@ class AppUpdateService {
       final cleanTag = rawTag.replaceAll(RegExp(r'[^0-9.]'), '');
       if (cleanTag.isEmpty) return null;
 
-      // Check if remote version is strictly newer
+      // Check if remote version is strictly newer (or forced by user tap)
       final isNewer = isVersionNewer(cleanTag, currentVersion);
-      if (!isNewer) {
+      if (!isNewer && !force) {
         // Clear any old snoozed version since app is now on or above it
         await _clearSnoozedVersion();
         return null;
