@@ -13,6 +13,7 @@ import '../theme/app_shadows.dart';
 import '../theme/app_motion.dart';
 import '../widgets/glass_icon_button.dart';
 import '../widgets/twilight_scene_background.dart';
+import '../widgets/synced_lyrics_view.dart';
 
 /// Full-Screen Now Playing Sanctuary Player from Universal UI Design System: Twilight Calm.
 class NowPlayingScreen extends StatefulWidget {
@@ -390,7 +391,25 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                         ],
                       ),
 
-                      const Spacer(),
+                      const SizedBox(height: 16),
+
+                      // Synced Karaoke Lyrics View (Issue 5: fills empty lower area)
+                      Container(
+                        height: 160,
+                        decoration: BoxDecoration(
+                          color: AppColors.surface1.withValues(alpha: 0.65),
+                          borderRadius: AppRadii.borderLarge,
+                          border: Border.all(
+                            color: AppColors.primarySoft.withValues(alpha: 0.2),
+                            width: 1,
+                          ),
+                          boxShadow: const [AppShadows.shadowSoft],
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: SyncedLyricsView(track: track),
+                      ),
+
+                      const SizedBox(height: 12),
 
                       // Bottom Utilities (Offline Cache Download, Up Next Queue)
                       Padding(
