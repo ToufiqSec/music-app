@@ -40,19 +40,18 @@ class YoutubeMusicService {
       }
     } catch (_) {}
 
-    // Tier 2 Fallback / Supplement: YouTube Explode Search
-    if (results.length < 5) {
-      try {
-        final ytTracks = await _searchYouTube(cleanQuery);
-        for (final track in ytTracks) {
-          final key = '${track.title.toLowerCase()}_${track.artist.toLowerCase()}';
-          if (!seenKeys.contains(key)) {
-            seenKeys.add(key);
-            results.add(track);
-          }
+    // Tier 2 Supplement & Universal Fallback: Regular YouTube Global Audio Search
+    // Unlocks long-tail content: Audio dramas (Sunday Suspense), podcasts, stories, audiobooks, foreign languages
+    try {
+      final ytTracks = await _searchYouTube(cleanQuery);
+      for (final track in ytTracks) {
+        final key = '${track.title.toLowerCase()}_${track.artist.toLowerCase()}';
+        if (!seenKeys.contains(key)) {
+          seenKeys.add(key);
+          results.add(track);
         }
-      } catch (_) {}
-    }
+      }
+    } catch (_) {}
 
     return results;
   }

@@ -6,6 +6,7 @@ import '../providers/audio_provider.dart';
 import '../core/services/curated_tracks.dart';
 import '../core/services/track_metadata_store.dart';
 import '../features/music/models/music_models.dart';
+import '../widgets/generated_cover_art.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radii.dart';
 import '../theme/app_text_styles.dart';
@@ -133,15 +134,31 @@ class LibraryScreen extends StatelessWidget {
                             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
                             leading: ClipRRect(
                               borderRadius: AppRadii.borderSmall,
-                              child: track.thumbnailUrl.isNotEmpty
+                              child: (track.thumbnailUrl.isNotEmpty &&
+                                      !track.thumbnailUrl.contains('hqdefault') &&
+                                      !track.thumbnailUrl.contains('mqdefault'))
                                   ? CachedNetworkImage(
                                       imageUrl: track.thumbnailUrl,
                                       width: 44,
                                       height: 44,
                                       fit: BoxFit.cover,
-                                      errorWidget: (_, __, ___) => _buildThumbFallback(),
+                                      errorWidget: (_, __, ___) => GeneratedCoverArt(
+                                        title: track.title,
+                                        artist: track.artist,
+                                        thumbnailUrl: track.thumbnailUrl,
+                                        durationSeconds: track.durationSeconds,
+                                        size: 44,
+                                        borderRadius: AppRadii.borderSmall,
+                                      ),
                                     )
-                                  : _buildThumbFallback(),
+                                  : GeneratedCoverArt(
+                                      title: track.title,
+                                      artist: track.artist,
+                                      thumbnailUrl: track.thumbnailUrl,
+                                      durationSeconds: track.durationSeconds,
+                                      size: 44,
+                                      borderRadius: AppRadii.borderSmall,
+                                    ),
                             ),
                             title: Text(
                               track.title,
@@ -458,15 +475,31 @@ class LibraryScreen extends StatelessWidget {
                               contentPadding: EdgeInsets.zero,
                               leading: ClipRRect(
                                 borderRadius: AppRadii.borderSmall,
-                                child: track.thumbnailUrl.isNotEmpty
+                                child: (track.thumbnailUrl.isNotEmpty &&
+                                        !track.thumbnailUrl.contains('hqdefault') &&
+                                        !track.thumbnailUrl.contains('mqdefault'))
                                     ? CachedNetworkImage(
                                         imageUrl: track.thumbnailUrl,
                                         width: 44,
                                         height: 44,
                                         fit: BoxFit.cover,
-                                        errorWidget: (_, __, ___) => _buildThumbFallback(),
+                                        errorWidget: (_, __, ___) => GeneratedCoverArt(
+                                          title: track.title,
+                                          artist: track.artist,
+                                          thumbnailUrl: track.thumbnailUrl,
+                                          durationSeconds: track.durationSeconds,
+                                          size: 44,
+                                          borderRadius: AppRadii.borderSmall,
+                                        ),
                                       )
-                                    : _buildThumbFallback(),
+                                    : GeneratedCoverArt(
+                                        title: track.title,
+                                        artist: track.artist,
+                                        thumbnailUrl: track.thumbnailUrl,
+                                        durationSeconds: track.durationSeconds,
+                                        size: 44,
+                                        borderRadius: AppRadii.borderSmall,
+                                      ),
                               ),
                               title: Text(track.title, style: AppTextStyles.bodyMedium),
                               subtitle: Text(track.artist, style: AppTextStyles.caption),
@@ -597,15 +630,31 @@ class LibraryScreen extends StatelessWidget {
                                         contentPadding: EdgeInsets.zero,
                                         leading: ClipRRect(
                                           borderRadius: AppRadii.borderSmall,
-                                          child: track.thumbnailUrl.isNotEmpty
+                                          child: (track.thumbnailUrl.isNotEmpty &&
+                                                  !track.thumbnailUrl.contains('hqdefault') &&
+                                                  !track.thumbnailUrl.contains('mqdefault'))
                                               ? CachedNetworkImage(
                                                   imageUrl: track.thumbnailUrl,
                                                   width: 44,
                                                   height: 44,
                                                   fit: BoxFit.cover,
-                                                  errorWidget: (_, __, ___) => _buildThumbFallback(),
+                                                  errorWidget: (_, __, ___) => GeneratedCoverArt(
+                                                    title: track.title,
+                                                    artist: track.artist,
+                                                    thumbnailUrl: track.thumbnailUrl,
+                                                    durationSeconds: track.durationSeconds,
+                                                    size: 44,
+                                                    borderRadius: AppRadii.borderSmall,
+                                                  ),
                                                 )
-                                              : _buildThumbFallback(),
+                                              : GeneratedCoverArt(
+                                                  title: track.title,
+                                                  artist: track.artist,
+                                                  thumbnailUrl: track.thumbnailUrl,
+                                                  durationSeconds: track.durationSeconds,
+                                                  size: 44,
+                                                  borderRadius: AppRadii.borderSmall,
+                                                ),
                                         ),
                                         title: Text(
                                           track.title,

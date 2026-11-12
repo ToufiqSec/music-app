@@ -12,6 +12,7 @@ class TrackMetadataStore {
   static Set<String>? _favoriteIds;
   static List<String>? _historyIds;
   static Map<String, List<String>>? _userPlaylists;
+  static Map<String, int>? _playbackPositions;
 
   static Future<File> _getFile(String filename) async {
     final docsDir = await getApplicationDocumentsDirectory();
@@ -54,15 +55,26 @@ class TrackMetadataStore {
             _userPlaylists![key] = List<String>.from(val ?? []);
           });
         }
+        _playbackPositions = {};
+        if (decoded['playback_positions'] is Map) {
+          final posMap = Map<String, dynamic>.from(decoded['playback_positions']);
+          posMap.forEach((key, val) {
+            if (val is num) {
+              _playbackPositions![key] = val.toInt();
+            }
+          });
+        }
       } else {
         _favoriteIds = {};
         _historyIds = [];
         _userPlaylists = {};
+        _playbackPositions = {};
       }
     } catch (_) {
       _favoriteIds = {};
       _historyIds = [];
       _userPlaylists = {};
+      _playbackPositions = {};
     }
   }
 
@@ -203,6 +215,26 @@ class TrackMetadataStore {
     return result;
   }
 
+  // --- Long Audio Resume Positions ---
+  static Future<int> getPlaybackPosition(String trackId) async {
+    if (_playbackPositions == null) await init();
+    return _playbackPositions![trackId] ?? 0;
+  }
+
+  static Future<void> savePlaybackPosition(String trackId, int seconds) async {
+    if (_playbackPositions == null) await init();
+    _playbackPositions![trackId] = seconds;
+    await _saveLibraryVault();
+  }
+
+  static Future<void> clearPlaybackPosition(String trackId) async {
+    if (_playbackPositions == null) await init();
+    if (_playbackPositions!.containsKey(trackId)) {
+      _playbackPositions!.remove(trackId);
+      await _saveLibraryVault();
+    }
+  }
+
   static Future<void> _saveLibraryVault() async {
     try {
       final file = await _getFile(_userLibraryFileName);
@@ -210,6 +242,7 @@ class TrackMetadataStore {
         'favorites': _favoriteIds?.toList() ?? [],
         'history': _historyIds ?? [],
         'playlists': _userPlaylists ?? {},
+        'playback_positions': _playbackPositions ?? {},
       };
       await file.writeAsString(jsonEncode(data));
     } catch (_) {}

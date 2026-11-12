@@ -100,4 +100,23 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
     }
     await _player.play();
   }
+
+  /// Smoothly fades volume up or down over [duration] to prevent harsh audio pops or clicks (Issue 8)
+  Future<void> fadeVolume(double targetVolume, Duration duration) async {
+    final startVolume = _player.volume;
+    final delta = targetVolume - startVolume;
+    if (delta.abs() < 0.01 || duration.inMilliseconds <= 0) {
+      await _player.setVolume(targetVolume);
+      return;
+    }
+
+    const steps = 15;
+    final stepDuration = Duration(milliseconds: duration.inMilliseconds ~/ steps);
+    for (int i = 1; i <= steps; i++) {
+      final v = (startVolume + (delta * (i / steps))).clamp(0.0, 1.0);
+      await _player.setVolume(v);
+      await Future.delayed(stepDuration);
+    }
+    await _player.setVolume(targetVolume);
+  }
 }

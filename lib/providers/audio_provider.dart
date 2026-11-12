@@ -7,6 +7,8 @@ import '../core/services/audio_cache_service.dart';
 import '../core/services/youtube_music_service.dart';
 import '../core/services/track_metadata_store.dart';
 import '../core/services/supabase_service.dart';
+import '../core/services/related_tracks_engine.dart';
+import '../widgets/generated_cover_art.dart';
 import '../services/audio_handler.dart';
 
 enum RepeatMode { off, all, one }
@@ -14,6 +16,7 @@ enum RepeatMode { off, all, one }
 class AudioProvider extends ChangeNotifier {
   final MyAudioHandler _audioHandler;
   final YoutubeMusicService _musicService = YoutubeMusicService();
+  late final RelatedTracksEngine _relatedEngine;
 
   YoutubeTrack? _currentTrack;
   List<YoutubeTrack> _playlistQueue = [];
@@ -23,6 +26,11 @@ class AudioProvider extends ChangeNotifier {
   bool _isBuffering = false;
   bool _isShuffle = false;
   RepeatMode _repeatMode = RepeatMode.off;
+
+  // Autoplay & Smooth Transition controls (Issue 8)
+  bool _autoplayEnabled = true;
+  double _crossfadeSeconds = 2.0;
+  int _lastSavedPositionSecond = 0;
 
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
@@ -43,6 +51,7 @@ class AudioProvider extends ChangeNotifier {
   Map<String, List<String>> _userPlaylists = {};
 
   AudioProvider(this._audioHandler) {
+    _relatedEngine = RelatedTracksEngine(_musicService);
     _initListeners();
     _loadUserLibrary();
   }
@@ -55,6 +64,8 @@ class AudioProvider extends ChangeNotifier {
   bool get isBuffering => _isBuffering;
   bool get isShuffle => _isShuffle;
   RepeatMode get repeatMode => _repeatMode;
+  bool get autoplayEnabled => _autoplayEnabled;
+  double get crossfadeSeconds => _crossfadeSeconds;
   Duration get position => _position;
   Duration get duration => _duration;
   Duration get bufferedPosition => _bufferedPosition;
@@ -65,6 +76,16 @@ class AudioProvider extends ChangeNotifier {
   Map<String, List<String>> get userPlaylists => _userPlaylists;
 
   bool isTrackLiked(String trackId) => _favoriteIds.contains(trackId);
+
+  void toggleAutoplay() {
+    _autoplayEnabled = !_autoplayEnabled;
+    notifyListeners();
+  }
+
+  void setCrossfadeSeconds(double seconds) {
+    _crossfadeSeconds = seconds.clamp(0.0, 5.0);
+    notifyListeners();
+  }
 
   Future<void> _loadUserLibrary() async {
     await TrackMetadataStore.init();
@@ -95,6 +116,7 @@ class AudioProvider extends ChangeNotifier {
     _audioHandler.player.positionStream.listen((pos) {
       _position = pos;
       _checkAndPrefetchNextTrack(pos);
+      _checkAndSaveResumePosition(pos);
       notifyListeners();
     });
 
@@ -110,27 +132,78 @@ class AudioProvider extends ChangeNotifier {
       notifyListeners();
     });
 
-    // Auto-advance or Repeat One loop on completion
+    // Auto-advance, repeat one, or Autoplay next related track on completion (Issue 8)
     _audioHandler.player.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed) {
-        if (_repeatMode == RepeatMode.one && _currentTrack != null) {
-          seekTo(Duration.zero);
-          _audioHandler.play();
-        } else {
-          playNext();
-        }
+        _onTrackCompleted();
       }
     });
   }
 
-  /// Gapless pre-fetching: when current track is at 80% duration, pre-resolve next track.
+  /// Handles track completion with queue precedence and dynamic related autoplay
+  Future<void> _onTrackCompleted() async {
+    if (_currentTrack != null) {
+      TrackMetadataStore.clearPlaybackPosition(_currentTrack!.id);
+      _relatedEngine.markTrackPlayed(_currentTrack!.id);
+    }
+
+    if (_repeatMode == RepeatMode.one && _currentTrack != null) {
+      seekTo(Duration.zero);
+      _audioHandler.play();
+      return;
+    }
+
+    // 1. Play remaining queue first
+    final nextIdx = _getNextIndex();
+    if (nextIdx != null) {
+      _currentIndex = nextIdx;
+      await playTrack(_playlistQueue[nextIdx]);
+      return;
+    }
+
+    // 2. Queue ended -> Continue with Autoplay related track if enabled
+    if (_autoplayEnabled && _currentTrack != null) {
+      final nextTrack = await _relatedEngine.findNextRelatedTrack(_currentTrack!);
+      if (nextTrack != null) {
+        _playlistQueue.add(nextTrack);
+        _currentIndex = _playlistQueue.length - 1;
+        await playTrack(nextTrack);
+        return;
+      }
+    }
+
+    // 3. Fallback queue wrap
+    if (_repeatMode == RepeatMode.all && _playlistQueue.isNotEmpty) {
+      _currentIndex = 0;
+      await playTrack(_playlistQueue[0]);
+    }
+  }
+
+  /// Gapless pre-fetching & related candidate prefetch
   void _checkAndPrefetchNextTrack(Duration currentPos) {
     if (_duration.inMilliseconds > 0 && !_preFetchedNextTrack) {
       final progressRatio = currentPos.inMilliseconds / _duration.inMilliseconds;
       if (progressRatio >= 0.80) {
         _preFetchedNextTrack = true;
         _prefetchNextInQueue();
+        if (_autoplayEnabled && _currentTrack != null) {
+          _relatedEngine.prefetchForTrack(_currentTrack!);
+        }
       }
+    }
+  }
+
+  /// Long Audio Playback Position Memory (Issue 6 Part A)
+  void _checkAndSaveResumePosition(Duration pos) {
+    if (_currentTrack == null) return;
+    final isLong = _currentTrack!.durationSeconds > 900 ||
+        AudioTypeDetector.detect(_currentTrack!.title, _currentTrack!.artist, _currentTrack!.durationSeconds) != AudioContentType.song;
+    if (!isLong) return;
+
+    final sec = pos.inSeconds;
+    if (sec > 15 && (sec - _lastSavedPositionSecond).abs() >= 10) {
+      _lastSavedPositionSecond = sec;
+      TrackMetadataStore.savePlaybackPosition(_currentTrack!.id, sec);
     }
   }
 
@@ -188,6 +261,14 @@ class AudioProvider extends ChangeNotifier {
     _isBuffering = true;
     notifyListeners();
 
+    // Check long audio resume position (Issue 6 Part A)
+    final isLong = track.durationSeconds > 900 ||
+        AudioTypeDetector.detect(track.title, track.artist, track.durationSeconds) != AudioContentType.song;
+    int resumeSeconds = 0;
+    if (isLong) {
+      resumeSeconds = await TrackMetadataStore.getPlaybackPosition(track.id);
+    }
+
     // Record to listening history
     TrackMetadataStore.addToHistory(track).then((_) {
       TrackMetadataStore.getListeningHistory().then((h) {
@@ -198,6 +279,11 @@ class AudioProvider extends ChangeNotifier {
     SupabaseService.syncAddListeningHistory(track).catchError((_) {});
 
     try {
+      // Smooth fade-out of previous track if currently playing (Issue 8)
+      if (_isPlaying) {
+        await _audioHandler.fadeVolume(0.15, const Duration(milliseconds: 150));
+      }
+
       // 1. Resolve stream or local file path
       final cached = await AudioCacheService.getCachedTrackFile(track.id);
       String? resolvedUrl;
@@ -215,6 +301,15 @@ class AudioProvider extends ChangeNotifier {
 
       // 2. Play immediately via AudioHandler
       await _audioHandler.playTrackUrl(track.toMediaItem(), resolvedUrl);
+
+      // Seek to resume position for long narrative audio / podcast
+      if (resumeSeconds > 15) {
+        await _audioHandler.seek(Duration(seconds: resumeSeconds));
+      }
+
+      // Smooth fade-in of new track (Issue 8)
+      final fadeDurationMs = (_crossfadeSeconds * 1000).toInt().clamp(200, 4000);
+      _audioHandler.fadeVolume(1.0, Duration(milliseconds: fadeDurationMs));
 
       // 3. Network protocol check (robust for Windows & Unix)
       // Debounce background caching by 8s so initial stream buffer is never starved
@@ -263,6 +358,13 @@ class AudioProvider extends ChangeNotifier {
     if (nextIdx != null) {
       _currentIndex = nextIdx;
       await playTrack(_playlistQueue[nextIdx]);
+    } else if (_autoplayEnabled && _currentTrack != null) {
+      final candidate = await _relatedEngine.findNextRelatedTrack(_currentTrack!);
+      if (candidate != null) {
+        _playlistQueue.add(candidate);
+        _currentIndex = _playlistQueue.length - 1;
+        await playTrack(candidate);
+      }
     }
   }
 

@@ -618,6 +618,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildPreferencesCard(BuildContext context, AuthProvider auth, UserSettingsData settings) {
+    final audio = context.watch<AudioProvider>();
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface1,
@@ -671,16 +673,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           Divider(color: AppColors.surface2, height: 1),
 
-          // Autoplay
+          // Autoplay (Issue 8)
           SwitchListTile(
             secondary: const Icon(Icons.all_inclusive_rounded, color: AppColors.primarySoft),
-            title: const Text('Autoplay Similar Songs', style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
-            subtitle: const Text('Queue similar tracks when current song ends', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-            value: settings.autoplayEnabled,
+            title: const Text('Autoplay Next Related Track', style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
+            subtitle: const Text('Continuous dynamic audio stream when current track ends', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+            value: audio.autoplayEnabled,
             activeColor: AppColors.primary,
             onChanged: (val) {
+              audio.toggleAutoplay();
               auth.updateSettings(autoplay: val);
             },
+          ),
+          Divider(color: AppColors.surface2, height: 1),
+
+          // Crossfade Duration (Issue 8)
+          ListTile(
+            leading: const Icon(Icons.graphic_eq_rounded, color: AppColors.primarySoft),
+            title: const Text('Audio Crossfade Transition', style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
+            subtitle: Text(
+              audio.crossfadeSeconds > 0
+                  ? '${audio.crossfadeSeconds.toStringAsFixed(1)}s natural overlap'
+                  : 'Disabled (Cut transitions)',
+              style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+            ),
+            trailing: DropdownButton<double>(
+              value: audio.crossfadeSeconds,
+              dropdownColor: AppColors.surface2,
+              underline: const SizedBox(),
+              icon: const Icon(Icons.arrow_drop_down, color: AppColors.iconIdle),
+              style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+              items: const [
+                DropdownMenuItem(value: 0.0, child: Text('Off')),
+                DropdownMenuItem(value: 1.0, child: Text('1.0s')),
+                DropdownMenuItem(value: 2.0, child: Text('2.0s')),
+                DropdownMenuItem(value: 3.0, child: Text('3.0s')),
+                DropdownMenuItem(value: 4.0, child: Text('4.0s')),
+              ],
+              onChanged: (val) {
+                if (val != null) {
+                  audio.setCrossfadeSeconds(val);
+                }
+              },
+            ),
           ),
           Divider(color: AppColors.surface2, height: 1),
 

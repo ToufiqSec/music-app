@@ -10,6 +10,7 @@ import '../features/music/models/music_models.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radii.dart';
 import '../theme/app_text_styles.dart';
+import '../widgets/generated_cover_art.dart';
 
 class DownloadsScreen extends StatefulWidget {
   const DownloadsScreen({super.key});
@@ -200,15 +201,31 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                                       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                                       leading: ClipRRect(
                                         borderRadius: AppRadii.borderSmall,
-                                        child: track.thumbnailUrl.isNotEmpty
+                                        child: (track.thumbnailUrl.isNotEmpty &&
+                                                !track.thumbnailUrl.contains('hqdefault') &&
+                                                !track.thumbnailUrl.contains('mqdefault'))
                                             ? CachedNetworkImage(
                                                 imageUrl: track.thumbnailUrl,
                                                 width: 48,
                                                 height: 48,
                                                 fit: BoxFit.cover,
-                                                errorWidget: (_, __, ___) => _buildFallbackThumbnail(),
+                                                errorWidget: (_, __, ___) => GeneratedCoverArt(
+                                                  title: track.title,
+                                                  artist: track.artist,
+                                                  thumbnailUrl: track.thumbnailUrl,
+                                                  durationSeconds: track.durationSeconds,
+                                                  size: 48,
+                                                  borderRadius: AppRadii.borderSmall,
+                                                ),
                                               )
-                                            : _buildFallbackThumbnail(),
+                                            : GeneratedCoverArt(
+                                                title: track.title,
+                                                artist: track.artist,
+                                                thumbnailUrl: track.thumbnailUrl,
+                                                durationSeconds: track.durationSeconds,
+                                                size: 48,
+                                                borderRadius: AppRadii.borderSmall,
+                                              ),
                                       ),
                                       title: Text(
                                         track.title,

@@ -7,6 +7,7 @@ import '../providers/audio_provider.dart';
 import '../providers/auth_provider.dart';
 import '../features/music/models/music_models.dart';
 import '../widgets/app_search_field.dart';
+import '../widgets/generated_cover_art.dart';
 import '../core/services/search_cache_store.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radii.dart';
@@ -45,6 +46,36 @@ class _SearchScreenState extends State<SearchScreen> {
     'Focus',
   ];
   String? _selectedCategory;
+  int _selectedFilterIndex = 0;
+  final List<String> _contentFilterTabs = [
+    'All',
+    'Songs',
+    'Shows & Drama',
+    'Podcasts',
+    'Audiobooks',
+    'Videos',
+  ];
+
+  List<YoutubeTrack> get _filteredResults {
+    if (_selectedFilterIndex == 0) return _searchResults;
+    return _searchResults.where((track) {
+      final type = AudioTypeDetector.detect(track.title, track.artist, track.durationSeconds);
+      switch (_selectedFilterIndex) {
+        case 1: // Songs
+          return type == AudioContentType.song;
+        case 2: // Shows & Drama
+          return type == AudioContentType.show;
+        case 3: // Podcasts
+          return type == AudioContentType.podcast;
+        case 4: // Audiobooks
+          return type == AudioContentType.audiobook;
+        case 5: // Videos
+          return track.thumbnailUrl.contains('ytimg.com') || track.thumbnailUrl.contains('youtube.com');
+        default:
+          return true;
+      }
+    }).toList();
+  }
 
   @override
   void initState() {
@@ -244,7 +275,49 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
             ),
 
-            // 3. Offline / Cached status subtle banner
+            // 3. Content Type Filter Tabs (Issue 6 Part A) - Visible when searching
+            if (hasActiveQuery && _searchResults.isNotEmpty)
+              Container(
+                height: 38,
+                margin: const EdgeInsets.only(bottom: 6),
+                child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _contentFilterTabs.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 6),
+                  itemBuilder: (context, idx) {
+                    final tab = _contentFilterTabs[idx];
+                    final isSelected = idx == _selectedFilterIndex;
+                    return GestureDetector(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        setState(() => _selectedFilterIndex = idx);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.primarySoft.withValues(alpha: 0.25) : AppColors.surface1,
+                          borderRadius: AppRadii.borderPill,
+                          border: Border.all(
+                            color: isSelected ? AppColors.primarySoft : AppColors.surface2,
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          tab,
+                          style: AppTextStyles.caption.copyWith(
+                            color: isSelected ? Colors.white : AppColors.textSecondary,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+            // 4. Offline / Cached status subtle banner
             if (_isOfflineNotice)
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -293,6 +366,16 @@ class _SearchScreenState extends State<SearchScreen> {
 
   /// Results list with 160 bottom padding to avoid floating nav bar
   Widget _buildResultsList(AudioProvider audioProvider) {
+    final list = _filteredResults;
+    if (list.isEmpty) {
+      return Center(
+        child: Text(
+          'No items found in ${_contentFilterTabs[_selectedFilterIndex]} tab.',
+          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textMuted),
+        ),
+      );
+    }
+
     return ListView.separated(
       padding: const EdgeInsets.only(
         left: 16,
@@ -300,10 +383,11 @@ class _SearchScreenState extends State<SearchScreen> {
         top: 8,
         bottom: 160,
       ),
-      itemCount: _searchResults.length,
+      itemCount: list.length,
       separatorBuilder: (_, __) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
-        final track = _searchResults[index];
+        final track = list[index];
+        final type = AudioTypeDetector.detect(track.title, track.artist, track.durationSeconds);
 
         return Selector<AudioProvider, (bool, bool)>(
           selector: (_, ap) => (
@@ -337,15 +421,31 @@ class _SearchScreenState extends State<SearchScreen> {
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 leading: ClipRRect(
                   borderRadius: AppRadii.borderSmall,
-                  child: track.thumbnailUrl.isNotEmpty
+                  child: (track.thumbnailUrl.isNotEmpty &&
+                          !track.thumbnailUrl.contains('hqdefault') &&
+                          !track.thumbnailUrl.contains('mqdefault'))
                       ? CachedNetworkImage(
                           imageUrl: track.thumbnailUrl,
                           width: 48,
                           height: 48,
                           fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) => _buildFallbackThumbnail(),
+                          errorWidget: (_, __, ___) => GeneratedCoverArt(
+                            title: track.title,
+                            artist: track.artist,
+                            thumbnailUrl: track.thumbnailUrl,
+                            durationSeconds: track.durationSeconds,
+                            size: 48,
+                            borderRadius: AppRadii.borderSmall,
+                          ),
                         )
-                      : _buildFallbackThumbnail(),
+                      : GeneratedCoverArt(
+                          title: track.title,
+                          artist: track.artist,
+                          thumbnailUrl: track.thumbnailUrl,
+                          durationSeconds: track.durationSeconds,
+                          size: 48,
+                          borderRadius: AppRadii.borderSmall,
+                        ),
                 ),
                 title: Text(
                   track.title,
@@ -356,8 +456,36 @@ class _SearchScreenState extends State<SearchScreen> {
                     color: isCurrent ? AppColors.primarySoft : AppColors.textPrimary,
                   ),
                 ),
-                subtitle: Text(
-                  '${track.artist} • ${_formatDuration(track.durationSeconds)}',
+                subtitle: Row(
+                  children: [
+                    if (type != AudioContentType.song) ...[
+                      Container(
+                        margin: const EdgeInsets.only(right: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: AppColors.primarySoft.withValues(alpha: 0.2),
+                          borderRadius: AppRadii.borderSmall,
+                        ),
+                        child: Text(
+                          AudioTypeDetector.getBadgeText(type),
+                          style: TextStyle(
+                            fontSize: 8.5,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primarySoft,
+                          ),
+                        ),
+                      ),
+                    ],
+                    Expanded(
+                      child: Text(
+                        '${track.artist} • ${_formatDuration(track.durationSeconds)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                      ),
+                    ),
+                  ],
+                ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
@@ -513,15 +641,31 @@ class _SearchScreenState extends State<SearchScreen> {
                 dense: true,
                 leading: ClipRRect(
                   borderRadius: AppRadii.borderSmall,
-                  child: track.thumbnailUrl.isNotEmpty
+                  child: (track.thumbnailUrl.isNotEmpty &&
+                          !track.thumbnailUrl.contains('hqdefault') &&
+                          !track.thumbnailUrl.contains('mqdefault'))
                       ? CachedNetworkImage(
                           imageUrl: track.thumbnailUrl,
                           width: 40,
                           height: 40,
                           fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) => _buildFallbackThumbnail(),
+                          errorWidget: (_, __, ___) => GeneratedCoverArt(
+                            title: track.title,
+                            artist: track.artist,
+                            thumbnailUrl: track.thumbnailUrl,
+                            durationSeconds: track.durationSeconds,
+                            size: 40,
+                            borderRadius: AppRadii.borderSmall,
+                          ),
                         )
-                      : _buildFallbackThumbnail(),
+                      : GeneratedCoverArt(
+                          title: track.title,
+                          artist: track.artist,
+                          thumbnailUrl: track.thumbnailUrl,
+                          durationSeconds: track.durationSeconds,
+                          size: 40,
+                          borderRadius: AppRadii.borderSmall,
+                        ),
                 ),
                 title: Text(
                   track.title,

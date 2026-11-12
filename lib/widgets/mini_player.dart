@@ -9,6 +9,7 @@ import '../theme/app_radii.dart';
 import '../theme/app_text_styles.dart';
 import '../theme/app_shadows.dart';
 import '../theme/app_motion.dart';
+import 'generated_cover_art.dart';
 
 /// Docked Mini-Player adhering to the Twilight Calm design system.
 /// Pinned cleanly immediately above the floating Bottom Navigation Bar.
@@ -102,27 +103,32 @@ class MiniPlayer extends StatelessWidget {
                         tag: 'album_art_${track.id}',
                         child: ClipRRect(
                           borderRadius: AppRadii.borderSmall,
-                          child: Container(
-                            width: 44,
-                            height: 44,
-                            color: AppColors.surface2,
-                            child: track.thumbnailUrl.isNotEmpty
-                                ? CachedNetworkImage(
-                                    imageUrl: track.thumbnailUrl,
-                                    fit: BoxFit.cover,
-                                    memCacheWidth: 120,
-                                    errorWidget: (_, __, ___) => const Icon(
-                                      Icons.music_note,
-                                      color: AppColors.primarySoft,
-                                      size: 22,
-                                    ),
-                                  )
-                                : const Icon(
-                                    Icons.music_note,
-                                    color: AppColors.primarySoft,
-                                    size: 22,
+                          child: (track.thumbnailUrl.isNotEmpty &&
+                                  !track.thumbnailUrl.contains('hqdefault') &&
+                                  !track.thumbnailUrl.contains('mqdefault'))
+                              ? CachedNetworkImage(
+                                  imageUrl: track.thumbnailUrl,
+                                  width: 44,
+                                  height: 44,
+                                  fit: BoxFit.cover,
+                                  memCacheWidth: 120,
+                                  errorWidget: (_, __, ___) => GeneratedCoverArt(
+                                    title: track.title,
+                                    artist: track.artist,
+                                    thumbnailUrl: track.thumbnailUrl,
+                                    durationSeconds: track.durationSeconds,
+                                    size: 44,
+                                    borderRadius: AppRadii.borderSmall,
                                   ),
-                          ),
+                                )
+                              : GeneratedCoverArt(
+                                  title: track.title,
+                                  artist: track.artist,
+                                  thumbnailUrl: track.thumbnailUrl,
+                                  durationSeconds: track.durationSeconds,
+                                  size: 44,
+                                  borderRadius: AppRadii.borderSmall,
+                                ),
                         ),
                       ),
                       const SizedBox(width: 12),

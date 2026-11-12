@@ -14,6 +14,7 @@ import '../theme/app_motion.dart';
 import '../widgets/glass_icon_button.dart';
 import '../widgets/twilight_scene_background.dart';
 import '../widgets/synced_lyrics_view.dart';
+import '../widgets/generated_cover_art.dart';
 
 /// Full-Screen Now Playing Sanctuary Player from Universal UI Design System: Twilight Calm.
 class NowPlayingScreen extends StatefulWidget {
@@ -122,7 +123,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
 
                       const SizedBox(height: 20),
 
-                      // Album Artwork with Hero & Smooth Glow
+                      // Album Artwork with Generated Cover Fallback (Issue 6 Part B)
                       Center(
                         child: Hero(
                           tag: 'album_art_${track.id}',
@@ -140,17 +141,31 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                 ),
                               ],
                             ),
-                            child: ClipRRect(
-                              borderRadius: AppRadii.borderLarge,
-                              child: track.thumbnailUrl.isNotEmpty
-                                  ? CachedNetworkImage(
+                            child: (track.thumbnailUrl.isNotEmpty &&
+                                    !track.thumbnailUrl.contains('hqdefault') &&
+                                    !track.thumbnailUrl.contains('mqdefault'))
+                                ? ClipRRect(
+                                    borderRadius: AppRadii.borderLarge,
+                                    child: CachedNetworkImage(
                                       imageUrl: track.thumbnailUrl,
                                       fit: BoxFit.cover,
                                       memCacheWidth: 600,
-                                      errorWidget: (_, __, ___) => _buildArtworkFallback(),
-                                    )
-                                  : _buildArtworkFallback(),
-                            ),
+                                      errorWidget: (_, __, ___) => GeneratedCoverArt(
+                                        title: track.title,
+                                        artist: track.artist,
+                                        thumbnailUrl: track.thumbnailUrl,
+                                        durationSeconds: track.durationSeconds,
+                                        size: artSize,
+                                      ),
+                                    ),
+                                  )
+                                : GeneratedCoverArt(
+                                    title: track.title,
+                                    artist: track.artist,
+                                    thumbnailUrl: track.thumbnailUrl,
+                                    durationSeconds: track.durationSeconds,
+                                    size: artSize,
+                                  ),
                           ),
                         ),
                       ),
@@ -483,6 +498,64 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                               },
                             ),
 
+                            // Autoplay Toggle (Issue 8)
+                            Selector<AudioProvider, bool>(
+                              selector: (_, ap) => ap.autoplayEnabled,
+                              builder: (context, autoplayEnabled, child) {
+                                return GestureDetector(
+                                  onTap: () {
+                                    HapticFeedback.selectionClick();
+                                    audioProvider.toggleAutoplay();
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          !autoplayEnabled
+                                              ? 'Autoplay ON: Continuous related audio flow'
+                                              : 'Autoplay OFF: Playback stops after queue',
+                                          style: AppTextStyles.bodySmall,
+                                        ),
+                                        backgroundColor: AppColors.surface1,
+                                        duration: const Duration(seconds: 1),
+                                        behavior: SnackBarBehavior.floating,
+                                      ),
+                                    );
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                                    decoration: BoxDecoration(
+                                      color: autoplayEnabled
+                                          ? AppColors.primarySoft.withValues(alpha: 0.2)
+                                          : AppColors.surface1,
+                                      borderRadius: AppRadii.borderPill,
+                                      border: Border.all(
+                                        color: autoplayEnabled
+                                            ? AppColors.primarySoft
+                                            : AppColors.surface2,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.all_inclusive_rounded,
+                                          size: 15,
+                                          color: autoplayEnabled ? AppColors.primarySoft : AppColors.iconIdle,
+                                        ),
+                                        const SizedBox(width: 5),
+                                        Text(
+                                          'Autoplay',
+                                          style: AppTextStyles.caption.copyWith(
+                                            color: autoplayEnabled ? Colors.white : AppColors.textMuted,
+                                            fontWeight: autoplayEnabled ? FontWeight.bold : FontWeight.normal,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+
                             // Queue / Up Next Sheet Trigger
                             Selector<AudioProvider, int>(
                               selector: (_, ap) => ap.playlistQueue.length,
@@ -603,21 +676,32 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                     return ListTile(
                       leading: ClipRRect(
                         borderRadius: AppRadii.borderSmall,
-                        child: Container(
-                          width: 44,
-                          height: 44,
-                          color: AppColors.surface2,
-                          child: qTrack.thumbnailUrl.isNotEmpty
-                              ? CachedNetworkImage(
-                                  imageUrl: qTrack.thumbnailUrl,
-                                  fit: BoxFit.cover,
-                                  memCacheWidth: 120,
-                                )
-                              : const Icon(
-                                  Icons.music_note,
-                                  color: AppColors.primarySoft,
+                        child: (qTrack.thumbnailUrl.isNotEmpty &&
+                                !qTrack.thumbnailUrl.contains('hqdefault') &&
+                                !qTrack.thumbnailUrl.contains('mqdefault'))
+                            ? CachedNetworkImage(
+                                imageUrl: qTrack.thumbnailUrl,
+                                width: 44,
+                                height: 44,
+                                fit: BoxFit.cover,
+                                memCacheWidth: 120,
+                                errorWidget: (_, __, ___) => GeneratedCoverArt(
+                                  title: qTrack.title,
+                                  artist: qTrack.artist,
+                                  thumbnailUrl: qTrack.thumbnailUrl,
+                                  durationSeconds: qTrack.durationSeconds,
+                                  size: 44,
+                                  borderRadius: AppRadii.borderSmall,
                                 ),
-                        ),
+                              )
+                            : GeneratedCoverArt(
+                                title: qTrack.title,
+                                artist: qTrack.artist,
+                                thumbnailUrl: qTrack.thumbnailUrl,
+                                durationSeconds: qTrack.durationSeconds,
+                                size: 44,
+                                borderRadius: AppRadii.borderSmall,
+                              ),
                       ),
                       title: Text(
                         qTrack.title,

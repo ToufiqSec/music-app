@@ -22,6 +22,7 @@ import 'library_screen.dart';
 import 'downloads_screen.dart';
 import 'profile_screen.dart';
 import 'artist_onboarding_screen.dart';
+import 'mood_hub_screen.dart';
 import '../core/services/taste_engine.dart';
 import '../providers/auth_provider.dart';
 
@@ -78,7 +79,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
-          // Main Tabs Stack (Keeps state active and prevents playback interrupts)
+          // Main Tabs Stack (5 Tabs - Issue 7)
           Positioned.fill(
             child: IndexedStack(
               index: _currentTabIndex,
@@ -88,8 +89,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   onNavigateToTab: (idx) => setState(() => _currentTabIndex = idx),
                 ),
                 const SearchScreen(),
+                const MoodHubScreen(),
                 LibraryScreen(
-                  onNavigateToDownloads: () => setState(() => _currentTabIndex = 3),
+                  onNavigateToDownloads: () => setState(() => _currentTabIndex = 4),
                 ),
                 const DownloadsScreen(),
               ],
@@ -107,13 +109,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 // Persistent Docked Mini-Player
                 const MiniPlayer(),
 
-                // 4-Tab Floating Bottom Navigation Bar
+                // 5-Tab Floating Bottom Navigation Bar (Issue 7 Step 1)
                 TwilightBottomNavBar(
                   currentIndex: _currentTabIndex,
                   onTap: (index) => setState(() => _currentTabIndex = index),
                   icons: const [
                     Icons.home_filled,
                     Icons.search_rounded,
+                    Icons.auto_awesome_rounded,
                     Icons.library_music_rounded,
                     Icons.cloud_download_rounded,
                   ],
@@ -318,9 +321,9 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
                     HapticFeedback.selectionClick();
                     setState(() => _activeFilter = filter);
                     if (filter == 'Liked Songs') {
-                      widget.onNavigateToTab(2); // Jump to Library
+                      widget.onNavigateToTab(3); // Jump to Library (Tab 3 in 5-tab shell)
                     } else if (filter == 'Downloaded') {
-                      widget.onNavigateToTab(3); // Jump to Downloads
+                      widget.onNavigateToTab(4); // Jump to Downloads (Tab 4 in 5-tab shell)
                     }
                   },
                   child: AnimatedContainer(
