@@ -130,7 +130,7 @@ class YoutubeMusicService {
   }
 
   /// Resolves the direct playable audio stream URL (with in-memory cache & highest bitrate extraction).
-  Future<String?> getAudioStreamUrl(String trackId) async {
+  Future<String?> getAudioStreamUrl(String trackId, {String? fallbackQuery}) async {
     // 0. Check local disk cache
     final cached = await AudioCacheService.getCachedTrackFile(trackId);
     if (cached != null) {
@@ -163,6 +163,19 @@ class YoutubeMusicService {
       }
     } catch (e) {
       debugPrint('[YoutubeMusicService] getAudioStreamUrl error for $trackId: $e');
+    }
+
+    // 3. Universal Fallback: If trackId is a JioSaavn ID or failed, search YouTube with query
+    if (fallbackQuery != null && fallbackQuery.trim().isNotEmpty) {
+      try {
+        final fallbackTracks = await _searchYouTube(fallbackQuery.trim());
+        if (fallbackTracks.isNotEmpty) {
+          final bestTrackId = fallbackTracks.first.id;
+          return getAudioStreamUrl(bestTrackId);
+        }
+      } catch (e) {
+        debugPrint('[YoutubeMusicService] fallback search failed for $fallbackQuery: $e');
+      }
     }
 
     return null;

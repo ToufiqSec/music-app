@@ -14,6 +14,7 @@ import '../theme/app_motion.dart';
 import '../widgets/mini_player.dart';
 import '../widgets/bottom_nav_bar.dart';
 import '../widgets/content_card.dart';
+import '../widgets/featured_banner.dart';
 import '../widgets/update_dialog.dart';
 import '../widgets/twilight_scene_background.dart';
 import '../core/services/app_update_service.dart';
@@ -178,6 +179,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
   List<YoutubeTrack> _carousel3Tracks = [];
   List<YoutubeTrack> _carousel4Tracks = [];
   List<YoutubeTrack> _carousel5Tracks = [];
+  YoutubeTrack _featuredPodcast = CuratedTracks.featuredPodcasts.first;
 
   final List<String> _filters = [
     'All',
@@ -291,6 +293,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
         audioProvider.musicService.searchTracks(carousel3Query).catchError((_) => <YoutubeTrack>[]),
         audioProvider.musicService.searchTracks(carousel4Query).catchError((_) => <YoutubeTrack>[]),
         audioProvider.musicService.searchTracks(carousel5Query).catchError((_) => <YoutubeTrack>[]),
+        audioProvider.musicService.searchTracks('Sunday Suspense Feluda audio story official').catchError((_) => <YoutubeTrack>[]),
       ]);
 
       if (mounted) {
@@ -312,6 +315,9 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
           }
           if (results[5].isNotEmpty) {
             _carousel5Tracks = TasteEngine.rerankSearchResults(results[5]).take(20).toList();
+          }
+          if (results[6].isNotEmpty) {
+            _featuredPodcast = results[6].first;
           }
           _isLoadingContent = false;
         });
@@ -526,6 +532,25 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
 
           const SizedBox(height: 20),
 
+          // 2.5 Featured Podcast & Audio Story Banner
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: FeaturedBanner(
+              title: _featuredPodcast.title,
+              metaText: 'PODCAST • ${_featuredPodcast.artist}',
+              imageUrl: _featuredPodcast.thumbnailUrl,
+              onActionTap: () {
+                HapticFeedback.lightImpact();
+                audioProvider.playTrack(
+                  _featuredPodcast,
+                  CuratedTracks.featuredPodcasts,
+                );
+              },
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
           // 3. Quick-Pick Grid
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -672,7 +697,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
               separatorBuilder: (_, __) => const SizedBox(width: 12),
               itemBuilder: (context, index) {
                 final track = _getCarousel2Tracks()[index];
-                return _buildTrendingCard(context, track, audioProvider);
+                return _buildTrendingCard(context, track, audioProvider, _getCarousel2Tracks());
               },
             ),
           ),
@@ -765,7 +790,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
               separatorBuilder: (_, __) => const SizedBox(width: 12),
               itemBuilder: (context, index) {
                 final track = _getCarousel4Tracks()[index];
-                return _buildTrendingCard(context, track, audioProvider);
+                return _buildTrendingCard(context, track, audioProvider, _getCarousel4Tracks());
               },
             ),
           ),
@@ -1043,6 +1068,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
     BuildContext context,
     YoutubeTrack track,
     AudioProvider audioProvider,
+    List<YoutubeTrack> queue,
   ) {
     return SizedBox(
       width: 140,
@@ -1054,7 +1080,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
               HapticFeedback.lightImpact();
               audioProvider.playTrack(
                 track,
-                _getCarousel2Tracks(),
+                queue,
               );
             },
             child: Stack(

@@ -171,6 +171,21 @@ class AudioProvider extends ChangeNotifier {
       return;
     }
 
+    // Detect premature 30-second snippet cutoff (e.g. preview media URL) and resolve full stream
+    if (_currentTrack != null &&
+        _currentTrack!.durationSeconds > 60 &&
+        _position.inSeconds < 45) {
+      debugPrint('[AudioProvider] Detected premature preview cutoff for ${_currentTrack!.title}. Resolving full stream...');
+      final fullStreamUrl = await _musicService.getAudioStreamUrl(
+        _currentTrack!.id,
+        fallbackQuery: '${_currentTrack!.title} ${_currentTrack!.artist} full audio',
+      );
+      if (fullStreamUrl != null) {
+        await _audioHandler.playTrackUrl(_currentTrack!.toMediaItem(), fullStreamUrl);
+        return;
+      }
+    }
+
     // 1. Play remaining queue first
     final nextIdx = _getNextIndex();
     if (nextIdx != null) {
@@ -311,7 +326,10 @@ class AudioProvider extends ChangeNotifier {
       } else if (track.audioStreamUrl != null && track.audioStreamUrl!.isNotEmpty) {
         resolvedUrl = track.audioStreamUrl;
       } else {
-        resolvedUrl = await _musicService.getAudioStreamUrl(track.id);
+        resolvedUrl = await _musicService.getAudioStreamUrl(
+          track.id,
+          fallbackQuery: '${track.title} ${track.artist}',
+        );
       }
 
       if (resolvedUrl == null) {
@@ -321,9 +339,11 @@ class AudioProvider extends ChangeNotifier {
       // 2. Play immediately via AudioHandler
       await _audioHandler.playTrackUrl(track.toMediaItem(), resolvedUrl);
 
-      // Seek to resume position for long narrative audio / podcast
+      // Seek to resume position for long narrative audio / podcast safely
       if (resumeSeconds > 15) {
-        await _audioHandler.seek(Duration(seconds: resumeSeconds));
+        Future.delayed(const Duration(milliseconds: 350), () {
+          _audioHandler.seek(Duration(seconds: resumeSeconds)).catchError((_) {});
+        });
       }
 
       // Smooth fade-in of new track (Issue 8)

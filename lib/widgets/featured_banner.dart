@@ -22,17 +22,19 @@ class FeaturedBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 112,
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      decoration: BoxDecoration(
-        borderRadius: AppRadii.borderLarge,
-        color: AppColors.surface1,
-        boxShadow: const [AppShadows.shadowSoft],
-      ),
-      child: ClipRRect(
-        borderRadius: AppRadii.borderLarge,
-        child: Stack(
+    return GestureDetector(
+      onTap: onActionTap,
+      child: Container(
+        height: 112,
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        decoration: BoxDecoration(
+          borderRadius: AppRadii.borderLarge,
+          color: AppColors.surface1,
+          boxShadow: const [AppShadows.shadowSoft],
+        ),
+        child: ClipRRect(
+          borderRadius: AppRadii.borderLarge,
+          child: Stack(
           children: [
             if (imageUrl != null)
               Positioned.fill(
@@ -95,6 +97,7 @@ class FeaturedBanner extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

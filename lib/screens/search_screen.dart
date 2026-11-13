@@ -461,9 +461,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 leading: ClipRRect(
                   borderRadius: AppRadii.borderSmall,
-                  child: (track.thumbnailUrl.isNotEmpty &&
-                          !track.thumbnailUrl.contains('hqdefault') &&
-                          !track.thumbnailUrl.contains('mqdefault'))
+                  child: track.thumbnailUrl.isNotEmpty
                       ? CachedNetworkImage(
                           imageUrl: track.thumbnailUrl,
                           width: 48,
@@ -677,9 +675,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 dense: true,
                 leading: ClipRRect(
                   borderRadius: AppRadii.borderSmall,
-                  child: (track.thumbnailUrl.isNotEmpty &&
-                          !track.thumbnailUrl.contains('hqdefault') &&
-                          !track.thumbnailUrl.contains('mqdefault'))
+                  child: track.thumbnailUrl.isNotEmpty
                       ? CachedNetworkImage(
                           imageUrl: track.thumbnailUrl,
                           width: 40,

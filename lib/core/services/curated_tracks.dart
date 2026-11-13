@@ -409,6 +409,30 @@ class CuratedTracks {
     ),
   ];
 
+  static final List<YoutubeTrack> featuredPodcasts = [
+    const YoutubeTrack(
+      id: 'z0mFqZ3q_zE',
+      title: 'Sunday Suspense: Feluda - Royal Bengal Rahasya',
+      artist: 'Sunday Suspense • Mirchi Bangla',
+      durationSeconds: 3840,
+      thumbnailUrl: 'https://i.ytimg.com/vi/z0mFqZ3q_zE/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: 'k2qfadCRzSc',
+      title: 'Sunday Suspense: Professor Shonku O Corvus',
+      artist: 'Sunday Suspense • Satyajit Ray',
+      durationSeconds: 3120,
+      thumbnailUrl: 'https://i.ytimg.com/vi/k2qfadCRzSc/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: 'BddP6PYo2gs',
+      title: 'The Ranveer Show • Music, Life & Healing',
+      artist: 'The Ranveer Show (TRS)',
+      durationSeconds: 4320,
+      thumbnailUrl: 'https://i.ytimg.com/vi/BddP6PYo2gs/hqdefault.jpg',
+    ),
+  ];
+
   static List<YoutubeTrack> get allCatalogTracks => [
     ...jumpBackInTracks,
     ...madeForYouTracks,

@@ -171,9 +171,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                 ),
                               ],
                             ),
-                            child: (track.thumbnailUrl.isNotEmpty &&
-                                    !track.thumbnailUrl.contains('hqdefault') &&
-                                    !track.thumbnailUrl.contains('mqdefault'))
+                            child: track.thumbnailUrl.isNotEmpty
                                 ? ClipRRect(
                                     borderRadius: AppRadii.borderLarge,
                                     child: CachedNetworkImage(
@@ -706,9 +704,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                     return ListTile(
                       leading: ClipRRect(
                         borderRadius: AppRadii.borderSmall,
-                        child: (qTrack.thumbnailUrl.isNotEmpty &&
-                                !qTrack.thumbnailUrl.contains('hqdefault') &&
-                                !qTrack.thumbnailUrl.contains('mqdefault'))
+                        child: qTrack.thumbnailUrl.isNotEmpty
                             ? CachedNetworkImage(
                                 imageUrl: qTrack.thumbnailUrl,
                                 width: 44,

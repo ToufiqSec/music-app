@@ -103,9 +103,7 @@ class MiniPlayer extends StatelessWidget {
                         tag: 'album_art_${track.id}',
                         child: ClipRRect(
                           borderRadius: AppRadii.borderSmall,
-                          child: (track.thumbnailUrl.isNotEmpty &&
-                                  !track.thumbnailUrl.contains('hqdefault') &&
-                                  !track.thumbnailUrl.contains('mqdefault'))
+                          child: track.thumbnailUrl.isNotEmpty
                               ? CachedNetworkImage(
                                   imageUrl: track.thumbnailUrl,
                                   width: 44,

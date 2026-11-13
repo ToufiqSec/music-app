@@ -174,9 +174,7 @@ class LibraryScreen extends StatelessWidget {
                             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
                             leading: ClipRRect(
                               borderRadius: AppRadii.borderSmall,
-                              child: (track.thumbnailUrl.isNotEmpty &&
-                                      !track.thumbnailUrl.contains('hqdefault') &&
-                                      !track.thumbnailUrl.contains('mqdefault'))
+                              child: track.thumbnailUrl.isNotEmpty
                                   ? CachedNetworkImage(
                                       imageUrl: track.thumbnailUrl,
                                       width: 44,
@@ -517,9 +515,7 @@ class LibraryScreen extends StatelessWidget {
                               contentPadding: EdgeInsets.zero,
                               leading: ClipRRect(
                                 borderRadius: AppRadii.borderSmall,
-                                child: (track.thumbnailUrl.isNotEmpty &&
-                                        !track.thumbnailUrl.contains('hqdefault') &&
-                                        !track.thumbnailUrl.contains('mqdefault'))
+                                child: track.thumbnailUrl.isNotEmpty
                                     ? CachedNetworkImage(
                                         imageUrl: track.thumbnailUrl,
                                         width: 44,
@@ -672,9 +668,7 @@ class LibraryScreen extends StatelessWidget {
                                         contentPadding: EdgeInsets.zero,
                                         leading: ClipRRect(
                                           borderRadius: AppRadii.borderSmall,
-                                          child: (track.thumbnailUrl.isNotEmpty &&
-                                                  !track.thumbnailUrl.contains('hqdefault') &&
-                                                  !track.thumbnailUrl.contains('mqdefault'))
+                                          child: track.thumbnailUrl.isNotEmpty
                                               ? CachedNetworkImage(
                                                   imageUrl: track.thumbnailUrl,
                                                   width: 44,
