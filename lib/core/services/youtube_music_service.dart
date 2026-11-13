@@ -169,9 +169,28 @@ class YoutubeMusicService {
     if (fallbackQuery != null && fallbackQuery.trim().isNotEmpty) {
       try {
         final fallbackTracks = await _searchYouTube(fallbackQuery.trim());
-        if (fallbackTracks.isNotEmpty) {
-          final bestTrackId = fallbackTracks.first.id;
-          return getAudioStreamUrl(bestTrackId);
+        for (final fb in fallbackTracks) {
+          if (fb.id == trackId) continue;
+          try {
+            final fbManifest = await _yt.videos.streamsClient.getManifest(fb.id).timeout(
+              const Duration(seconds: 15),
+            );
+            final audioOnly = fbManifest.audioOnly;
+            if (audioOnly.isNotEmpty) {
+              final url = audioOnly.withHighestBitrate().url.toString();
+              _streamCache[trackId] = url;
+              _streamCache[fb.id] = url;
+              return url;
+            }
+            if (fbManifest.muxed.isNotEmpty) {
+              final url = fbManifest.muxed.withHighestBitrate().url.toString();
+              _streamCache[trackId] = url;
+              _streamCache[fb.id] = url;
+              return url;
+            }
+          } catch (_) {
+            continue;
+          }
         }
       } catch (e) {
         debugPrint('[YoutubeMusicService] fallback search failed for $fallbackQuery: $e');

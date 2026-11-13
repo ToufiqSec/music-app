@@ -24,8 +24,21 @@ class AuthProvider extends ChangeNotifier {
 
   String get displayName =>
       _profile?.displayName.isNotEmpty == true ? _profile!.displayName : 'Music Lover';
-  String get email => _profile?.email ?? (currentUser?.email ?? 'Guest');
-  String get avatarUrl => _profile?.avatarUrl ?? '';
+  String get email {
+    if (_profile != null && _profile!.email.trim().isNotEmpty && _profile!.email.trim() != 'Guest') {
+      return _profile!.email.trim();
+    }
+    final user = currentUser;
+    if (user?.email != null && user!.email!.trim().isNotEmpty) {
+      return user.email!.trim();
+    }
+    final metaEmail = user?.userMetadata?['email']?.toString().trim();
+    if (metaEmail != null && metaEmail.isNotEmpty) {
+      return metaEmail;
+    }
+    return 'Guest';
+  }
+  String get avatarUrl => _profile?.avatarUrl ?? (currentUser?.userMetadata?['avatar_url']?.toString() ?? '');
 
   void _initAuthListener() {
     // Read initial state
@@ -38,6 +51,24 @@ class AuthProvider extends ChangeNotifier {
       debugPrint('[Auth State Change] Event: $event');
 
       if (event == AuthChangeEvent.signedIn || event == AuthChangeEvent.tokenRefreshed) {
+        final user = SupabaseService.currentUser;
+        if (user != null) {
+          final userEmail = user.email?.trim() ?? user.userMetadata?['email']?.toString().trim();
+          if (userEmail != null && userEmail.isNotEmpty) {
+            try {
+              await SupabaseService.client.from('profiles').upsert({
+                'id': user.id,
+                'email': userEmail,
+                'display_name': user.userMetadata?['full_name'] ??
+                    user.userMetadata?['name'] ??
+                    userEmail.split('@')[0],
+                'updated_at': DateTime.now().toIso8601String(),
+              });
+            } catch (e) {
+              debugPrint('[AuthProvider] Profile sync on auth change: $e');
+            }
+          }
+        }
         await _loadProfileAndSettings();
         await SupabaseService.syncDownAllUserData();
       } else if (event == AuthChangeEvent.signedOut) {

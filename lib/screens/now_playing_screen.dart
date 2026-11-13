@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart' hide RepeatMode;
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -65,11 +66,43 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
       backgroundColor: AppColors.bgBase,
       body: Stack(
         children: [
-          // Background Full-Bleed Twilight Illustrated Landscape (Issue 2)
-          const Positioned.fill(
-            child: TwilightSceneBackground(
-              mode: TwilightSceneMode.fullBleed,
-            ),
+          // Ambient Dynamic Blurred Album Art Backdrop (Spotify & YouTube Music Theme)
+          Positioned.fill(
+            child: track.thumbnailUrl.isNotEmpty
+                ? Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      CachedNetworkImage(
+                        imageUrl: track.thumbnailUrl,
+                        fit: BoxFit.cover,
+                        memCacheWidth: 400,
+                        errorWidget: (_, __, ___) => const TwilightSceneBackground(
+                          mode: TwilightSceneMode.fullBleed,
+                        ),
+                      ),
+                      ClipRect(
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 60, sigmaY: 60),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.black.withValues(alpha: 0.55),
+                                  Colors.black.withValues(alpha: 0.70),
+                                  AppColors.bgBase.withValues(alpha: 0.95),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : const TwilightSceneBackground(
+                    mode: TwilightSceneMode.fullBleed,
+                  ),
           ),
 
           SafeArea(
@@ -153,7 +186,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
 
                       const SizedBox(height: 20),
 
-                      // Album Artwork with Generated Cover Fallback (Issue 6 Part B)
+                      // Album Artwork with Ambient Shadow & Crisp Cover Art (Spotify / YouTube Music)
                       Center(
                         child: Hero(
                           tag: 'album_art_${track.id}',
@@ -164,9 +197,9 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                               borderRadius: AppRadii.borderLarge,
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppColors.primarySoft.withValues(alpha: 0.22),
+                                  color: Colors.black.withValues(alpha: 0.50),
                                   blurRadius: 36,
-                                  spreadRadius: 2,
+                                  spreadRadius: 4,
                                   offset: const Offset(0, 16),
                                 ),
                               ],
@@ -177,7 +210,16 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                     child: CachedNetworkImage(
                                       imageUrl: track.thumbnailUrl,
                                       fit: BoxFit.cover,
-                                      memCacheWidth: 600,
+                                      memCacheWidth: 800,
+                                      placeholder: (_, __) => Container(
+                                        color: AppColors.surface1,
+                                        child: const Center(
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: AppColors.primarySoft,
+                                          ),
+                                        ),
+                                      ),
                                       errorWidget: (_, __, ___) => GeneratedCoverArt(
                                         title: track.title,
                                         artist: track.artist,

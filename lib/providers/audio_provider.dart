@@ -336,8 +336,22 @@ class AudioProvider extends ChangeNotifier {
         throw Exception('Unable to resolve audio stream for track ${track.title}');
       }
 
-      // 2. Play immediately via AudioHandler
-      await _audioHandler.playTrackUrl(track.toMediaItem(), resolvedUrl);
+      // 2. Play via AudioHandler with automated fallback recovery
+      try {
+        await _audioHandler.playTrackUrl(track.toMediaItem(), resolvedUrl);
+      } catch (playErr) {
+        debugPrint('[AudioProvider] Primary playTrackUrl failed: $playErr. Attempting direct YouTube stream fallback...');
+        final fbUrl = await _musicService.getAudioStreamUrl(
+          track.id,
+          fallbackQuery: '${track.title} ${track.artist}',
+        );
+        if (fbUrl != null && fbUrl != resolvedUrl) {
+          resolvedUrl = fbUrl;
+          await _audioHandler.playTrackUrl(track.toMediaItem(), resolvedUrl);
+        } else {
+          rethrow;
+        }
+      }
 
       // Seek to resume position for long narrative audio / podcast safely
       if (resumeSeconds > 15) {
@@ -351,9 +365,11 @@ class AudioProvider extends ChangeNotifier {
       _audioHandler.fadeVolume(1.0, Duration(milliseconds: fadeDurationMs));
 
       // 3. Network protocol check (robust for Windows & Unix)
-      // Debounce background caching by 8s so initial stream buffer is never starved
+      // Debounce background caching by 8s so initial stream buffer is never starved.
+      // For long podcasts / narrative audio (> 20 mins), skip background whole-file disk caching to avoid network strain.
       final isRemote = resolvedUrl.startsWith('http://') || resolvedUrl.startsWith('https://');
-      if (isRemote && !await AudioCacheService.isTrackCached(track.id)) {
+      final isLongNarrative = track.durationSeconds > 1200;
+      if (isRemote && !isLongNarrative && !await AudioCacheService.isTrackCached(track.id)) {
         _backgroundCacheTimer?.cancel();
         _backgroundCacheTimer = Timer(const Duration(seconds: 8), () async {
           if (_currentTrack?.id == track.id && _isPlaying) {

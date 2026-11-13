@@ -411,25 +411,25 @@ class CuratedTracks {
 
   static final List<YoutubeTrack> featuredPodcasts = [
     const YoutubeTrack(
-      id: 'z0mFqZ3q_zE',
-      title: 'Sunday Suspense: Feluda - Royal Bengal Rahasya',
+      id: 'JK_YANrT5KU',
+      title: 'Sunday Suspense: Feluda - Kailase Kelankari',
       artist: 'Sunday Suspense • Mirchi Bangla',
       durationSeconds: 3840,
-      thumbnailUrl: 'https://i.ytimg.com/vi/z0mFqZ3q_zE/hqdefault.jpg',
+      thumbnailUrl: 'https://i.ytimg.com/vi/JK_YANrT5KU/hqdefault.jpg',
     ),
     const YoutubeTrack(
-      id: 'k2qfadCRzSc',
-      title: 'Sunday Suspense: Professor Shonku O Corvus',
+      id: '3-Wu2wygKOA',
+      title: 'Sunday Suspense: Professor Shonku - Baghdader Baksho',
       artist: 'Sunday Suspense • Satyajit Ray',
       durationSeconds: 3120,
-      thumbnailUrl: 'https://i.ytimg.com/vi/k2qfadCRzSc/hqdefault.jpg',
+      thumbnailUrl: 'https://i.ytimg.com/vi/3-Wu2wygKOA/hqdefault.jpg',
     ),
     const YoutubeTrack(
-      id: 'BddP6PYo2gs',
-      title: 'The Ranveer Show • Music, Life & Healing',
-      artist: 'The Ranveer Show (TRS)',
+      id: 'OpHNmU5df48',
+      title: 'Sunday Suspense: Taranath Tantrik - Parajeebi',
+      artist: 'Sunday Suspense • Mirchi Bangla',
       durationSeconds: 4320,
-      thumbnailUrl: 'https://i.ytimg.com/vi/BddP6PYo2gs/hqdefault.jpg',
+      thumbnailUrl: 'https://i.ytimg.com/vi/OpHNmU5df48/hqdefault.jpg',
     ),
   ];
 

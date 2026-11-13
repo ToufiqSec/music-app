@@ -18,11 +18,20 @@ class UserProfileData {
   });
 
   factory UserProfileData.fromMap(Map<String, dynamic> map, String fallbackEmail) {
+    final rawEmail = map['email']?.toString().trim();
+    final effectiveEmail = (rawEmail != null && rawEmail.isNotEmpty)
+        ? rawEmail
+        : (fallbackEmail.trim().isNotEmpty ? fallbackEmail.trim() : 'Guest');
+
+    final rawName = map['display_name']?.toString().trim();
+    final effectiveName = (rawName != null && rawName.isNotEmpty)
+        ? rawName
+        : (effectiveEmail.contains('@') ? effectiveEmail.split('@')[0] : 'Music Lover');
+
     return UserProfileData(
       id: map['id']?.toString() ?? '',
-      email: map['email']?.toString() ?? fallbackEmail,
-      displayName: map['display_name']?.toString() ??
-          (fallbackEmail.contains('@') ? fallbackEmail.split('@')[0] : 'Music Lover'),
+      email: effectiveEmail,
+      displayName: effectiveName,
       avatarUrl: map['avatar_url']?.toString() ?? '',
     );
   }
@@ -113,14 +122,31 @@ class SupabaseService {
     required String password,
     String? displayName,
   }) async {
+    final trimmedEmail = email.trim();
+    final name = (displayName != null && displayName.trim().isNotEmpty)
+        ? displayName.trim()
+        : trimmedEmail.split('@')[0];
+
     final response = await client.auth.signUp(
-      email: email.trim(),
+      email: trimmedEmail,
       password: password,
-      data: displayName != null && displayName.isNotEmpty
-          ? {'full_name': displayName.trim(), 'name': displayName.trim()}
-          : null,
+      data: {
+        'email': trimmedEmail,
+        'full_name': name,
+        'name': name,
+      },
     );
     if (response.user != null) {
+      try {
+        await client.from('profiles').upsert({
+          'id': response.user!.id,
+          'email': trimmedEmail,
+          'display_name': name,
+          'updated_at': DateTime.now().toIso8601String(),
+        });
+      } catch (e) {
+        debugPrint('[Supabase] Error saving profile on signup: $e');
+      }
       await syncDownAllUserData();
     }
     return response;
@@ -130,11 +156,25 @@ class SupabaseService {
     required String email,
     required String password,
   }) async {
+    final trimmedEmail = email.trim();
     final response = await client.auth.signInWithPassword(
-      email: email.trim(),
+      email: trimmedEmail,
       password: password,
     );
     if (response.user != null) {
+      try {
+        final u = response.user!;
+        final uEmail = (u.email != null && u.email!.trim().isNotEmpty)
+            ? u.email!.trim()
+            : trimmedEmail;
+        await client.from('profiles').upsert({
+          'id': u.id,
+          'email': uEmail,
+          'updated_at': DateTime.now().toIso8601String(),
+        });
+      } catch (e) {
+        debugPrint('[Supabase] Error updating profile email on signin: $e');
+      }
       await syncDownAllUserData();
     }
     return response;
@@ -162,6 +202,10 @@ class SupabaseService {
     final user = currentUser;
     if (user == null) return null;
 
+    final fallbackEmail = (user.email != null && user.email!.trim().isNotEmpty)
+        ? user.email!.trim()
+        : (user.userMetadata?['email']?.toString().trim() ?? '');
+
     try {
       final res = await client
           .from('profiles')
@@ -170,25 +214,49 @@ class SupabaseService {
           .maybeSingle();
 
       if (res != null) {
-        return UserProfileData.fromMap(res, user.email ?? '');
+        final storedEmail = res['email']?.toString().trim();
+        final effectiveEmail = (storedEmail != null && storedEmail.isNotEmpty)
+            ? storedEmail
+            : fallbackEmail;
+
+        if ((storedEmail == null || storedEmail.isEmpty) && effectiveEmail.isNotEmpty) {
+          try {
+            await client.from('profiles').update({
+              'email': effectiveEmail,
+              'updated_at': DateTime.now().toIso8601String(),
+            }).eq('id', user.id);
+          } catch (_) {}
+        }
+
+        return UserProfileData.fromMap(res, effectiveEmail);
       }
 
       // If profile row was not yet created by trigger, create it now
+      final effectiveName = user.userMetadata?['full_name'] ??
+          user.userMetadata?['name'] ??
+          (fallbackEmail.contains('@') ? fallbackEmail.split('@')[0] : 'Music Lover');
+
       final newProfile = {
         'id': user.id,
-        'email': user.email ?? '',
-        'display_name': user.userMetadata?['full_name'] ??
-            user.userMetadata?['name'] ??
-            (user.email?.split('@')[0] ?? 'Music Lover'),
+        'email': fallbackEmail,
+        'display_name': effectiveName,
         'avatar_url': user.userMetadata?['avatar_url'] ?? '',
+        'updated_at': DateTime.now().toIso8601String(),
       };
       await client.from('profiles').upsert(newProfile);
-      return UserProfileData.fromMap(newProfile, user.email ?? '');
+      return UserProfileData.fromMap(newProfile, fallbackEmail);
     } catch (e) {
       debugPrint('[Supabase] Error fetching profile: $e');
       return UserProfileData(
         id: user.id,
-        email: user.email ?? '',
+        email: fallbackEmail.isNotEmpty ? fallbackEmail : 'Guest',
+        displayName: user.userMetadata?['full_name'] ??
+            user.userMetadata?['name'] ??
+            (fallbackEmail.contains('@') ? fallbackEmail.split('@')[0] : 'Music Lover'),
+        avatarUrl: user.userMetadata?['avatar_url']?.toString() ?? '',
+      );
+    }
+  }
         displayName: user.email?.split('@')[0] ?? 'Music Lover',
         avatarUrl: '',
       );

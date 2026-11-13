@@ -179,17 +179,17 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
   List<YoutubeTrack> _carousel3Tracks = [];
   List<YoutubeTrack> _carousel4Tracks = [];
   List<YoutubeTrack> _carousel5Tracks = [];
+  List<YoutubeTrack> _carousel6Tracks = [];
   YoutubeTrack _featuredPodcast = CuratedTracks.featuredPodcasts.first;
 
   final List<String> _filters = [
     'All',
+    'Podcast',
     'Trending',
     'Chill',
     'Late Night',
     'Workout',
     'Focus',
-    'Liked Songs',
-    'Downloaded',
   ];
 
   @override
@@ -201,6 +201,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
     _carousel3Tracks = List.from(CuratedTracks.allCatalogTracks.reversed.take(12));
     _carousel4Tracks = List.from(CuratedTracks.workoutTracks + CuratedTracks.trendingTracks);
     _carousel5Tracks = List.from(CuratedTracks.chillTracks + CuratedTracks.lateNightTracks);
+    _carousel6Tracks = List.from(CuratedTracks.lateNightTracks + CuratedTracks.chillTracks);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadDynamicContent();
@@ -224,8 +225,18 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
     String carousel3Query;
     String carousel4Query;
     String carousel5Query;
+    String carousel6Query;
 
     switch (_activeFilter) {
+      case 'Podcast':
+        quickQuery = 'Sunday Suspense Feluda Mirchi Bangla audio story';
+        carousel1Query = 'Sunday Suspense Mirchi Bangla audio stories';
+        carousel2Query = 'top popular hindi podcasts episodes';
+        carousel3Query = 'mystery thriller audio drama detective story';
+        carousel4Query = 'the ranveer show beerbiceps podcast';
+        carousel5Query = 'bengali audio drama natok story';
+        carousel6Query = 'horror thriller paranormal suspense audio drama';
+        break;
       case 'Trending':
         quickQuery = 'top trending songs hits 2026';
         carousel1Query = 'latest trending songs chartbusters';
@@ -233,6 +244,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
         carousel3Query = 'top bollywood punjabi trending';
         carousel4Query = 'global top 50 viral hits';
         carousel5Query = 'viral dance hits electronic';
+        carousel6Query = 'trending midnight acoustic vibes';
         break;
       case 'Chill':
         quickQuery = 'acoustic lofi chill relaxing songs';
@@ -241,6 +253,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
         carousel3Query = 'peaceful piano guitar acoustic';
         carousel4Query = 'indie chill acoustic sessions';
         carousel5Query = 'breeze slow reverb relaxing songs';
+        carousel6Query = 'chill aesthetic night vibes lofi slow';
         break;
       case 'Late Night':
         quickQuery = 'late night slow reverb melancholy vibes';
@@ -249,6 +262,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
         carousel3Query = 'slowed and reverb late night songs';
         carousel4Query = 'deep midnight melancholic vibes';
         carousel5Query = 'night drive synthwave lofi';
+        carousel6Query = 'chill aesthetic night vibes bedroom pop';
         break;
       case 'Workout':
         quickQuery = 'gym workout energy gym motivation tracks';
@@ -257,6 +271,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
         carousel3Query = 'beast mode gym phonk hip hop';
         carousel4Query = 'punjabi workout gym high bass';
         carousel5Query = 'pump up energetic electronic workout';
+        carousel6Query = 'post workout calm stretching ambient';
         break;
       case 'Focus':
         quickQuery = 'lofi study focus deep concentration ambient';
@@ -265,6 +280,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
         carousel3Query = 'peaceful ambient study frequency';
         carousel4Query = 'calm instrumental focus flow';
         carousel5Query = 'deep focus classical piano';
+        carousel6Query = 'night study aesthetic lofi rain beats';
         break;
       case 'All':
       default:
@@ -282,6 +298,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
         carousel3Query = '$secondArtist iconic hit songs';
         carousel4Query = '$thirdArtist chartbusters songs';
         carousel5Query = 'chill acoustic lofi midnight songs';
+        carousel6Query = 'chill aesthetic night vibes acoustic lofi';
         break;
     }
 
@@ -293,7 +310,8 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
         audioProvider.musicService.searchTracks(carousel3Query).catchError((_) => <YoutubeTrack>[]),
         audioProvider.musicService.searchTracks(carousel4Query).catchError((_) => <YoutubeTrack>[]),
         audioProvider.musicService.searchTracks(carousel5Query).catchError((_) => <YoutubeTrack>[]),
-        audioProvider.musicService.searchTracks('Sunday Suspense Feluda audio story official').catchError((_) => <YoutubeTrack>[]),
+        audioProvider.musicService.searchTracks(carousel6Query).catchError((_) => <YoutubeTrack>[]),
+        audioProvider.musicService.searchTracks('Sunday Suspense Feluda Mirchi Bangla audio stories official').catchError((_) => <YoutubeTrack>[]),
       ]);
 
       if (mounted) {
@@ -317,7 +335,10 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
             _carousel5Tracks = TasteEngine.rerankSearchResults(results[5]).take(20).toList();
           }
           if (results[6].isNotEmpty) {
-            _featuredPodcast = results[6].first;
+            _carousel6Tracks = TasteEngine.rerankSearchResults(results[6]).take(20).toList();
+          }
+          if (results.length > 7 && results[7].isNotEmpty) {
+            _featuredPodcast = results[7].first;
           }
           _isLoadingContent = false;
         });
@@ -486,15 +507,6 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
                 return GestureDetector(
                   onTap: () {
                     HapticFeedback.selectionClick();
-                    if (filter == 'Liked Songs') {
-                      widget.onNavigateToTab(3); // Jump to Library
-                      return;
-                    } else if (filter == 'Downloaded') {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const DownloadsScreen()),
-                      );
-                      return;
-                    }
                     setState(() => _activeFilter = filter);
                     _loadDynamicContent();
                   },
@@ -846,6 +858,47 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
               },
             ),
           ),
+
+          const SizedBox(height: 28),
+
+          // 10. Horizontal Card Carousel 6: Chill Aesthetic Night Vibes (Spotify Style)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  _getCarousel6Title(),
+                  style: AppTextStyles.h3.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  'Explore',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.primarySoft,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          SizedBox(
+            height: 200,
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              scrollDirection: Axis.horizontal,
+              itemCount: _getCarousel6Tracks().length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (context, index) {
+                final track = _getCarousel6Tracks()[index];
+                return _buildTrendingCard(context, track, audioProvider, _getCarousel6Tracks());
+              },
+            ),
+          ),
         ],
       ),
     );
@@ -853,6 +906,8 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
 
   String _getCarousel1Title() {
     switch (_activeFilter) {
+      case 'Podcast':
+        return 'Sunday Suspense Audio Stories';
       case 'Trending':
         return 'Trending Hits';
       case 'Chill':
@@ -878,6 +933,8 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
 
   String _getCarousel2Title() {
     switch (_activeFilter) {
+      case 'Podcast':
+        return 'Popular Podcasts & Talk Shows';
       case 'Trending':
         return 'Viral Charts';
       case 'Chill':
@@ -902,6 +959,8 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
 
   String _getCarousel3Title() {
     switch (_activeFilter) {
+      case 'Podcast':
+        return 'Mystery & Detective Dramas';
       case 'Trending':
         return 'Regional & Bollywood Chartbusters';
       case 'Chill':
@@ -927,6 +986,8 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
 
   String _getCarousel4Title() {
     switch (_activeFilter) {
+      case 'Podcast':
+        return 'The Ranveer Show & Talks';
       case 'Trending':
         return 'Global Top 50 Hits';
       case 'Chill':
@@ -951,6 +1012,8 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
 
   String _getCarousel5Title() {
     switch (_activeFilter) {
+      case 'Podcast':
+        return 'Bengali Audio Natok & Thrillers';
       case 'Trending':
         return 'Party & Dance Floor Hits';
       case 'Chill':
@@ -971,6 +1034,32 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
     return _carousel5Tracks.isNotEmpty
         ? _carousel5Tracks
         : CuratedTracks.chillTracks;
+  }
+
+  String _getCarousel6Title() {
+    switch (_activeFilter) {
+      case 'Podcast':
+        return 'Horror & Paranormal Stories';
+      case 'Trending':
+        return 'Viral Midnight Hits';
+      case 'Chill':
+        return 'Chill Aesthetic Night Vibes';
+      case 'Late Night':
+        return 'Bedroom Pop & Reverb';
+      case 'Workout':
+        return 'Cool Down & Stretch';
+      case 'Focus':
+        return 'Night Study & Ambient Flow';
+      case 'All':
+      default:
+        return 'Chill Aesthetic Night Vibes';
+    }
+  }
+
+  List<YoutubeTrack> _getCarousel6Tracks() {
+    return _carousel6Tracks.isNotEmpty
+        ? _carousel6Tracks
+        : (CuratedTracks.lateNightTracks + CuratedTracks.chillTracks);
   }
 
   /// 2x5 Grid of Compact Glass-Tinted Tiles

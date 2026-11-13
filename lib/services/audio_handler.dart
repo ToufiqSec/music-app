@@ -91,12 +91,13 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
     queue.add([item]);
 
     try {
-      if (File(resolvedUrl).existsSync()) {
+      final isRemote = resolvedUrl.startsWith('http://') || resolvedUrl.startsWith('https://');
+      if (!isRemote && File(resolvedUrl).existsSync()) {
         await _player.setFilePath(resolvedUrl);
       } else {
         await _player.setUrl(
           resolvedUrl,
-        ).timeout(const Duration(seconds: 20));
+        ).timeout(const Duration(seconds: 25));
       }
       await _player.play();
     } catch (e) {
