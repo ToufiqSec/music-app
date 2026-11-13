@@ -175,6 +175,9 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
   List<YoutubeTrack> _quickPickTracks = [];
   List<YoutubeTrack> _carousel1Tracks = [];
   List<YoutubeTrack> _carousel2Tracks = [];
+  List<YoutubeTrack> _carousel3Tracks = [];
+  List<YoutubeTrack> _carousel4Tracks = [];
+  List<YoutubeTrack> _carousel5Tracks = [];
 
   final List<String> _filters = [
     'All',
@@ -193,6 +196,9 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
     _quickPickTracks = List.from(CuratedTracks.jumpBackInTracks);
     _carousel1Tracks = List.from(CuratedTracks.madeForYouTracks);
     _carousel2Tracks = List.from(CuratedTracks.trendingTracks);
+    _carousel3Tracks = List.from(CuratedTracks.allCatalogTracks.reversed.take(12));
+    _carousel4Tracks = List.from(CuratedTracks.workoutTracks + CuratedTracks.trendingTracks);
+    _carousel5Tracks = List.from(CuratedTracks.chillTracks + CuratedTracks.lateNightTracks);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadDynamicContent();
@@ -205,52 +211,75 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
 
     await TasteEngine.init();
     final audioProvider = context.read<AudioProvider>();
-    final favArtists = TasteEngine.favoriteArtists.map((a) => a.name).toList();
+    final favArtists = TasteEngine.favoriteArtists
+        .where((a) => !TasteEngine.isBlockedChannelOrLabel(a.name))
+        .map((a) => a.name)
+        .toList();
 
     String quickQuery;
     String carousel1Query;
     String carousel2Query;
+    String carousel3Query;
+    String carousel4Query;
+    String carousel5Query;
 
     switch (_activeFilter) {
       case 'Trending':
         quickQuery = 'top trending songs hits 2026';
         carousel1Query = 'latest trending songs chartbusters';
-        carousel2Query = 'viral hits billboard';
+        carousel2Query = 'viral hits billboard 2026';
+        carousel3Query = 'top bollywood punjabi trending';
+        carousel4Query = 'global top 50 viral hits';
+        carousel5Query = 'viral dance hits electronic';
         break;
       case 'Chill':
         quickQuery = 'acoustic lofi chill relaxing songs';
         carousel1Query = 'soothing acoustic coffeehouse hits';
         carousel2Query = 'lofi chill sunset beats';
+        carousel3Query = 'peaceful piano guitar acoustic';
+        carousel4Query = 'indie chill acoustic sessions';
+        carousel5Query = 'breeze slow reverb relaxing songs';
         break;
       case 'Late Night':
         quickQuery = 'late night slow reverb melancholy vibes';
         carousel1Query = 'midnight slow ambient acoustic';
         carousel2Query = 'dark pop late night session';
+        carousel3Query = 'slowed and reverb late night songs';
+        carousel4Query = 'deep midnight melancholic vibes';
+        carousel5Query = 'night drive synthwave lofi';
         break;
       case 'Workout':
         quickQuery = 'gym workout energy gym motivation tracks';
         carousel1Query = 'high bpm workout running EDM';
         carousel2Query = 'power cardio motivation bass';
+        carousel3Query = 'beast mode gym phonk hip hop';
+        carousel4Query = 'punjabi workout gym high bass';
+        carousel5Query = 'pump up energetic electronic workout';
         break;
       case 'Focus':
         quickQuery = 'lofi study focus deep concentration ambient';
         carousel1Query = 'binaural focus ambient study music';
         carousel2Query = 'coding deep work lofi beats';
+        carousel3Query = 'peaceful ambient study frequency';
+        carousel4Query = 'calm instrumental focus flow';
+        carousel5Query = 'deep focus classical piano';
         break;
       case 'All':
       default:
-        if (favArtists.isNotEmpty) {
-          final top = favArtists.take(3).join(' ');
-          quickQuery = '$top best hits official';
-          carousel1Query = '${favArtists.first} top hit songs';
-          carousel2Query = favArtists.length > 1
-              ? '${favArtists[1]} latest songs'
-              : 'top trending melodious hits';
-        } else {
-          quickQuery = 'popular hindi bengali english songs';
-          carousel1Query = 'arijit shreya coldplay songs';
-          carousel2Query = 'trending songs 2026';
-        }
+        final topArtist = favArtists.isNotEmpty ? favArtists.first : 'Arijit Singh';
+        final secondArtist = favArtists.length > 1
+            ? favArtists[1]
+            : (favArtists.isNotEmpty ? 'Pritam' : 'Shreya Ghoshal');
+        final thirdArtist = favArtists.length > 2
+            ? favArtists[2]
+            : 'Coldplay';
+
+        quickQuery = '$topArtist $secondArtist best hits official';
+        carousel1Query = '$topArtist top hit songs';
+        carousel2Query = 'top trending viral songs 2026';
+        carousel3Query = '$secondArtist iconic hit songs';
+        carousel4Query = '$thirdArtist chartbusters songs';
+        carousel5Query = 'chill acoustic lofi midnight songs';
         break;
     }
 
@@ -259,18 +288,30 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
         audioProvider.musicService.searchTracks(quickQuery).catchError((_) => <YoutubeTrack>[]),
         audioProvider.musicService.searchTracks(carousel1Query).catchError((_) => <YoutubeTrack>[]),
         audioProvider.musicService.searchTracks(carousel2Query).catchError((_) => <YoutubeTrack>[]),
+        audioProvider.musicService.searchTracks(carousel3Query).catchError((_) => <YoutubeTrack>[]),
+        audioProvider.musicService.searchTracks(carousel4Query).catchError((_) => <YoutubeTrack>[]),
+        audioProvider.musicService.searchTracks(carousel5Query).catchError((_) => <YoutubeTrack>[]),
       ]);
 
       if (mounted) {
         setState(() {
           if (results[0].isNotEmpty) {
-            _quickPickTracks = TasteEngine.rerankSearchResults(results[0]).take(6).toList();
+            _quickPickTracks = TasteEngine.rerankSearchResults(results[0]).take(10).toList();
           }
           if (results[1].isNotEmpty) {
-            _carousel1Tracks = TasteEngine.rerankSearchResults(results[1]).take(10).toList();
+            _carousel1Tracks = TasteEngine.rerankSearchResults(results[1]).take(20).toList();
           }
           if (results[2].isNotEmpty) {
-            _carousel2Tracks = TasteEngine.rerankSearchResults(results[2]).take(10).toList();
+            _carousel2Tracks = TasteEngine.rerankSearchResults(results[2]).take(20).toList();
+          }
+          if (results[3].isNotEmpty) {
+            _carousel3Tracks = TasteEngine.rerankSearchResults(results[3]).take(20).toList();
+          }
+          if (results[4].isNotEmpty) {
+            _carousel4Tracks = TasteEngine.rerankSearchResults(results[4]).take(20).toList();
+          }
+          if (results[5].isNotEmpty) {
+            _carousel5Tracks = TasteEngine.rerankSearchResults(results[5]).take(20).toList();
           }
           _isLoadingContent = false;
         });
@@ -505,7 +546,47 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
 
           const SizedBox(height: 28),
 
-          // 4. Horizontal Card Carousel 1
+          // 4. Horizontal Circle Row ("Recommended Artists")
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Recommended Artists',
+                  style: AppTextStyles.h3.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ArtistOnboardingScreen(isModal: true)),
+                    );
+                    setState(() {});
+                  },
+                  child: Text(
+                    TasteEngine.favoriteArtists.isEmpty ? '+ Pick Taste' : 'Edit',
+                    style: AppTextStyles.meta.copyWith(
+                      color: AppColors.primarySoft,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          SizedBox(
+            height: 110,
+            child: _buildArtistCirclesRow(audioProvider),
+          ),
+
+          const SizedBox(height: 24),
+
+          // 5. Horizontal Card Carousel 1
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Row(
@@ -557,7 +638,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
 
           const SizedBox(height: 28),
 
-          // 5. Horizontal Card Carousel 2
+          // 6. Horizontal Card Carousel 2
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Row(
@@ -598,42 +679,147 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
 
           const SizedBox(height: 28),
 
-          // 6. Horizontal Circle Row ("Recommended Artists" - Issue 4)
+          // 7. Horizontal Card Carousel 3
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Recommended Artists',
+                  _getCarousel3Title(),
                   style: AppTextStyles.h3.copyWith(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                GestureDetector(
-                  onTap: () async {
-                    await Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const ArtistOnboardingScreen(isModal: true)),
-                    );
-                    setState(() {});
-                  },
-                  child: Text(
-                    TasteEngine.favoriteArtists.isEmpty ? '+ Pick Taste' : 'Edit',
-                    style: AppTextStyles.meta.copyWith(
-                      color: AppColors.primarySoft,
-                      fontWeight: FontWeight.bold,
-                    ),
+                Text(
+                  'Spotlight',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.primarySoft,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
 
           SizedBox(
-            height: 110,
-            child: _buildArtistCirclesRow(audioProvider),
+            height: 180,
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              scrollDirection: Axis.horizontal,
+              itemCount: _getCarousel3Tracks().length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (context, index) {
+                final track = _getCarousel3Tracks()[index];
+                return ContentCard(
+                  title: track.title,
+                  subtitle: track.artist,
+                  imageUrl: track.thumbnailUrl,
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    audioProvider.playTrack(
+                      track,
+                      _getCarousel3Tracks(),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+
+          const SizedBox(height: 28),
+
+          // 8. Horizontal Card Carousel 4
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  _getCarousel4Title(),
+                  style: AppTextStyles.h3.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  'Chartbusters',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.primarySoft,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          SizedBox(
+            height: 200,
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              scrollDirection: Axis.horizontal,
+              itemCount: _getCarousel4Tracks().length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (context, index) {
+                final track = _getCarousel4Tracks()[index];
+                return _buildTrendingCard(context, track, audioProvider);
+              },
+            ),
+          ),
+
+          const SizedBox(height: 28),
+
+          // 9. Horizontal Card Carousel 5
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  _getCarousel5Title(),
+                  style: AppTextStyles.h3.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  'Mellow',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.primarySoft,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          SizedBox(
+            height: 180,
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              scrollDirection: Axis.horizontal,
+              itemCount: _getCarousel5Tracks().length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (context, index) {
+                final track = _getCarousel5Tracks()[index];
+                return ContentCard(
+                  title: track.title,
+                  subtitle: track.artist,
+                  imageUrl: track.thumbnailUrl,
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    audioProvider.playTrack(
+                      track,
+                      _getCarousel5Tracks(),
+                    );
+                  },
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -654,7 +840,8 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
         return 'Deep Work & Study';
       case 'All':
       default:
-        return 'Made For You';
+        final favs = TasteEngine.favoriteArtists.where((a) => !TasteEngine.isBlockedChannelOrLabel(a.name));
+        return favs.isNotEmpty ? 'Because You Love ${favs.first.name}' : 'Made For You';
     }
   }
 
@@ -667,7 +854,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
   String _getCarousel2Title() {
     switch (_activeFilter) {
       case 'Trending':
-        return 'Viral Today';
+        return 'Viral Charts';
       case 'Chill':
         return 'Mellow Waves';
       case 'Late Night':
@@ -678,7 +865,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
         return 'Binaural Focus';
       case 'All':
       default:
-        return 'Trending & New For You';
+        return 'Trending & Viral Hits';
     }
   }
 
@@ -688,14 +875,87 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
         : CuratedTracks.trendingTracks;
   }
 
-  /// 2x3 Grid of Compact Glass-Tinted Tiles
+  String _getCarousel3Title() {
+    switch (_activeFilter) {
+      case 'Trending':
+        return 'Regional & Bollywood Chartbusters';
+      case 'Chill':
+        return 'Peaceful Acoustic & Strings';
+      case 'Late Night':
+        return 'Slowed & Reverb Sessions';
+      case 'Workout':
+        return 'Beast Mode Gym Motivation';
+      case 'Focus':
+        return 'Ambient Lo-Fi Frequency';
+      case 'All':
+      default:
+        final favs = TasteEngine.favoriteArtists.where((a) => !TasteEngine.isBlockedChannelOrLabel(a.name)).toList();
+        return favs.length > 1 ? 'Artist Spotlight: ${favs[1].name}' : 'Iconic Melody Hits';
+    }
+  }
+
+  List<YoutubeTrack> _getCarousel3Tracks() {
+    return _carousel3Tracks.isNotEmpty
+        ? _carousel3Tracks
+        : CuratedTracks.allCatalogTracks.reversed.take(15).toList();
+  }
+
+  String _getCarousel4Title() {
+    switch (_activeFilter) {
+      case 'Trending':
+        return 'Global Top 50 Hits';
+      case 'Chill':
+        return 'Coffeehouse Acoustic';
+      case 'Late Night':
+        return 'Midnight Melancholy';
+      case 'Workout':
+        return 'High Bass Power EDM';
+      case 'Focus':
+        return 'Deep Concentration Flow';
+      case 'All':
+      default:
+        return 'Fresh Discoveries & Releases';
+    }
+  }
+
+  List<YoutubeTrack> _getCarousel4Tracks() {
+    return _carousel4Tracks.isNotEmpty
+        ? _carousel4Tracks
+        : CuratedTracks.workoutTracks;
+  }
+
+  String _getCarousel5Title() {
+    switch (_activeFilter) {
+      case 'Trending':
+        return 'Party & Dance Floor Hits';
+      case 'Chill':
+        return 'Sunset Lo-Fi Chill';
+      case 'Late Night':
+        return 'Night Drive Waves';
+      case 'Workout':
+        return 'Non-Stop Workout Mix';
+      case 'Focus':
+        return 'Calm Instrumental Study';
+      case 'All':
+      default:
+        return 'Chill Acoustic & Night Vibes';
+    }
+  }
+
+  List<YoutubeTrack> _getCarousel5Tracks() {
+    return _carousel5Tracks.isNotEmpty
+        ? _carousel5Tracks
+        : CuratedTracks.chillTracks;
+  }
+
+  /// 2x5 Grid of Compact Glass-Tinted Tiles
   Widget _buildQuickPickGrid(
     BuildContext context,
     AudioProvider audioProvider,
   ) {
     final tracks = _quickPickTracks.isNotEmpty
         ? _quickPickTracks
-        : CuratedTracks.getTracksForFilter(_activeFilter).take(6).toList();
+        : CuratedTracks.getTracksForFilter(_activeFilter).take(10).toList();
 
     return GridView.builder(
       physics: const NeverScrollableScrollPhysics(),
@@ -873,10 +1133,15 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
 
   /// Circular Artist Avatar Item
   Widget _buildArtistCirclesRow(AudioProvider audioProvider) {
-    final userFavs = TasteEngine.favoriteArtists;
+    final userFavs = TasteEngine.favoriteArtists
+        .where((a) => !TasteEngine.isBlockedChannelOrLabel(a.name))
+        .toList();
     final artistsToShow = userFavs.isNotEmpty
         ? userFavs
-        : TasteEngine.defaultArtistCatalog.take(12).toList();
+        : TasteEngine.defaultArtistCatalog
+            .where((a) => !TasteEngine.isBlockedChannelOrLabel(a.name))
+            .take(16)
+            .toList();
 
     return ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -950,6 +1215,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
                       ? CachedNetworkImage(
                           imageUrl: artist.imageUrl,
                           fit: BoxFit.cover,
+                          placeholder: (_, __) => _buildArtistAvatarFallback(artist.name),
                           errorWidget: (_, __, ___) => _buildArtistAvatarFallback(artist.name),
                         )
                       : _buildArtistAvatarFallback(artist.name),
@@ -976,13 +1242,50 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
     );
   }
 
-  Widget _buildArtistAvatarFallback(String name) {
+  Widget _buildArtistAvatarFallback(String name, {double size = 70, double fontSize = 20}) {
+    final clean = name.trim();
+    String initials = '?';
+    if (clean.isNotEmpty) {
+      final parts = clean.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+      if (parts.length >= 2) {
+        initials = '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+      } else {
+        initials = parts[0].substring(0, parts[0].length >= 2 ? 2 : 1).toUpperCase();
+      }
+    }
+
+    const gradients = [
+      [Color(0xFF6366F1), Color(0xFF8B5CF6)], // Indigo - Purple
+      [Color(0xFFEC4899), Color(0xFFF43F5E)], // Pink - Rose
+      [Color(0xFF06B6D4), Color(0xFF3B82F6)], // Cyan - Blue
+      [Color(0xFF10B981), Color(0xFF059669)], // Emerald - Teal
+      [Color(0xFFF59E0B), Color(0xFFEF4444)], // Amber - Red
+      [Color(0xFF8B5CF6), Color(0xFFD946EF)], // Purple - Fuchsia
+      [Color(0xFF3B82F6), Color(0xFF1D4ED8)], // Royal Blue
+      [Color(0xFF14B8A6), Color(0xFF0D9488)], // Teal
+    ];
+    final colorPair = gradients[clean.hashCode.abs() % gradients.length];
+
     return Container(
-      color: AppColors.surface2,
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          colors: colorPair,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
       child: Center(
         child: Text(
-          name.isNotEmpty ? name[0].toUpperCase() : 'A',
-          style: const TextStyle(color: AppColors.primarySoft, fontWeight: FontWeight.bold, fontSize: 20),
+          initials,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: fontSize,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.0,
+          ),
         ),
       ),
     );

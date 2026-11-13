@@ -45,6 +45,7 @@ class _ArtistOnboardingScreenState extends State<ArtistOnboardingScreen> {
   Future<void> _loadInitialTaste() async {
     await TasteEngine.init();
     for (final a in TasteEngine.favoriteArtists) {
+      if (TasteEngine.isBlockedChannelOrLabel(a.name)) continue;
       _selectedArtistNames.add(a.name.toLowerCase());
       _selectedArtistProfiles[a.name.toLowerCase()] = a;
     }
@@ -54,6 +55,7 @@ class _ArtistOnboardingScreenState extends State<ArtistOnboardingScreen> {
 
     // Also include any user-added favorite artists not in the default catalog
     for (final a in TasteEngine.favoriteArtists) {
+      if (TasteEngine.isBlockedChannelOrLabel(a.name)) continue;
       if (!_artistPool.any((p) => p.name.toLowerCase() == a.name.toLowerCase())) {
         _artistPool.insert(0, a);
       }
@@ -81,6 +83,17 @@ class _ArtistOnboardingScreenState extends State<ArtistOnboardingScreen> {
   Future<void> _handleCustomAddArtist() async {
     final query = _searchFilter.trim();
     if (query.isEmpty) return;
+
+    if (TasteEngine.isBlockedChannelOrLabel(query)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter an artist name rather than a channel or label.'),
+          backgroundColor: AppColors.surface2,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
 
     setState(() => _isSearchingLive = true);
     HapticFeedback.lightImpact();
@@ -373,29 +386,14 @@ class _ArtistOnboardingScreenState extends State<ArtistOnboardingScreen> {
                                         : null,
                                   ),
                                   child: ClipOval(
-                                    child: CachedNetworkImage(
-                                      imageUrl: artist.imageUrl,
-                                      fit: BoxFit.cover,
-                                      placeholder: (_, __) => Container(
-                                        color: AppColors.surface2,
-                                        child: const Center(
-                                          child: Icon(Icons.person_rounded, color: AppColors.iconIdle, size: 36),
-                                        ),
-                                      ),
-                                      errorWidget: (_, __, ___) => Container(
-                                        color: AppColors.surface2,
-                                        child: Center(
-                                          child: Text(
-                                            artist.name.isNotEmpty ? artist.name[0].toUpperCase() : '?',
-                                            style: const TextStyle(
-                                              color: AppColors.primarySoft,
-                                              fontSize: 28,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
+                                    child: artist.imageUrl.isNotEmpty
+                                        ? CachedNetworkImage(
+                                            imageUrl: artist.imageUrl,
+                                            fit: BoxFit.cover,
+                                            placeholder: (_, __) => _buildInitialsGradient(artist.name),
+                                            errorWidget: (_, __, ___) => _buildInitialsGradient(artist.name),
+                                          )
+                                        : _buildInitialsGradient(artist.name),
                                   ),
                                 ),
 
@@ -441,6 +439,55 @@ class _ArtistOnboardingScreenState extends State<ArtistOnboardingScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildInitialsGradient(String name, {double size = 86, double fontSize = 26}) {
+    final clean = name.trim();
+    String initials = '?';
+    if (clean.isNotEmpty) {
+      final parts = clean.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+      if (parts.length >= 2) {
+        initials = '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+      } else {
+        initials = parts[0].substring(0, parts[0].length >= 2 ? 2 : 1).toUpperCase();
+      }
+    }
+
+    const gradients = [
+      [Color(0xFF6366F1), Color(0xFF8B5CF6)], // Indigo - Purple
+      [Color(0xFFEC4899), Color(0xFFF43F5E)], // Pink - Rose
+      [Color(0xFF06B6D4), Color(0xFF3B82F6)], // Cyan - Blue
+      [Color(0xFF10B981), Color(0xFF059669)], // Emerald - Teal
+      [Color(0xFFF59E0B), Color(0xFFEF4444)], // Amber - Red
+      [Color(0xFF8B5CF6), Color(0xFFD946EF)], // Purple - Fuchsia
+      [Color(0xFF3B82F6), Color(0xFF1D4ED8)], // Royal Blue
+      [Color(0xFF14B8A6), Color(0xFF0D9488)], // Teal
+    ];
+    final colorPair = gradients[clean.hashCode.abs() % gradients.length];
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          colors: colorPair,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Center(
+        child: Text(
+          initials,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: fontSize,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
+          ),
+        ),
       ),
     );
   }
