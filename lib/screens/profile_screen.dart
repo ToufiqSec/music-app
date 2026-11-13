@@ -17,7 +17,8 @@ import 'artist_onboarding_screen.dart';
 import 'downloads_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final ValueChanged<int>? onNavigateToTab;
+  const ProfileScreen({super.key, this.onNavigateToTab});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -496,8 +497,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             count: audio.favoriteIds.length.toString(),
             label: 'Liked Songs',
             onTap: () {
-              Navigator.pop(context);
-              // Switch to Library tab (Index 3)
+              if (widget.onNavigateToTab != null) {
+                widget.onNavigateToTab!(3); // Switch to Library tab (Index 3)
+              } else if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+              }
             },
           ),
         ),
@@ -509,7 +513,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             count: audio.userPlaylists.length.toString(),
             label: 'Playlists',
             onTap: () {
-              Navigator.pop(context);
+              if (widget.onNavigateToTab != null) {
+                widget.onNavigateToTab!(3); // Switch to Library tab (Index 3)
+              } else if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+              }
             },
           ),
         ),

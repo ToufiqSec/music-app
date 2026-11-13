@@ -115,7 +115,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     );
                   },
                 ),
-                const ProfileScreen(),
+                ProfileScreen(
+                  onNavigateToTab: (idx) => setState(() => _currentTabIndex = idx),
+                ),
               ],
             ),
           ),
