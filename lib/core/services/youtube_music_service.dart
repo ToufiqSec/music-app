@@ -29,35 +29,68 @@ class YoutubeMusicService {
     final results = <YoutubeTrack>[];
     final seenKeys = <String>{};
 
-    // Tier 1: JioSaavn Search API
-    try {
-      final saavnTracks = await _searchJioSaavn(cleanQuery);
-      for (final track in saavnTracks) {
-        final key = '${track.title.toLowerCase()}_${track.artist.toLowerCase()}';
-        if (!seenKeys.contains(key)) {
-          seenKeys.add(key);
-          results.add(track);
-        }
-      }
-    } catch (_) {}
+    final isPodcastOrDrama = cleanQuery.toLowerCase().contains('suspense') ||
+        cleanQuery.toLowerCase().contains('sunday') ||
+        cleanQuery.toLowerCase().contains('podcast') ||
+        cleanQuery.toLowerCase().contains('audio drama') ||
+        cleanQuery.toLowerCase().contains('audio story') ||
+        cleanQuery.toLowerCase().contains('natok') ||
+        cleanQuery.toLowerCase().contains('talk') ||
+        cleanQuery.toLowerCase().contains('episode');
 
-    // Tier 2 Supplement & Universal Fallback: Regular YouTube Global Audio Search
-    // Unlocks long-tail content: Audio dramas (Sunday Suspense), podcasts, stories, audiobooks, foreign languages
-    try {
-      final ytTracks = await _searchYouTube(cleanQuery);
-      for (final track in ytTracks) {
-        final key = '${track.title.toLowerCase()}_${track.artist.toLowerCase()}';
-        if (!seenKeys.contains(key)) {
-          seenKeys.add(key);
-          results.add(track);
+    if (isPodcastOrDrama) {
+      // For audio dramas & podcasts, prioritize YouTube directly for full-length episodes
+      try {
+        final ytTracks = await _searchYouTube(cleanQuery);
+        for (final track in ytTracks) {
+          final key = '${track.title.toLowerCase()}_${track.artist.toLowerCase()}';
+          if (!seenKeys.contains(key)) {
+            seenKeys.add(key);
+            results.add(track);
+          }
         }
-      }
-    } catch (_) {}
+      } catch (_) {}
+
+      try {
+        final saavnTracks = await _searchJioSaavn(cleanQuery);
+        for (final track in saavnTracks) {
+          final key = '${track.title.toLowerCase()}_${track.artist.toLowerCase()}';
+          if (!seenKeys.contains(key)) {
+            seenKeys.add(key);
+            results.add(track);
+          }
+        }
+      } catch (_) {}
+    } else {
+      // For general music, query JioSaavn first for instant lossless 320kbps CDN playback
+      try {
+        final saavnTracks = await _searchJioSaavn(cleanQuery);
+        for (final track in saavnTracks) {
+          final key = '${track.title.toLowerCase()}_${track.artist.toLowerCase()}';
+          if (!seenKeys.contains(key)) {
+            seenKeys.add(key);
+            results.add(track);
+          }
+        }
+      } catch (_) {}
+
+      // Supplement & fallback to YouTube global audio search
+      try {
+        final ytTracks = await _searchYouTube(cleanQuery);
+        for (final track in ytTracks) {
+          final key = '${track.title.toLowerCase()}_${track.artist.toLowerCase()}';
+          if (!seenKeys.contains(key)) {
+            seenKeys.add(key);
+            results.add(track);
+          }
+        }
+      } catch (_) {}
+    }
 
     return results;
   }
 
-  /// Queries JioSaavn search API and decrypts encrypted_media_url to 320kbps audio.
+  /// Queries JioSaavn search API and decrypts encrypted_media_url to audio stream.
   Future<List<YoutubeTrack>> _searchJioSaavn(String query) async {
     final uri = Uri.parse(
       'https://www.jiosaavn.com/api.php?__call=search.getResults&_format=json&_marker=0&cc=in&n=15&p=1&q=${Uri.encodeComponent(query)}',
@@ -76,9 +109,10 @@ class YoutubeMusicService {
     final tracks = <YoutubeTrack>[];
     for (final item in resultsList) {
       final encryptedUrl = item['encrypted_media_url'] as String? ?? '';
+      final has320 = item['320kbps'] == 'true' || item['320kbps'] == true;
       String? streamUrl;
       if (encryptedUrl.isNotEmpty) {
-        streamUrl = DesEcbDecryptor.decryptMediaUrl(encryptedUrl);
+        streamUrl = DesEcbDecryptor.decryptMediaUrl(encryptedUrl, is320Available: has320);
       }
 
       final id = item['id']?.toString() ?? DateTime.now().microsecondsSinceEpoch.toString();
@@ -129,17 +163,30 @@ class YoutubeMusicService {
     return tracks;
   }
 
-  /// Resolves the direct playable audio stream URL (with in-memory cache & highest bitrate extraction).
-  Future<String?> getAudioStreamUrl(String trackId, {String? fallbackQuery}) async {
-    // 0. Check local disk cache
-    final cached = await AudioCacheService.getCachedTrackFile(trackId);
-    if (cached != null) {
-      return cached.path;
-    }
+  /// Removes a cached stream URL if it failed during playback
+  void invalidateCache(String trackId) {
+    _streamCache.remove(trackId);
+  }
 
-    // 1. In-memory stream cache
-    if (_streamCache.containsKey(trackId)) {
-      return _streamCache[trackId];
+  /// Resolves the direct playable audio stream URL (with in-memory cache & universal AAC hardware decoding).
+  Future<String?> getAudioStreamUrl(
+    String trackId, {
+    String? fallbackQuery,
+    bool forceRefresh = false,
+  }) async {
+    // 0. Check local disk cache
+    if (!forceRefresh) {
+      final cached = await AudioCacheService.getCachedTrackFile(trackId);
+      if (cached != null) {
+        return cached.path;
+      }
+
+      // 1. In-memory stream cache
+      if (_streamCache.containsKey(trackId)) {
+        return _streamCache[trackId];
+      }
+    } else {
+      _streamCache.remove(trackId);
     }
 
     // 2. YouTube Explode stream extraction for YouTube IDs
@@ -149,8 +196,14 @@ class YoutubeMusicService {
       );
       final audioOnlyStreams = manifest.audioOnly;
       if (audioOnlyStreams.isNotEmpty) {
-        final bestAudio = audioOnlyStreams.withHighestBitrate();
-        final url = bestAudio.url.toString();
+        // Universal hardware decoding: Prefer MP4 / AAC audio stream
+        final aacStreams = audioOnlyStreams.where(
+          (s) => s.container.name.toLowerCase() == 'mp4' || s.audioCodec.toLowerCase().contains('mp4a'),
+        );
+        final selected = aacStreams.isNotEmpty
+            ? aacStreams.withHighestBitrate()
+            : audioOnlyStreams.withHighestBitrate();
+        final url = selected.url.toString();
         _streamCache[trackId] = url;
         return url;
       }
@@ -177,7 +230,11 @@ class YoutubeMusicService {
             );
             final audioOnly = fbManifest.audioOnly;
             if (audioOnly.isNotEmpty) {
-              final url = audioOnly.withHighestBitrate().url.toString();
+              final aac = audioOnly.where(
+                (s) => s.container.name.toLowerCase() == 'mp4' || s.audioCodec.toLowerCase().contains('mp4a'),
+              );
+              final selected = aac.isNotEmpty ? aac.withHighestBitrate() : audioOnly.withHighestBitrate();
+              final url = selected.url.toString();
               _streamCache[trackId] = url;
               _streamCache[fb.id] = url;
               return url;

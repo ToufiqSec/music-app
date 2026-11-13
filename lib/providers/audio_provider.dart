@@ -313,11 +313,6 @@ class AudioProvider extends ChangeNotifier {
     SupabaseService.syncAddListeningHistory(track).catchError((_) {});
 
     try {
-      // Smooth fade-out of previous track if currently playing (Issue 8)
-      if (_isPlaying) {
-        await _audioHandler.fadeVolume(0.15, const Duration(milliseconds: 150));
-      }
-
       // 1. Resolve stream or local file path
       final cached = await AudioCacheService.getCachedTrackFile(track.id);
       String? resolvedUrl;
@@ -336,16 +331,18 @@ class AudioProvider extends ChangeNotifier {
         throw Exception('Unable to resolve audio stream for track ${track.title}');
       }
 
-      // 2. Play via AudioHandler with automated fallback recovery
+      // 2. Play via AudioHandler with automated YouTube fallback recovery
       try {
         await _audioHandler.playTrackUrl(track.toMediaItem(), resolvedUrl);
       } catch (playErr) {
         debugPrint('[AudioProvider] Primary playTrackUrl failed: $playErr. Attempting direct YouTube stream fallback...');
+        _musicService.invalidateCache(track.id);
         final fbUrl = await _musicService.getAudioStreamUrl(
           track.id,
           fallbackQuery: '${track.title} ${track.artist}',
+          forceRefresh: true,
         );
-        if (fbUrl != null && fbUrl != resolvedUrl) {
+        if (fbUrl != null) {
           resolvedUrl = fbUrl;
           await _audioHandler.playTrackUrl(track.toMediaItem(), resolvedUrl);
         } else {
@@ -359,10 +356,6 @@ class AudioProvider extends ChangeNotifier {
           _audioHandler.seek(Duration(seconds: resumeSeconds)).catchError((_) {});
         });
       }
-
-      // Smooth fade-in of new track (Issue 8)
-      final fadeDurationMs = (_crossfadeSeconds * 1000).toInt().clamp(200, 4000);
-      _audioHandler.fadeVolume(1.0, Duration(milliseconds: fadeDurationMs));
 
       // 3. Network protocol check (robust for Windows & Unix)
       // Debounce background caching by 8s so initial stream buffer is never starved.

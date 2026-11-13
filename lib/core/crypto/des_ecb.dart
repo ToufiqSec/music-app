@@ -140,8 +140,8 @@ class DesEcbDecryptor {
 
   static const List<int> _shifts = [1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1];
 
-  /// Decrypts JioSaavn encrypted_media_url to direct CDN stream link (upgraded to 320kbps).
-  static String? decryptMediaUrl(String encryptedUrl, {String key = defaultSaavnKey}) {
+  /// Decrypts JioSaavn encrypted_media_url to direct CDN stream link.
+  static String? decryptMediaUrl(String encryptedUrl, {String key = defaultSaavnKey, bool is320Available = true}) {
     try {
       final ciphertext = base64.decode(encryptedUrl.trim());
       final keyBytes = utf8.encode(key);
@@ -162,9 +162,13 @@ class DesEcbDecryptor {
 
       String url = utf8.decode(decrypted.sublist(0, unpaddedLen)).trim();
 
-      // Upgrade quality to 320kbps if saavncdn URL
-      url = url.replaceAll('_96.mp4', '_320.mp4')
-               .replaceAll('_160.mp4', '_320.mp4');
+      // Upgrade to 320kbps only if confirmed available by API metadata
+      if (is320Available) {
+        url = url.replaceAll('_96.mp4', '_320.mp4')
+                 .replaceAll('_160.mp4', '_320.mp4');
+      } else {
+        url = url.replaceAll('_96.mp4', '_160.mp4');
+      }
 
       return url;
     } catch (_) {

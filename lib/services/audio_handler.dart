@@ -97,8 +97,14 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
       } else {
         await _player.setUrl(
           resolvedUrl,
-        ).timeout(const Duration(seconds: 25));
+          headers: const {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Referer': 'https://www.youtube.com/',
+          },
+        ).timeout(const Duration(seconds: 30));
       }
+      // Guarantee full audible volume immediately
+      await _player.setVolume(1.0);
       await _player.play();
     } catch (e) {
       await _player.stop();
