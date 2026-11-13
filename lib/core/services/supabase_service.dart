@@ -261,11 +261,6 @@ class SupabaseService {
       );
     }
   }
-        displayName: user.email?.split('@')[0] ?? 'Music Lover',
-        avatarUrl: '',
-      );
-    }
-  }
 
   static Future<void> updateProfile({
     required String displayName,
