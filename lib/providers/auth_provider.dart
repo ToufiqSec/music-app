@@ -32,9 +32,10 @@ class AuthProvider extends ChangeNotifier {
     if (user?.email != null && user!.email!.trim().isNotEmpty) {
       return user.email!.trim();
     }
-    final metaEmail = user?.userMetadata?['email']?.toString().trim();
-    if (metaEmail != null && metaEmail.isNotEmpty) {
-      return metaEmail;
+    final metaEmail = user?.userMetadata?['email']?.toString();
+    final trimmedMeta = metaEmail?.trim();
+    if (trimmedMeta != null && trimmedMeta.isNotEmpty) {
+      return trimmedMeta;
     }
     return 'Guest';
   }
@@ -53,7 +54,8 @@ class AuthProvider extends ChangeNotifier {
       if (event == AuthChangeEvent.signedIn || event == AuthChangeEvent.tokenRefreshed) {
         final user = SupabaseService.currentUser;
         if (user != null) {
-          final userEmail = user.email?.trim() ?? user.userMetadata?['email']?.toString().trim();
+          final metaUserEmail = user.userMetadata?['email']?.toString();
+          final userEmail = user.email?.trim() ?? metaUserEmail?.trim();
           if (userEmail != null && userEmail.isNotEmpty) {
             try {
               await SupabaseService.client.from('profiles').upsert({

@@ -18,14 +18,16 @@ class UserProfileData {
   });
 
   factory UserProfileData.fromMap(Map<String, dynamic> map, String fallbackEmail) {
-    final rawEmail = map['email']?.toString().trim();
-    final effectiveEmail = (rawEmail != null && rawEmail.isNotEmpty)
-        ? rawEmail
+    final rawEmail = map['email']?.toString();
+    final trimmedEmail = rawEmail?.trim();
+    final effectiveEmail = (trimmedEmail != null && trimmedEmail.isNotEmpty)
+        ? trimmedEmail
         : (fallbackEmail.trim().isNotEmpty ? fallbackEmail.trim() : 'Guest');
 
-    final rawName = map['display_name']?.toString().trim();
-    final effectiveName = (rawName != null && rawName.isNotEmpty)
-        ? rawName
+    final rawName = map['display_name']?.toString();
+    final trimmedName = rawName?.trim();
+    final effectiveName = (trimmedName != null && trimmedName.isNotEmpty)
+        ? trimmedName
         : (effectiveEmail.contains('@') ? effectiveEmail.split('@')[0] : 'Music Lover');
 
     return UserProfileData(
@@ -202,9 +204,10 @@ class SupabaseService {
     final user = currentUser;
     if (user == null) return null;
 
+    final metaEmail = user.userMetadata?['email']?.toString();
     final fallbackEmail = (user.email != null && user.email!.trim().isNotEmpty)
         ? user.email!.trim()
-        : (user.userMetadata?['email']?.toString().trim() ?? '');
+        : (metaEmail?.trim() ?? '');
 
     try {
       final res = await client
@@ -214,12 +217,13 @@ class SupabaseService {
           .maybeSingle();
 
       if (res != null) {
-        final storedEmail = res['email']?.toString().trim();
-        final effectiveEmail = (storedEmail != null && storedEmail.isNotEmpty)
-            ? storedEmail
+        final storedEmail = res['email']?.toString();
+        final trimmedStored = storedEmail?.trim();
+        final effectiveEmail = (trimmedStored != null && trimmedStored.isNotEmpty)
+            ? trimmedStored
             : fallbackEmail;
 
-        if ((storedEmail == null || storedEmail.isEmpty) && effectiveEmail.isNotEmpty) {
+        if ((trimmedStored == null || trimmedStored.isEmpty) && effectiveEmail.isNotEmpty) {
           try {
             await client.from('profiles').update({
               'email': effectiveEmail,
