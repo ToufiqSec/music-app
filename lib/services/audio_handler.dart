@@ -46,6 +46,8 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
           MediaAction.seek,
           MediaAction.seekForward,
           MediaAction.seekBackward,
+          MediaAction.skipToNext,
+          MediaAction.skipToPrevious,
         },
         androidCompactActionIndices: const [0, 1, 3],
         processingState: const {
@@ -79,11 +81,26 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
   @override
   Future<void> seek(Duration position) => _player.seek(position);
 
-  @override
-  Future<void> skipToNext() => _player.seekToNext();
+  Future<void> Function()? onSkipToNext;
+  Future<void> Function()? onSkipToPrevious;
 
   @override
-  Future<void> skipToPrevious() => _player.seekToPrevious();
+  Future<void> skipToNext() async {
+    if (onSkipToNext != null) {
+      await onSkipToNext!();
+    } else {
+      await _player.seekToNext();
+    }
+  }
+
+  @override
+  Future<void> skipToPrevious() async {
+    if (onSkipToPrevious != null) {
+      await onSkipToPrevious!();
+    } else {
+      await _player.seekToPrevious();
+    }
+  }
 
   /// Play a single direct stream or local file
   Future<void> playTrackUrl(MediaItem item, String resolvedUrl) async {

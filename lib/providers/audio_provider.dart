@@ -8,6 +8,7 @@ import '../core/services/youtube_music_service.dart';
 import '../core/services/track_metadata_store.dart';
 import '../core/services/supabase_service.dart';
 import '../core/services/related_tracks_engine.dart';
+import '../core/services/curated_tracks.dart';
 import '../widgets/generated_cover_art.dart';
 import '../services/audio_handler.dart';
 
@@ -38,6 +39,8 @@ class AudioProvider extends ChangeNotifier {
 
   // Track pre-fetch flag to avoid duplicate trigger per song
   bool _preFetchedNextTrack = false;
+  bool _isTransitioningTrack = false;
+  final Set<String> _retriedPreviewCutoffTrackIds = {};
   Timer? _seekDebounceTimer;
   Timer? _backgroundCacheTimer;
 
@@ -118,6 +121,10 @@ class AudioProvider extends ChangeNotifier {
   }
 
   void _initListeners() {
+    // Wire OS lockscreen, notification, and headphone skip buttons to AudioProvider queue
+    _audioHandler.onSkipToNext = playNext;
+    _audioHandler.onSkipToPrevious = playPrevious;
+
     _audioHandler.playbackState.listen((state) {
       _isPlaying = state.playing;
       final wasBuffering = _isBuffering;
@@ -135,6 +142,14 @@ class AudioProvider extends ChangeNotifier {
       _position = pos;
       _checkAndPrefetchNextTrack(pos);
       _checkAndSaveResumePosition(pos);
+
+      // Automated track advancement: position threshold watchdog
+      // If within 350ms of stream duration, transition cleanly to the next track
+      if (_duration > const Duration(seconds: 5) &&
+          pos >= _duration - const Duration(milliseconds: 350) &&
+          !_isTransitioningTrack) {
+        _onTrackCompleted();
+      }
       notifyListeners();
     });
 
@@ -152,7 +167,7 @@ class AudioProvider extends ChangeNotifier {
 
     // Auto-advance, repeat one, or Autoplay next related track on completion (Issue 8)
     _audioHandler.player.playerStateStream.listen((state) {
-      if (state.processingState == ProcessingState.completed) {
+      if (state.processingState == ProcessingState.completed && !_isTransitioningTrack) {
         _onTrackCompleted();
       }
     });
@@ -160,56 +175,116 @@ class AudioProvider extends ChangeNotifier {
 
   /// Handles track completion with queue precedence and dynamic related autoplay
   Future<void> _onTrackCompleted() async {
-    if (_currentTrack != null) {
-      TrackMetadataStore.clearPlaybackPosition(_currentTrack!.id);
-      _relatedEngine.markTrackPlayed(_currentTrack!.id);
-    }
+    if (_isTransitioningTrack) return;
+    _isTransitioningTrack = true;
 
-    if (_repeatMode == RepeatMode.one && _currentTrack != null) {
-      seekTo(Duration.zero);
-      _audioHandler.play();
-      return;
-    }
+    try {
+      if (_currentTrack != null) {
+        TrackMetadataStore.clearPlaybackPosition(_currentTrack!.id);
+        _relatedEngine.markTrackPlayed(_currentTrack!.id);
+      }
 
-    // Detect premature 30-second snippet cutoff (e.g. preview media URL) and resolve full stream
-    if (_currentTrack != null &&
-        _currentTrack!.durationSeconds > 60 &&
-        _position.inSeconds < 45) {
-      debugPrint('[AudioProvider] Detected premature preview cutoff for ${_currentTrack!.title}. Resolving full stream...');
-      final fullStreamUrl = await _musicService.getAudioStreamUrl(
-        _currentTrack!.id,
-        fallbackQuery: '${_currentTrack!.title} ${_currentTrack!.artist} full audio',
-      );
-      if (fullStreamUrl != null) {
-        await _audioHandler.playTrackUrl(_currentTrack!.toMediaItem(), fullStreamUrl);
+      // 1. Repeat One
+      if (_repeatMode == RepeatMode.one && _currentTrack != null) {
+        await seekTo(Duration.zero);
+        await _audioHandler.play();
         return;
+      }
+
+      // Check for true premature preview cutoff (e.g. 30s preview when full track is >60s)
+      // Only runs if stream duration was actually short and we haven't already retried this track
+      if (_currentTrack != null &&
+          _currentTrack!.durationSeconds > 60 &&
+          _duration.inSeconds > 0 &&
+          _duration.inSeconds < 45 &&
+          !_retriedPreviewCutoffTrackIds.contains(_currentTrack!.id)) {
+        _retriedPreviewCutoffTrackIds.add(_currentTrack!.id);
+        debugPrint('[AudioProvider] Detected premature preview cutoff for ${_currentTrack!.title}. Resolving full stream...');
+        final fullStreamUrl = await _musicService.getAudioStreamUrl(
+          _currentTrack!.id,
+          fallbackQuery: '${_currentTrack!.title} ${_currentTrack!.artist} full audio',
+          forceRefresh: true,
+        );
+        if (fullStreamUrl != null) {
+          await _audioHandler.playTrackUrl(_currentTrack!.toMediaItem(), fullStreamUrl);
+          return;
+        }
+      }
+
+      // 2. Play remaining queue first
+      final nextIdx = _getNextIndex();
+      if (nextIdx != null && nextIdx < _playlistQueue.length) {
+        _currentIndex = nextIdx;
+        await playTrack(_playlistQueue[nextIdx]);
+        return;
+      }
+
+      // 3. Queue ended -> Continue with Autoplay related track if enabled
+      if (_autoplayEnabled && _currentTrack != null) {
+        YoutubeTrack? nextTrack;
+        try {
+          nextTrack = await _relatedEngine.findNextRelatedTrack(_currentTrack!).timeout(
+            const Duration(seconds: 6),
+            onTimeout: () => null,
+          );
+        } catch (e) {
+          debugPrint('[AudioProvider] Autoplay findNextRelatedTrack failed: $e');
+        }
+
+        // Fallback: If related track query returned nothing, pick fallback catalog track
+        nextTrack ??= _findFallbackAutoplayTrack();
+
+        if (nextTrack != null) {
+          _playlistQueue.add(nextTrack);
+          _currentIndex = _playlistQueue.length - 1;
+          await playTrack(nextTrack);
+          return;
+        }
+      }
+
+      // 4. Fallback queue wrap (Repeat All or Queue loop)
+      if (_playlistQueue.isNotEmpty) {
+        if (_repeatMode == RepeatMode.all || _autoplayEnabled) {
+          _currentIndex = 0;
+          await playTrack(_playlistQueue[0]);
+          return;
+        }
+      }
+    } catch (e) {
+      debugPrint('[AudioProvider] _onTrackCompleted error: $e');
+    } finally {
+      // Short debounce window to avoid re-triggering while audio player state settles
+      Future.delayed(const Duration(milliseconds: 800), () {
+        _isTransitioningTrack = false;
+      });
+    }
+  }
+
+  /// Finds a non-duplicate fallback track from listening history or curated catalog
+  YoutubeTrack? _findFallbackAutoplayTrack() {
+    final currentId = _currentTrack?.id;
+    final queueIds = _playlistQueue.map((t) => t.id).toSet();
+
+    // 1. Check history tracks
+    for (final h in _historyTracks) {
+      if (h.id != currentId && !queueIds.contains(h.id)) {
+        return h;
       }
     }
 
-    // 1. Play remaining queue first
-    final nextIdx = _getNextIndex();
-    if (nextIdx != null) {
-      _currentIndex = nextIdx;
-      await playTrack(_playlistQueue[nextIdx]);
-      return;
-    }
-
-    // 2. Queue ended -> Continue with Autoplay related track if enabled
-    if (_autoplayEnabled && _currentTrack != null) {
-      final nextTrack = await _relatedEngine.findNextRelatedTrack(_currentTrack!);
-      if (nextTrack != null) {
-        _playlistQueue.add(nextTrack);
-        _currentIndex = _playlistQueue.length - 1;
-        await playTrack(nextTrack);
-        return;
+    // 2. Check verified catalog tracks
+    for (final t in CuratedTracks.allCatalogTracks) {
+      if (t.id != currentId && !queueIds.contains(t.id)) {
+        return t;
       }
     }
 
-    // 3. Fallback queue wrap
-    if (_repeatMode == RepeatMode.all && _playlistQueue.isNotEmpty) {
-      _currentIndex = 0;
-      await playTrack(_playlistQueue[0]);
+    // 3. Fallback to any curated track
+    if (CuratedTracks.allCatalogTracks.isNotEmpty) {
+      return CuratedTracks.allCatalogTracks.first;
     }
+
+    return null;
   }
 
   /// Gapless pre-fetching & related candidate prefetch
@@ -281,12 +356,22 @@ class AudioProvider extends ChangeNotifier {
   /// Plays a track using the multi-tier zero-delay pipeline:
   /// Tier 3: Local cache -> Tier 1: JioSaavn -> Tier 2: YouTube
   Future<void> playTrack(YoutubeTrack track, [List<YoutubeTrack>? queue]) async {
+    _isTransitioningTrack = false;
     if (queue != null) {
       _playlistQueue = List.from(queue);
       _currentIndex = _playlistQueue.indexWhere((t) => t.id == track.id);
-    } else if (!_playlistQueue.any((t) => t.id == track.id)) {
-      _playlistQueue.add(track);
-      _currentIndex = _playlistQueue.length - 1;
+      if (_currentIndex == -1) {
+        _playlistQueue.insert(0, track);
+        _currentIndex = 0;
+      }
+    } else {
+      final existingIdx = _playlistQueue.indexWhere((t) => t.id == track.id);
+      if (existingIdx != -1) {
+        _currentIndex = existingIdx;
+      } else {
+        _playlistQueue.add(track);
+        _currentIndex = _playlistQueue.length - 1;
+      }
     }
 
     _currentTrack = track;
@@ -379,6 +464,12 @@ class AudioProvider extends ChangeNotifier {
       debugPrint('[AudioProvider] Playback error: $e');
       _isBuffering = false;
       _bufferingWatchdogTimer?.cancel();
+      // If a track in queue fails to load, gracefully advance to next track so playback doesn't stall
+      if (_playlistQueue.length > 1) {
+        Future.delayed(const Duration(milliseconds: 500), () {
+          playNext();
+        });
+      }
     } finally {
       _isBuffering = false;
       _bufferingWatchdogTimer?.cancel();
@@ -406,24 +497,43 @@ class AudioProvider extends ChangeNotifier {
 
   Future<void> playNext() async {
     final nextIdx = _getNextIndex();
-    if (nextIdx != null) {
+    if (nextIdx != null && nextIdx < _playlistQueue.length) {
       _currentIndex = nextIdx;
       await playTrack(_playlistQueue[nextIdx]);
     } else if (_autoplayEnabled && _currentTrack != null) {
-      final candidate = await _relatedEngine.findNextRelatedTrack(_currentTrack!);
+      YoutubeTrack? candidate;
+      try {
+        candidate = await _relatedEngine.findNextRelatedTrack(_currentTrack!).timeout(
+          const Duration(seconds: 6),
+          onTimeout: () => null,
+        );
+      } catch (_) {}
+      candidate ??= _findFallbackAutoplayTrack();
       if (candidate != null) {
         _playlistQueue.add(candidate);
         _currentIndex = _playlistQueue.length - 1;
         await playTrack(candidate);
       }
+    } else if (_playlistQueue.isNotEmpty) {
+      _currentIndex = 0;
+      await playTrack(_playlistQueue[0]);
     }
   }
 
   Future<void> playPrevious() async {
+    // If more than 3 seconds into track, restart current track
+    if (_position.inSeconds > 3) {
+      await seekTo(Duration.zero);
+      await _audioHandler.play();
+      return;
+    }
+
     final prevIdx = _getPreviousIndex();
-    if (prevIdx != null) {
+    if (prevIdx != null && prevIdx >= 0 && prevIdx < _playlistQueue.length) {
       _currentIndex = prevIdx;
       await playTrack(_playlistQueue[prevIdx]);
+    } else if (_playlistQueue.isNotEmpty) {
+      await seekTo(Duration.zero);
     }
   }
 
