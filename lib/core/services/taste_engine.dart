@@ -424,7 +424,8 @@ class TasteEngine {
     ),
   ];
 
-  static List<YoutubeTrack> rerankSearchResults(List<YoutubeTrack> tracks) => rerankWithTaste(tracks);
+  static List<YoutubeTrack> rerankSearchResults(List<YoutubeTrack> tracks) =>
+      avoidConsecutiveArtists(rerankWithTaste(tracks));
 
   static Future<File> _getLocalFile() async {
     final dir = await getApplicationDocumentsDirectory();
@@ -580,7 +581,37 @@ class TasteEngine {
       return scoreB.compareTo(scoreA);
     });
 
-    return scoredList;
+    return avoidConsecutiveArtists(scoredList);
+  }
+
+  /// Avoids consecutive tracks from the same artist to ensure diverse playback flow
+  static List<YoutubeTrack> avoidConsecutiveArtists(List<YoutubeTrack> tracks) {
+    if (tracks.length <= 1) return tracks;
+    final List<YoutubeTrack> result = [];
+    final List<YoutubeTrack> pool = List.from(tracks);
+
+    String? lastArtist;
+    while (pool.isNotEmpty) {
+      int targetIdx = pool.indexWhere((t) {
+        final currentArtist = _extractPrimaryArtist(t.artist);
+        return lastArtist == null || currentArtist != lastArtist;
+      });
+
+      if (targetIdx == -1) {
+        result.addAll(pool);
+        break;
+      }
+
+      final chosen = pool.removeAt(targetIdx);
+      result.add(chosen);
+      lastArtist = _extractPrimaryArtist(chosen.artist);
+    }
+    return result;
+  }
+
+  static String _extractPrimaryArtist(String fullArtist) {
+    final lower = fullArtist.trim().toLowerCase();
+    return lower.split(RegExp(r'[,&/]')).first.trim();
   }
 
   /// Live search for ANY artist online with real official portrait resolution
