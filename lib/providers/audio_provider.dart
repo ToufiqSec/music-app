@@ -186,7 +186,7 @@ class AudioProvider extends ChangeNotifier {
 
       // 1. Repeat One
       if (_repeatMode == RepeatMode.one && _currentTrack != null) {
-        await seekTo(Duration.zero);
+        seekTo(Duration.zero);
         await _audioHandler.play();
         return;
       }
@@ -523,7 +523,7 @@ class AudioProvider extends ChangeNotifier {
   Future<void> playPrevious() async {
     // If more than 3 seconds into track, restart current track
     if (_position.inSeconds > 3) {
-      await seekTo(Duration.zero);
+      seekTo(Duration.zero);
       await _audioHandler.play();
       return;
     }
@@ -533,7 +533,7 @@ class AudioProvider extends ChangeNotifier {
       _currentIndex = prevIdx;
       await playTrack(_playlistQueue[prevIdx]);
     } else if (_playlistQueue.isNotEmpty) {
-      await seekTo(Duration.zero);
+      seekTo(Duration.zero);
     }
   }
 
