@@ -14,6 +14,8 @@ class AppColors {
   // Brand and accent
   static const Color primary = Color(0xFF8B6FE8);
   static const Color primarySoft = Color(0xFFA58CF2);
+  static const Color accentTeal = Color(0xFF5EEAD4);
+  static const Color cardBorder = Color(0xFF2E2E3E);
   static const Color sunsetPink = Color(0xFFE887B8);
   static const Color sunsetCoral = Color(0xFFF29BC0);
   static const Color sunsetViolet = Color(0xFF7A4FB8);
@@ -30,6 +32,7 @@ class AppColors {
   static const Color controlLightIcon = Color(0xFF1E1B24);
   static const Color iconIdle = Color(0xFFA39CAD);
   static const Color iconActive = Color(0xFFFFFFFF);
+  static const Color iconDisabled = Color(0xFF555060);
   static const Color scrim = Color(0x73121218); // 45% opacity of bgBase
 
   // Status

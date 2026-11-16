@@ -9,6 +9,11 @@ class AppRadii {
   static const double full = 999.0;
   static const double pill = 999.0;
 
+  static const double sm = small;
+  static const double md = medium;
+  static const double lg = large;
+  static const double xl = xlarge;
+
   static const double radiusSmall = small;
   static const double radiusMedium = medium;
   static const double radiusLarge = large;

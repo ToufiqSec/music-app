@@ -101,6 +101,7 @@ class AppTextStyles {
       );
   static TextStyle get bodyMedium => body;
   static TextStyle get bodySmall => subtitle;
+  static TextStyle get bodySecondary => body;
   static TextStyle get caption => meta;
   static TextStyle get heroTitle => displayTitle;
   static TextStyle get button => buttonLabel;
