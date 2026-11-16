@@ -403,10 +403,10 @@ class AudioProvider extends ChangeNotifier {
     });
     SupabaseService.syncAddListeningHistory(track).catchError((_) {});
 
+    String? resolvedUrl;
     try {
       // 1. Resolve stream or local file path
       final cached = await AudioCacheService.getCachedTrackFile(track.id);
-      String? resolvedUrl;
       if (cached != null) {
         resolvedUrl = cached.path;
       } else if (track.audioStreamUrl != null && track.audioStreamUrl!.isNotEmpty) {

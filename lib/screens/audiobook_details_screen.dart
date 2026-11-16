@@ -12,8 +12,9 @@ class AudiobookDetailsScreen extends StatelessWidget {
 
   const AudiobookDetailsScreen({
     super.key,
-    required this.book,
-  });
+    AudiobookModel? book,
+    AudiobookModel? audiobook,
+  }) : book = book ?? audiobook!;
 
   String _formatDuration(int seconds) {
     final hours = seconds ~/ 3600;
