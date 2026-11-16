@@ -11,6 +11,8 @@ class YoutubeTrack {
   final bool isDownloaded;
   final String? localFilePath;
 
+  String get thumbnail => thumbnailUrl;
+
   const YoutubeTrack({
     required this.id,
     required this.title,

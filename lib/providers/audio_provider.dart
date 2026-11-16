@@ -44,6 +44,9 @@ class AudioProvider extends ChangeNotifier {
   Timer? _seekDebounceTimer;
   Timer? _backgroundCacheTimer;
 
+  // Listen Together Room delegate callback (Spec Section 1 & 6)
+  Future<bool> Function()? onTrackCompletedInRoom;
+
   // Download states for offline tracks
   final Map<String, double> _downloadProgress = {};
   StreamSubscription<double>? _currentDownloadSubscription;
@@ -189,6 +192,12 @@ class AudioProvider extends ChangeNotifier {
         seekTo(Duration.zero);
         await _audioHandler.play();
         return;
+      }
+
+      // Check if Listen Together room is active and delegates queue progression
+      if (onTrackCompletedInRoom != null) {
+        final handled = await onTrackCompletedInRoom!();
+        if (handled) return;
       }
 
       // Check for true premature preview cutoff (e.g. 30s preview when full track is >60s)

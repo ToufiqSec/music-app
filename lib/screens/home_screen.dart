@@ -26,6 +26,7 @@ import 'artist_onboarding_screen.dart';
 import 'mood_hub_screen.dart';
 import '../core/services/taste_engine.dart';
 import '../providers/auth_provider.dart';
+import '../features/listen_together/widgets/listen_together_button.dart';
 
 /// Main Discovery Hub and Navigation Shell for Music App.
 /// Universal UI Design System: Twilight Calm.
@@ -390,9 +391,10 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
                   ],
                 ),
 
-                // Top Action Buttons (Search, History, Profile)
+                // Top Action Buttons (Listen Together, Search, History, Profile)
                 Row(
                   children: [
+                    const ListenTogetherButton(),
                     IconButton(
                       icon: const Icon(
                         Icons.search_rounded,

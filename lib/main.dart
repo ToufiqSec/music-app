@@ -5,6 +5,7 @@ import 'package:audio_service/audio_service.dart';
 import 'services/audio_handler.dart';
 import 'providers/audio_provider.dart';
 import 'providers/auth_provider.dart';
+import 'features/listen_together/providers/room_provider.dart';
 import 'core/services/supabase_service.dart';
 import 'core/services/notification_service.dart';
 import 'screens/home_screen.dart';
@@ -81,6 +82,7 @@ class MusicAppBootstrap extends StatefulWidget {
 class _MusicAppBootstrapState extends State<MusicAppBootstrap> {
   AudioProvider? _audioProvider;
   AuthProvider? _authProvider;
+  RoomProvider? _roomProvider;
 
   @override
   void initState() {
@@ -130,9 +132,13 @@ class _MusicAppBootstrapState extends State<MusicAppBootstrap> {
     }
 
     if (mounted) {
+      final audio = AudioProvider(handler);
+      final room = RoomProvider();
+      room.attachAudioProvider(audio);
       setState(() {
-        _audioProvider = AudioProvider(handler);
+        _audioProvider = audio;
         _authProvider = AuthProvider();
+        _roomProvider = room;
       });
       debugPrint('[Startup] Providers mounted, rendering HomeScreen.');
     }
@@ -168,6 +174,7 @@ class _MusicAppBootstrapState extends State<MusicAppBootstrap> {
       providers: [
         ChangeNotifierProvider.value(value: _audioProvider!),
         ChangeNotifierProvider.value(value: _authProvider ?? AuthProvider()),
+        ChangeNotifierProvider.value(value: _roomProvider ?? RoomProvider()),
       ],
       child: const MusicApp(),
     );
