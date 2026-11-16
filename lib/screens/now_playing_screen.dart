@@ -16,6 +16,7 @@ import '../widgets/glass_icon_button.dart';
 import '../widgets/twilight_scene_background.dart';
 import '../widgets/synced_lyrics_view.dart';
 import '../widgets/generated_cover_art.dart';
+import '../features/listen_together/widgets/listen_together_button.dart';
 
 /// Full-Screen Now Playing Sanctuary Player from Universal UI Design System: Twilight Calm.
 class NowPlayingScreen extends StatefulWidget {
@@ -129,6 +130,9 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              // Listen Together Group Sync Button
+                              const ListenTogetherButton(size: 20),
+                              const SizedBox(width: 4),
                               // Like Button
                               Selector<AudioProvider, bool>(
                                 selector: (_, ap) => ap.isTrackLiked(track.id),

@@ -3,6 +3,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import '../../features/listen_together/screens/join_room_screen.dart';
 
 /// Top-level background message handler for FCM
 @pragma('vm:entry-point')
@@ -18,6 +20,8 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 class NotificationService {
   NotificationService._();
   static final NotificationService instance = NotificationService._();
+
+  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _localNotifications =
@@ -122,6 +126,9 @@ class NotificationService {
       initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
         debugPrint('[NotificationService] Local notification payload tapped: ${response.payload}');
+        if (response.payload != null && response.payload!.isNotEmpty) {
+          _handlePayloadNavigation(response.payload!);
+        }
       },
     );
   }
@@ -132,6 +139,7 @@ class NotificationService {
     final android = message.notification?.android;
 
     if (notification != null && !kIsWeb) {
+      final roomCode = message.data['room_code'] ?? message.data['roomCode'];
       _localNotifications.show(
         notification.hashCode,
         notification.title,
@@ -146,12 +154,31 @@ class NotificationService {
             priority: Priority.high,
           ),
         ),
-        payload: message.data.toString(),
+        payload: roomCode?.toString(),
       );
     }
   }
 
   void _handleNotificationOpenedApp(RemoteMessage message) {
     debugPrint('[NotificationService] App opened via notification: ${message.data}');
+    final roomCode = message.data['room_code'] ?? message.data['roomCode'];
+    if (roomCode != null && roomCode.toString().isNotEmpty) {
+      _handlePayloadNavigation(roomCode.toString());
+    }
+  }
+
+  void _handlePayloadNavigation(String payload) {
+    try {
+      final cleanCode = payload.trim().toUpperCase();
+      if (cleanCode.length == 6) {
+        navigatorKey.currentState?.push(
+          MaterialPageRoute(
+            builder: (_) => JoinRoomScreen(initialCode: cleanCode),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('[NotificationService] Error navigating to payload target: $e');
+    }
   }
 }
