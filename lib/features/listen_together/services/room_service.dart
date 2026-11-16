@@ -500,11 +500,9 @@ class RoomService {
       final onlineIds = <String>{};
       for (final p in state) {
         for (final item in p.presences) {
-          if (item is Map && item['user_id'] != null) {
-            final uId = item['user_id']?.toString();
-            if (uId != null && uId.isNotEmpty) {
-              onlineIds.add(uId);
-            }
+          final uId = item.payload['user_id']?.toString();
+          if (uId != null && uId.isNotEmpty) {
+            onlineIds.add(uId);
           }
         }
       }
