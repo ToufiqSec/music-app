@@ -498,12 +498,10 @@ class RoomService {
     _roomChannel!.onPresenceSync((_) {
       final state = _roomChannel!.presenceState();
       final onlineIds = <String>{};
-      for (final presences in state.values) {
-        for (final p in presences) {
-          final uId = p.payload['user_id']?.toString();
-          if (uId != null && uId.isNotEmpty) {
-            onlineIds.add(uId);
-          }
+      for (final p in state) {
+        final uId = p.payload['user_id']?.toString();
+        if (uId != null && uId.isNotEmpty) {
+          onlineIds.add(uId);
         }
       }
       onPresenceChanged(onlineIds);
