@@ -8,6 +8,9 @@ import '../providers/auth_provider.dart';
 import '../features/music/models/music_models.dart';
 import '../widgets/app_search_field.dart';
 import '../widgets/generated_cover_art.dart';
+import '../features/audiobooks/data/sample_audiobooks.dart';
+import '../features/audiobooks/models/audiobook_model.dart';
+import 'audiobook_details_screen.dart';
 import '../core/services/search_cache_store.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radii.dart';
@@ -34,6 +37,9 @@ class _SearchScreenState extends State<SearchScreen> {
 
   // Real Dynamic Mood Chips (Global Rule 2: App's own categorization layer)
   final List<String> _quickCategories = [
+    'All',
+    'Podcasts',
+    'Audiobooks',
     'Trending',
     'Chill',
     'Lo-Fi',
@@ -58,7 +64,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   List<YoutubeTrack> get _filteredResults {
     if (_selectedFilterIndex == 0) return _searchResults;
-    return _searchResults.where((track) {
+    final list = _searchResults.where((track) {
       final type = AudioTypeDetector.detect(track.title, track.artist, track.durationSeconds);
       switch (_selectedFilterIndex) {
         case 1: // Songs
@@ -68,13 +74,17 @@ class _SearchScreenState extends State<SearchScreen> {
         case 3: // Podcasts
           return type == AudioContentType.podcast;
         case 4: // Audiobooks
-          return type == AudioContentType.audiobook;
+          return type == AudioContentType.audiobook || track.id.startsWith('ab_');
         case 5: // Videos
           return track.thumbnailUrl.contains('ytimg.com') || track.thumbnailUrl.contains('youtube.com');
         default:
           return true;
       }
     }).toList();
+    if (_selectedFilterIndex == 4 && list.isEmpty) {
+      return SampleAudiobooks.getAllChaptersAsTracks();
+    }
+    return list;
   }
 
   @override
@@ -113,6 +123,27 @@ class _SearchScreenState extends State<SearchScreen> {
         _isShowingCached = false;
         _isOfflineNotice = false;
       });
+      return;
+    }
+
+    if (trimmed == 'Audiobooks') {
+      setState(() {
+        _lastQuery = 'Audiobooks';
+        _selectedFilterIndex = 4; // Audiobooks tab
+        _searchResults = SampleAudiobooks.getAllChaptersAsTracks();
+        _isSearching = false;
+        _errorMessage = '';
+        _isOfflineNotice = false;
+      });
+      return;
+    }
+
+    if (trimmed == 'All') {
+      setState(() {
+        _selectedFilterIndex = 0;
+        _selectedCategory = 'All';
+      });
+      _executeSearch('Trending', isMood: true);
       return;
     }
 
@@ -563,6 +594,25 @@ class _SearchScreenState extends State<SearchScreen> {
                   if (_searchController.text.trim().isNotEmpty) {
                     SearchCacheStore.addRecentSearch(_searchController.text.trim());
                   }
+
+                  // Audiobooks Navigation (Issue 9 & 10)
+                  if (type == AudioContentType.audiobook || track.id.startsWith('ab_')) {
+                    final matchingBook = SampleAudiobooks.books.firstWhere(
+                      (b) =>
+                          track.id.startsWith(b.id) ||
+                          track.artist.toLowerCase() == b.author.toLowerCase() ||
+                          track.title.toLowerCase().contains(b.title.toLowerCase()),
+                      orElse: () => SampleAudiobooks.books.first,
+                    );
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => AudiobookDetailsScreen(audiobook: matchingBook),
+                      ),
+                    );
+                    return;
+                  }
+
                   audioProvider.playTrack(track, _searchResults);
                 },
               ),

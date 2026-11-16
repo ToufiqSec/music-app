@@ -26,6 +26,10 @@ class SearchCacheStore {
 
   /// Internal Mood Categorization Layer mapping moods to live queries (Global Rule 2)
   static final Map<String, String> moodQueryMap = {
+    'All': 'top trending viral music hits 2026',
+    'Podcasts': 'popular podcast episodes full audio story',
+    'Audiobooks': 'bestselling full audiobook chapters stories',
+    'Trending': 'top music hits viral trending',
     'Chill': 'chill acoustic peaceful relax vibes',
     'Lo-Fi': 'lofi hip hop beats to study relax',
     'Midnight': 'late night drive ambient synthwave',
@@ -35,7 +39,6 @@ class SearchCacheStore {
     'EDM': 'electronic dance festival hits energy',
     'Workout': 'workout pump gym motivation energy',
     'Focus': 'deep focus ambient study music instrumental',
-    'Trending': 'top music hits viral trending',
   };
 
   static Future<File> _getCacheFile() async {

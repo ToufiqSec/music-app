@@ -433,6 +433,262 @@ class CuratedTracks {
     ),
   ];
 
+  static final List<YoutubeTrack> popularAlbumsTracks = [
+    const YoutubeTrack(
+      id: 'IJq0ydz4628',
+      title: 'Tum Hi Ho (Aashiqui 2)',
+      artist: 'Arijit Singh, Mithoon',
+      durationSeconds: 262,
+      thumbnailUrl: 'https://i.ytimg.com/vi/IJq0ydz4628/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: 'T94PHkuydcw',
+      title: 'Kun Faya Kun (Rockstar)',
+      artist: 'A.R. Rahman, Mohit Chauhan, Javed Ali',
+      durationSeconds: 473,
+      thumbnailUrl: 'https://i.ytimg.com/vi/T94PHkuydcw/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: '6wZZ4b9A-g8',
+      title: 'Ilahi (Yeh Jawaani Hai Deewani)',
+      artist: 'Arijit Singh, Pritam',
+      durationSeconds: 228,
+      thumbnailUrl: 'https://i.ytimg.com/vi/6wZZ4b9A-g8/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: 'BddP6PYo2gs',
+      title: 'Kesariya (Brahmāstra)',
+      artist: 'Arijit Singh, Pritam',
+      durationSeconds: 268,
+      thumbnailUrl: 'https://i.ytimg.com/vi/BddP6PYo2gs/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: 'VOLKJJvfAbg',
+      title: 'Bekhayali (Kabir Singh)',
+      artist: 'Sachet Tandon, Sachet-Parampara',
+      durationSeconds: 371,
+      thumbnailUrl: 'https://i.ytimg.com/vi/VOLKJJvfAbg/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: 'mUvG965iVlY',
+      title: 'Dil Bechara (Dil Bechara)',
+      artist: 'A.R. Rahman',
+      durationSeconds: 242,
+      thumbnailUrl: 'https://i.ytimg.com/vi/mUvG965iVlY/hqdefault.jpg',
+    ),
+  ];
+
+  static final List<YoutubeTrack> featuringSongsTracks = [
+    const YoutubeTrack(
+      id: 'sK7riqg2mr4',
+      title: 'Agar Tum Saath Ho (Tamasha)',
+      artist: 'Alka Yagnik, Arijit Singh, A.R. Rahman',
+      durationSeconds: 341,
+      thumbnailUrl: 'https://i.ytimg.com/vi/sK7riqg2mr4/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: '6vKucgAeF_Q',
+      title: 'Matargashti (Tamasha)',
+      artist: 'Mohit Chauhan, A.R. Rahman',
+      durationSeconds: 328,
+      thumbnailUrl: 'https://i.ytimg.com/vi/6vKucgAeF_Q/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: 'Z_PODraXg4E',
+      title: 'Channa Mereya (Ae Dil Hai Mushkil)',
+      artist: 'Arijit Singh, Pritam',
+      durationSeconds: 289,
+      thumbnailUrl: 'https://i.ytimg.com/vi/Z_PODraXg4E/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: 'pELk1MYhpPk',
+      title: 'Tum Tak (Raanjhanaa)',
+      artist: 'Javed Ali, Keerthi Sagathia, A.R. Rahman',
+      durationSeconds: 304,
+      thumbnailUrl: 'https://i.ytimg.com/vi/pELk1MYhpPk/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: 'M_6Z0y7e7gM',
+      title: 'Patakha Guddi (Highway)',
+      artist: 'Nooran Sisters, A.R. Rahman',
+      durationSeconds: 284,
+      thumbnailUrl: 'https://i.ytimg.com/vi/M_6Z0y7e7gM/hqdefault.jpg',
+    ),
+  ];
+
+  static final List<YoutubeTrack> ishqBulaavaRadioTracks = [
+    const YoutubeTrack(
+      id: 'xW4Xq5uE9eI',
+      title: 'Ishq Bulaava',
+      artist: 'Sanam Puri, Shipra Goyal, Vishal-Shekhar',
+      durationSeconds: 303,
+      thumbnailUrl: 'https://i.ytimg.com/vi/xW4Xq5uE9eI/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: '8vK8ZqGvU_A',
+      title: 'Zehnaseeb',
+      artist: 'Chinmayi Sripaada, Shekhar Ravjiani',
+      durationSeconds: 215,
+      thumbnailUrl: 'https://i.ytimg.com/vi/8vK8ZqGvU_A/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: 'H2f7MZUsvVE',
+      title: 'Samjhawan',
+      artist: 'Arijit Singh, Shreya Ghoshal',
+      durationSeconds: 269,
+      thumbnailUrl: 'https://i.ytimg.com/vi/H2f7MZUsvVE/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: 'b87dE8g3cXE',
+      title: 'Mast Magan',
+      artist: 'Arijit Singh, Chinmayi Sripaada',
+      durationSeconds: 280,
+      thumbnailUrl: 'https://i.ytimg.com/vi/b87dE8g3cXE/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: 'jHNNMj5bNQw',
+      title: 'Kabira',
+      artist: 'Tochi Raina, Rekha Bhardwaj, Pritam',
+      durationSeconds: 223,
+      thumbnailUrl: 'https://i.ytimg.com/vi/jHNNMj5bNQw/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: 'gP_GqX7s3Y8',
+      title: 'Hasi (Acoustic)',
+      artist: 'Ami Mishra, Shreya Ghoshal',
+      durationSeconds: 212,
+      thumbnailUrl: 'https://i.ytimg.com/vi/gP_GqX7s3Y8/hqdefault.jpg',
+    ),
+  ];
+
+  static final List<YoutubeTrack> happyHitsTracks = [
+    const YoutubeTrack(
+      id: '6wZZ4b9A-g8',
+      title: 'Ilahi',
+      artist: 'Arijit Singh, Pritam',
+      durationSeconds: 228,
+      thumbnailUrl: 'https://i.ytimg.com/vi/6wZZ4b9A-g8/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: 'II2EO3Nw4m0',
+      title: 'Badtameez Dil',
+      artist: 'Benny Dayal, Shefali Alvares, Pritam',
+      durationSeconds: 252,
+      thumbnailUrl: 'https://i.ytimg.com/vi/II2EO3Nw4m0/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: '6vKucgAeF_Q',
+      title: 'Matargashti',
+      artist: 'Mohit Chauhan, A.R. Rahman',
+      durationSeconds: 328,
+      thumbnailUrl: 'https://i.ytimg.com/vi/6vKucgAeF_Q/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: '7DYyFOU8Nfg',
+      title: 'Gallan Goodiyaan',
+      artist: 'Yashita Sharma, Manish Kumar Tipu, Shankar Mahadevan',
+      durationSeconds: 297,
+      thumbnailUrl: 'https://i.ytimg.com/vi/7DYyFOU8Nfg/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: 'nCg3ufihKyU',
+      title: 'Sooraj Dooba Hain',
+      artist: 'Arijit Singh, Aditi Singh Sharma, Amaal Mallik',
+      durationSeconds: 264,
+      thumbnailUrl: 'https://i.ytimg.com/vi/nCg3ufihKyU/hqdefault.jpg',
+    ),
+  ];
+
+  static final List<YoutubeTrack> arRahmanTracks = [
+    const YoutubeTrack(
+      id: 'T94PHkuydcw',
+      title: 'Kun Faya Kun',
+      artist: 'A.R. Rahman, Mohit Chauhan, Javed Ali',
+      durationSeconds: 473,
+      thumbnailUrl: 'https://i.ytimg.com/vi/T94PHkuydcw/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: 'xwwAVRyNmgQ',
+      title: 'Jai Ho',
+      artist: 'A.R. Rahman, Sukhwinder Singh',
+      durationSeconds: 319,
+      thumbnailUrl: 'https://i.ytimg.com/vi/xwwAVRyNmgQ/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: 'r_g7pE9fXbQ',
+      title: 'Tere Bina',
+      artist: 'A.R. Rahman, Chinmayi, Murtuza Khan',
+      durationSeconds: 309,
+      thumbnailUrl: 'https://i.ytimg.com/vi/r_g7pE9fXbQ/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: 'pELk1MYhpPk',
+      title: 'Tum Tak',
+      artist: 'Javed Ali, Keerthi Sagathia, A.R. Rahman',
+      durationSeconds: 304,
+      thumbnailUrl: 'https://i.ytimg.com/vi/pELk1MYhpPk/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: 'sK7riqg2mr4',
+      title: 'Agar Tum Saath Ho',
+      artist: 'Alka Yagnik, Arijit Singh, A.R. Rahman',
+      durationSeconds: 341,
+      thumbnailUrl: 'https://i.ytimg.com/vi/sK7riqg2mr4/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: 'PQmrmVs10X8',
+      title: 'Chaiyya Chaiyya',
+      artist: 'Sukhwinder Singh, Sapna Awasthi, A.R. Rahman',
+      durationSeconds: 399,
+      thumbnailUrl: 'https://i.ytimg.com/vi/PQmrmVs10X8/hqdefault.jpg',
+    ),
+  ];
+
+  static final List<YoutubeTrack> manwaLaageRadioTracks = [
+    const YoutubeTrack(
+      id: 'd8ItEhzs88g',
+      title: 'Manwa Laage',
+      artist: 'Arijit Singh, Shreya Ghoshal, Vishal-Shekhar',
+      durationSeconds: 271,
+      thumbnailUrl: 'https://i.ytimg.com/vi/d8ItEhzs88g/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: 'AEIVhBS6baE',
+      title: 'Gerua',
+      artist: 'Arijit Singh, Antara Mitra, Pritam',
+      durationSeconds: 345,
+      thumbnailUrl: 'https://i.ytimg.com/vi/AEIVhBS6baE/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: 'o_B4yVjH9l4',
+      title: 'Raabta (Kehte Hain Khuda)',
+      artist: 'Arijit Singh, Hamsika Iyer, Pritam',
+      durationSeconds: 244,
+      thumbnailUrl: 'https://i.ytimg.com/vi/o_B4yVjH9l4/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: 'TGpG56pg3UU',
+      title: 'Sun Saathiya',
+      artist: 'Priya Saraiya, Divya Kumar, Sachin-Jigar',
+      durationSeconds: 219,
+      thumbnailUrl: 'https://i.ytimg.com/vi/TGpG56pg3UU/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: 'of3tW2iZk7c',
+      title: 'Enna Sona',
+      artist: 'Arijit Singh, A.R. Rahman',
+      durationSeconds: 213,
+      thumbnailUrl: 'https://i.ytimg.com/vi/of3tW2iZk7c/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: 'DS-raAyMxl4',
+      title: 'Sanam Re',
+      artist: 'Arijit Singh, Mithoon',
+      durationSeconds: 308,
+      thumbnailUrl: 'https://i.ytimg.com/vi/DS-raAyMxl4/hqdefault.jpg',
+    ),
+  ];
+
   static List<YoutubeTrack> get allCatalogTracks => [
     ...jumpBackInTracks,
     ...madeForYouTracks,

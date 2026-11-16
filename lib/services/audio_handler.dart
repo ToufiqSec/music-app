@@ -112,12 +112,22 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
       if (!isRemote && File(resolvedUrl).existsSync()) {
         await _player.setFilePath(resolvedUrl);
       } else {
+        final isYouTubeStream = resolvedUrl.contains('googlevideo.com') ||
+            resolvedUrl.contains('youtube.com') ||
+            resolvedUrl.contains('youtu.be');
+
+        final headers = <String, String>{
+          'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        };
+        // Only set Referer for YouTube servers to avoid CORS/403 blocks on podcast and audio drama CDNs
+        if (isYouTubeStream) {
+          headers['Referer'] = 'https://www.youtube.com/';
+        }
+
         await _player.setUrl(
           resolvedUrl,
-          headers: const {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-            'Referer': 'https://www.youtube.com/',
-          },
+          headers: headers,
         ).timeout(const Duration(seconds: 30));
       }
       // Guarantee full audible volume immediately

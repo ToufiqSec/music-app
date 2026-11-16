@@ -40,6 +40,7 @@ class AudioProvider extends ChangeNotifier {
   // Track pre-fetch flag to avoid duplicate trigger per song
   bool _preFetchedNextTrack = false;
   bool _isTransitioningTrack = false;
+  String? _playbackErrorMessage;
   final Set<String> _retriedPreviewCutoffTrackIds = {};
   Timer? _seekDebounceTimer;
   Timer? _backgroundCacheTimer;
@@ -92,6 +93,11 @@ class AudioProvider extends ChangeNotifier {
   Set<String> get favoriteIds => _favoriteIds;
   List<YoutubeTrack> get historyTracks => _historyTracks;
   Map<String, List<String>> get userPlaylists => _userPlaylists;
+  String? get playbackErrorMessage => _playbackErrorMessage;
+
+  void clearPlaybackErrorMessage() {
+    _playbackErrorMessage = null;
+  }
 
   bool isTrackLiked(String trackId) => _favoriteIds.contains(trackId);
 
@@ -145,14 +151,6 @@ class AudioProvider extends ChangeNotifier {
       _position = pos;
       _checkAndPrefetchNextTrack(pos);
       _checkAndSaveResumePosition(pos);
-
-      // Automated track advancement: position threshold watchdog
-      // If within 350ms of stream duration, transition cleanly to the next track
-      if (_duration > const Duration(seconds: 5) &&
-          pos >= _duration - const Duration(milliseconds: 350) &&
-          !_isTransitioningTrack) {
-        _onTrackCompleted();
-      }
       notifyListeners();
     });
 
@@ -168,7 +166,7 @@ class AudioProvider extends ChangeNotifier {
       notifyListeners();
     });
 
-    // Auto-advance, repeat one, or Autoplay next related track on completion (Issue 8)
+    // Auto-advance, repeat one, or Autoplay next related track on completion (Rock-solid single trigger)
     _audioHandler.player.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed && !_isTransitioningTrack) {
         _onTrackCompleted();
@@ -365,7 +363,6 @@ class AudioProvider extends ChangeNotifier {
   /// Plays a track using the multi-tier zero-delay pipeline:
   /// Tier 3: Local cache -> Tier 1: JioSaavn -> Tier 2: YouTube
   Future<void> playTrack(YoutubeTrack track, [List<YoutubeTrack>? queue]) async {
-    _isTransitioningTrack = false;
     if (queue != null) {
       _playlistQueue = List.from(queue);
       _currentIndex = _playlistQueue.indexWhere((t) => t.id == track.id);
@@ -470,12 +467,22 @@ class AudioProvider extends ChangeNotifier {
         });
       }
     } catch (e) {
-      debugPrint('[AudioProvider] Playback error: $e');
+      debugPrint('==================== [PLAYBACK DIAGNOSTIC] ====================');
+      debugPrint('Track ID: ${track.id}');
+      debugPrint('Track Title: "${track.title}" by ${track.artist}');
+      debugPrint('Source Type: ${track.audioStreamUrl != null ? "Direct Enclosure" : "Streaming Resolver"}');
+      debugPrint('Resolved Stream URL: $resolvedUrl');
+      debugPrint('Exact Error: $e');
+      debugPrint('===============================================================');
+
       _isBuffering = false;
       _bufferingWatchdogTimer?.cancel();
+      _playbackErrorMessage = 'Unable to play "${track.title}". Trying next...';
+      notifyListeners();
+
       // If a track in queue fails to load, gracefully advance to next track so playback doesn't stall
       if (_playlistQueue.length > 1) {
-        Future.delayed(const Duration(milliseconds: 500), () {
+        Future.delayed(const Duration(milliseconds: 600), () {
           playNext();
         });
       }

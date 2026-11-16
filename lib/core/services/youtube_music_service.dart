@@ -174,6 +174,11 @@ class YoutubeMusicService {
     String? fallbackQuery,
     bool forceRefresh = false,
   }) async {
+    // -1. Direct enclosure / web URL
+    if (trackId.startsWith('http://') || trackId.startsWith('https://')) {
+      return trackId;
+    }
+
     // 0. Check local disk cache
     if (!forceRefresh) {
       final cached = await AudioCacheService.getCachedTrackFile(trackId);
@@ -189,33 +194,36 @@ class YoutubeMusicService {
       _streamCache.remove(trackId);
     }
 
-    // 2. YouTube Explode stream extraction for YouTube IDs
-    try {
-      final manifest = await _yt.videos.streamsClient.getManifest(trackId).timeout(
-        const Duration(seconds: 15),
-      );
-      final audioOnlyStreams = manifest.audioOnly;
-      if (audioOnlyStreams.isNotEmpty) {
-        // Universal hardware decoding: Prefer MP4 / AAC audio stream
-        final aacStreams = audioOnlyStreams.where(
-          (s) => s.container.name.toLowerCase() == 'mp4' || s.audioCodec.toLowerCase().contains('mp4a'),
+    // 2. YouTube Explode stream extraction for valid 11-char YouTube IDs
+    final isYouTubeId = RegExp(r'^[a-zA-Z0-9_-]{11}$').hasMatch(trackId);
+    if (isYouTubeId) {
+      try {
+        final manifest = await _yt.videos.streamsClient.getManifest(trackId).timeout(
+          const Duration(seconds: 15),
         );
-        final selected = aacStreams.isNotEmpty
-            ? aacStreams.withHighestBitrate()
-            : audioOnlyStreams.withHighestBitrate();
-        final url = selected.url.toString();
-        _streamCache[trackId] = url;
-        return url;
+        final audioOnlyStreams = manifest.audioOnly;
+        if (audioOnlyStreams.isNotEmpty) {
+          // Universal hardware decoding: Prefer MP4 / AAC audio stream
+          final aacStreams = audioOnlyStreams.where(
+            (s) => s.container.name.toLowerCase() == 'mp4' || s.audioCodec.toLowerCase().contains('mp4a'),
+          );
+          final selected = aacStreams.isNotEmpty
+              ? aacStreams.withHighestBitrate()
+              : audioOnlyStreams.withHighestBitrate();
+          final url = selected.url.toString();
+          _streamCache[trackId] = url;
+          return url;
+        }
+        // Fallback: Check muxed streams if audioOnly is empty
+        if (manifest.muxed.isNotEmpty) {
+          final bestMuxed = manifest.muxed.withHighestBitrate();
+          final url = bestMuxed.url.toString();
+          _streamCache[trackId] = url;
+          return url;
+        }
+      } catch (e) {
+        debugPrint('[YoutubeMusicService] getAudioStreamUrl error for $trackId: $e');
       }
-      // Fallback: Check muxed streams if audioOnly is empty
-      if (manifest.muxed.isNotEmpty) {
-        final bestMuxed = manifest.muxed.withHighestBitrate();
-        final url = bestMuxed.url.toString();
-        _streamCache[trackId] = url;
-        return url;
-      }
-    } catch (e) {
-      debugPrint('[YoutubeMusicService] getAudioStreamUrl error for $trackId: $e');
     }
 
     // 3. Universal Fallback: If trackId is a JioSaavn ID or failed, search YouTube with query

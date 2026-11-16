@@ -22,6 +22,7 @@ import 'search_screen.dart';
 import 'library_screen.dart';
 import 'downloads_screen.dart';
 import 'profile_screen.dart';
+import 'albums_screen.dart';
 import 'artist_onboarding_screen.dart';
 import 'mood_hub_screen.dart';
 import '../core/services/taste_engine.dart';
@@ -117,9 +118,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     );
                   },
                 ),
-                ProfileScreen(
-                  onNavigateToTab: (idx) => setState(() => _currentTabIndex = idx),
-                ),
+                const AlbumsScreen(),
               ],
             ),
           ),
@@ -144,7 +143,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Icons.search_rounded,
                     Icons.auto_awesome_rounded,
                     Icons.library_music_rounded,
-                    Icons.person_rounded,
+                    Icons.album_rounded,
                   ],
                 ),
               ],
@@ -173,6 +172,7 @@ class _HomeDiscoveryView extends StatefulWidget {
 class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
   String _activeFilter = 'All';
   bool _isLoadingContent = false;
+  Timer? _greetingRefreshTimer;
 
   List<YoutubeTrack> _quickPickTracks = [];
   List<YoutubeTrack> _carousel1Tracks = [];
@@ -204,9 +204,20 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
     _carousel5Tracks = List.from(CuratedTracks.chillTracks + CuratedTracks.lateNightTracks);
     _carousel6Tracks = List.from(CuratedTracks.lateNightTracks + CuratedTracks.chillTracks);
 
+    // Live greeting refresh every minute without restart (Issue 1)
+    _greetingRefreshTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+      if (mounted) setState(() {});
+    });
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadDynamicContent();
     });
+  }
+
+  @override
+  void dispose() {
+    _greetingRefreshTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadDynamicContent() async {
@@ -351,15 +362,43 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
 
   String _getTimeGreeting() {
     final hour = DateTime.now().hour;
-    if (hour < 12) return 'Good Morning';
-    if (hour < 17) return 'Good Afternoon';
-    return 'Good Evening';
+    if (hour >= 5 && hour < 12) return 'Good Morning';
+    if (hour >= 12 && hour < 17) return 'Good Afternoon';
+    if (hour >= 17 && hour < 21) return 'Good Evening';
+    return 'Good Night';
   }
 
   @override
   Widget build(BuildContext context) {
-    final audioProvider = context.read<AudioProvider>();
+    final audioProvider = context.watch<AudioProvider>();
     final authProvider = context.watch<AuthProvider>();
+
+    final errorMsg = audioProvider.playbackErrorMessage;
+    if (errorMsg != null && errorMsg.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.info_outline_rounded, color: Colors.amber, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    errorMsg,
+                    style: AppTextStyles.bodySmall.copyWith(color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: AppColors.surface1,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        audioProvider.clearPlaybackErrorMessage();
+      });
+    }
 
     return SafeArea(
       bottom: false,
@@ -625,284 +664,191 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
 
           const SizedBox(height: 24),
 
-          // 5. Horizontal Card Carousel 1
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  _getCarousel1Title(),
-                  style: AppTextStyles.h3.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  'See all',
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.primarySoft,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
+          // Home Recommendation Sections (Issue 3: 12 Sections in exact order)
+          if (_activeFilter == 'All') ...[
+            // 1. Recently Played (horizontal scroll)
+            _buildHomeSection(
+              title: 'Recently Played',
+              tracks: audioProvider.historyTracks.isNotEmpty
+                  ? audioProvider.historyTracks
+                  : CuratedTracks.jumpBackInTracks,
+              audioProvider: audioProvider,
             ),
-          ),
-          const SizedBox(height: 12),
-
-          SizedBox(
-            height: 180,
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              scrollDirection: Axis.horizontal,
-              itemCount: _getCarousel1Tracks().length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (context, index) {
-                final track = _getCarousel1Tracks()[index];
-                return ContentCard(
-                  title: track.title,
-                  subtitle: track.artist,
-                  imageUrl: track.thumbnailUrl,
-                  onTap: () {
-                    HapticFeedback.lightImpact();
-                    audioProvider.playTrack(
-                      track,
-                      _getCarousel1Tracks(),
-                    );
-                  },
-                );
-              },
+            // 2. Recommended Today (horizontal scroll)
+            _buildHomeSection(
+              title: 'Recommended Today',
+              tracks: _carousel1Tracks.isNotEmpty
+                  ? _carousel1Tracks
+                  : CuratedTracks.madeForYouTracks,
+              audioProvider: audioProvider,
             ),
-          ),
-
-          const SizedBox(height: 28),
-
-          // 6. Horizontal Card Carousel 2
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  _getCarousel2Title(),
-                  style: AppTextStyles.h3.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  'Explore',
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.primarySoft,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
+            // 3. Popular Albums and Singles (horizontal scroll)
+            _buildHomeSection(
+              title: 'Popular Albums and Singles',
+              tracks: CuratedTracks.popularAlbumsTracks,
+              audioProvider: audioProvider,
             ),
-          ),
-          const SizedBox(height: 12),
-
-          SizedBox(
-            height: 200,
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              scrollDirection: Axis.horizontal,
-              itemCount: _getCarousel2Tracks().length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (context, index) {
-                final track = _getCarousel2Tracks()[index];
-                return _buildTrendingCard(context, track, audioProvider, _getCarousel2Tracks());
-              },
+            // 4. More of What You Like (horizontal scroll)
+            _buildHomeSection(
+              title: 'More of What You Like',
+              tracks: _carousel2Tracks.isNotEmpty
+                  ? _carousel2Tracks
+                  : CuratedTracks.chillTracks,
+              audioProvider: audioProvider,
             ),
-          ),
-
-          const SizedBox(height: 28),
-
-          // 7. Horizontal Card Carousel 3
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  _getCarousel3Title(),
-                  style: AppTextStyles.h3.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  'Spotlight',
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.primarySoft,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
+            // 5. Today's Biggest Hits (horizontal scroll)
+            _buildHomeSection(
+              title: "Today's Biggest Hits",
+              tracks: _carousel3Tracks.isNotEmpty
+                  ? _carousel3Tracks
+                  : CuratedTracks.trendingTracks,
+              audioProvider: audioProvider,
             ),
-          ),
-          const SizedBox(height: 12),
-
-          SizedBox(
-            height: 180,
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              scrollDirection: Axis.horizontal,
-              itemCount: _getCarousel3Tracks().length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (context, index) {
-                final track = _getCarousel3Tracks()[index];
-                return ContentCard(
-                  title: track.title,
-                  subtitle: track.artist,
-                  imageUrl: track.thumbnailUrl,
-                  onTap: () {
-                    HapticFeedback.lightImpact();
-                    audioProvider.playTrack(
-                      track,
-                      _getCarousel3Tracks(),
-                    );
-                  },
-                );
-              },
+            // 6. Albums Featuring Songs You Like (horizontal scroll)
+            _buildHomeSection(
+              title: 'Albums Featuring Songs You Like',
+              tracks: CuratedTracks.featuringSongsTracks,
+              audioProvider: audioProvider,
             ),
-          ),
-
-          const SizedBox(height: 28),
-
-          // 8. Horizontal Card Carousel 4
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  _getCarousel4Title(),
-                  style: AppTextStyles.h3.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  'Chartbusters',
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.primarySoft,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
+            // 7. Based on Your Recent Listening (horizontal scroll)
+            _buildHomeSection(
+              title: 'Based on Your Recent Listening',
+              tracks: _carousel4Tracks.isNotEmpty
+                  ? _carousel4Tracks
+                  : CuratedTracks.workoutTracks,
+              audioProvider: audioProvider,
             ),
-          ),
-          const SizedBox(height: 12),
-
-          SizedBox(
-            height: 200,
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              scrollDirection: Axis.horizontal,
-              itemCount: _getCarousel4Tracks().length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (context, index) {
-                final track = _getCarousel4Tracks()[index];
-                return _buildTrendingCard(context, track, audioProvider, _getCarousel4Tracks());
-              },
+            // 8. More Like Ishq Bulaava Radio (horizontal scroll)
+            _buildHomeSection(
+              title: 'More Like Ishq Bulaava Radio',
+              tracks: CuratedTracks.ishqBulaavaRadioTracks,
+              audioProvider: audioProvider,
             ),
-          ),
-
-          const SizedBox(height: 28),
-
-          // 9. Horizontal Card Carousel 5
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  _getCarousel5Title(),
-                  style: AppTextStyles.h3.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  'Mellow',
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.primarySoft,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
+            // 9. Happy Hits (horizontal scroll)
+            _buildHomeSection(
+              title: 'Happy Hits',
+              tracks: CuratedTracks.happyHitsTracks,
+              audioProvider: audioProvider,
             ),
-          ),
-          const SizedBox(height: 12),
-
-          SizedBox(
-            height: 180,
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              scrollDirection: Axis.horizontal,
-              itemCount: _getCarousel5Tracks().length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (context, index) {
-                final track = _getCarousel5Tracks()[index];
-                return ContentCard(
-                  title: track.title,
-                  subtitle: track.artist,
-                  imageUrl: track.thumbnailUrl,
-                  onTap: () {
-                    HapticFeedback.lightImpact();
-                    audioProvider.playTrack(
-                      track,
-                      _getCarousel5Tracks(),
-                    );
-                  },
-                );
-              },
+            // 10. More from A.R. Rahman (horizontal scroll)
+            _buildHomeSection(
+              title: 'More from A.R. Rahman',
+              tracks: CuratedTracks.arRahmanTracks,
+              audioProvider: audioProvider,
             ),
-          ),
-
-          const SizedBox(height: 28),
-
-          // 10. Horizontal Card Carousel 6: Chill Aesthetic Night Vibes (Spotify Style)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  _getCarousel6Title(),
-                  style: AppTextStyles.h3.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  'Explore',
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.primarySoft,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
+            // 11. Your Top Mixes (horizontal scroll)
+            _buildHomeSection(
+              title: 'Your Top Mixes',
+              tracks: _carousel5Tracks.isNotEmpty
+                  ? _carousel5Tracks
+                  : CuratedTracks.lateNightTracks,
+              audioProvider: audioProvider,
             ),
-          ),
-          const SizedBox(height: 12),
-
-          SizedBox(
-            height: 200,
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              scrollDirection: Axis.horizontal,
-              itemCount: _getCarousel6Tracks().length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (context, index) {
-                final track = _getCarousel6Tracks()[index];
-                return _buildTrendingCard(context, track, audioProvider, _getCarousel6Tracks());
-              },
+            // 12. More Like Manwa Laage Radio (horizontal scroll)
+            _buildHomeSection(
+              title: 'More Like Manwa Laage Radio',
+              tracks: CuratedTracks.manwaLaageRadioTracks,
+              audioProvider: audioProvider,
             ),
-          ),
+          ] else ...[
+            // Filter-specific carousels when a mood chip is tapped
+            _buildHomeSection(
+              title: _getCarousel1Title(),
+              tracks: _getCarousel1Tracks(),
+              audioProvider: audioProvider,
+            ),
+            _buildHomeSection(
+              title: _getCarousel2Title(),
+              tracks: _getCarousel2Tracks(),
+              audioProvider: audioProvider,
+            ),
+            _buildHomeSection(
+              title: _getCarousel3Title(),
+              tracks: _getCarousel3Tracks(),
+              audioProvider: audioProvider,
+            ),
+            _buildHomeSection(
+              title: _getCarousel4Title(),
+              tracks: _getCarousel4Tracks(),
+              audioProvider: audioProvider,
+            ),
+            _buildHomeSection(
+              title: _getCarousel5Title(),
+              tracks: _getCarousel5Tracks(),
+              audioProvider: audioProvider,
+            ),
+            _buildHomeSection(
+              title: _getCarousel6Title(),
+              tracks: _getCarousel6Tracks(),
+              audioProvider: audioProvider,
+            ),
+          ],
         ],
       ),
+    );
+  }
+
+  Widget _buildHomeSection({
+    required String title,
+    required List<YoutubeTrack> tracks,
+    required AudioProvider audioProvider,
+    String actionLabel = 'See all',
+  }) {
+    if (tracks.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.h3.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Text(
+                actionLabel,
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.primarySoft,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 180,
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            scrollDirection: Axis.horizontal,
+            itemCount: tracks.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              final track = tracks[index];
+              return ContentCard(
+                title: track.title,
+                subtitle: track.artist,
+                imageUrl: track.thumbnailUrl,
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  audioProvider.playTrack(track, tracks);
+                },
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 28),
+      ],
     );
   }
 
