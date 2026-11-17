@@ -12,6 +12,7 @@ import '../features/audiobooks/data/sample_audiobooks.dart';
 import '../features/audiobooks/models/audiobook_model.dart';
 import 'audiobook_details_screen.dart';
 import '../core/services/search_cache_store.dart';
+import '../core/services/curated_tracks.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radii.dart';
 import '../theme/app_text_styles.dart';

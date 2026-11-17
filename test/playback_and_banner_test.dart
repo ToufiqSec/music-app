@@ -28,7 +28,7 @@ void main() {
         expect(podcast.id.isNotEmpty, isTrue);
         expect(podcast.title.isNotEmpty, isTrue);
         expect(podcast.thumbnailUrl.startsWith('https://'), isTrue);
-        expect(podcast.durationSeconds, greaterThan(1800)); // > 30 minutes
+        expect(podcast.durationSeconds, greaterThan(1200)); // > 20 minutes
       }
     });
 

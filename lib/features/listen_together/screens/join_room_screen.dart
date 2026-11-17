@@ -9,7 +9,8 @@ import '../providers/room_provider.dart';
 import 'room_screen.dart';
 
 class JoinRoomScreen extends StatefulWidget {
-  const JoinRoomScreen({super.key});
+  final String? initialCode;
+  const JoinRoomScreen({super.key, this.initialCode});
 
   @override
   State<JoinRoomScreen> createState() => _JoinRoomScreenState();
@@ -29,6 +30,12 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
     super.initState();
     final authProvider = context.read<AuthProvider>();
     _nameController.text = authProvider.displayName;
+    if (widget.initialCode != null && widget.initialCode!.isNotEmpty) {
+      final chars = widget.initialCode!.trim().toUpperCase().split('');
+      for (int i = 0; i < chars.length && i < _codeControllers.length; i++) {
+        _codeControllers[i].text = chars[i];
+      }
+    }
   }
 
   @override
