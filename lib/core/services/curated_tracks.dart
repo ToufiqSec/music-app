@@ -411,25 +411,44 @@ class CuratedTracks {
 
   static final List<YoutubeTrack> featuredPodcasts = [
     const YoutubeTrack(
-      id: 'JK_YANrT5KU',
-      title: 'Sunday Suspense: Feluda - Kailase Kelankari',
-      artist: 'Sunday Suspense • Mirchi Bangla',
-      durationSeconds: 3840,
-      thumbnailUrl: 'https://i.ytimg.com/vi/JK_YANrT5KU/hqdefault.jpg',
+      id: 'ss_feluda_kathmandu',
+      title: 'Sunday Suspense: Feluda - Joto Kando Kathmandu-te',
+      artist: 'Sunday Suspense • Satyajit Ray',
+      durationSeconds: 9813,
+      thumbnailUrl: 'https://d3wo5wojvuv7l.cloudfront.net/t_rss_itunes_square_1400/images.spreaker.com/original/1448de548583885ff422361fdb951f38.jpg',
+      audioStreamUrl: 'https://dts.podtrac.com/redirect.mp3/api.spreaker.com/download/episode/58582188/joto_kando_kathmandu_te.mp3',
     ),
     const YoutubeTrack(
-      id: '3-Wu2wygKOA',
+      id: 'ss_shonku_baghdad',
       title: 'Sunday Suspense: Professor Shonku - Baghdader Baksho',
       artist: 'Sunday Suspense • Satyajit Ray',
-      durationSeconds: 3120,
-      thumbnailUrl: 'https://i.ytimg.com/vi/3-Wu2wygKOA/hqdefault.jpg',
+      durationSeconds: 3807,
+      thumbnailUrl: 'https://d3wo5wojvuv7l.cloudfront.net/t_rss_itunes_square_1400/images.spreaker.com/original/9fda1488dc4ee354a08a868cc609a0fb.jpg',
+      audioStreamUrl: 'https://dts.podtrac.com/redirect.mp3/api.spreaker.com/download/episode/75550604/baghdad_er_baksho.mp3',
     ),
     const YoutubeTrack(
-      id: 'OpHNmU5df48',
-      title: 'Sunday Suspense: Taranath Tantrik - Parajeebi',
+      id: 'ss_taranath_kaalbhairav',
+      title: 'Sunday Suspense: Taranath Tantrik - Kaal Bhairav',
       artist: 'Sunday Suspense • Mirchi Bangla',
-      durationSeconds: 4320,
-      thumbnailUrl: 'https://i.ytimg.com/vi/OpHNmU5df48/hqdefault.jpg',
+      durationSeconds: 3672,
+      thumbnailUrl: 'https://d3wo5wojvuv7l.cloudfront.net/t_rss_itunes_square_1400/images.spreaker.com/original/d36a886547e5ce2af77fd2bda1afcf44.jpg',
+      audioStreamUrl: 'https://dts.podtrac.com/redirect.mp3/api.spreaker.com/download/episode/58898669/kaal_bhairav.mp3',
+    ),
+    const YoutubeTrack(
+      id: 'ss_bhoot_khela',
+      title: 'Sunday Suspense: Bhoot Niye Khela',
+      artist: 'Sunday Suspense • Gouranga Prasad Basu',
+      durationSeconds: 1461,
+      thumbnailUrl: 'https://d3wo5wojvuv7l.cloudfront.net/t_rss_itunes_square_1400/images.spreaker.com/original/f33790b9ada4996467e3a491a36b3c04.jpg',
+      audioStreamUrl: 'https://dts.podtrac.com/redirect.mp3/api.spreaker.com/download/episode/75838821/bhoot_niye_khela.mp3',
+    ),
+    const YoutubeTrack(
+      id: 'ss_indrapatan',
+      title: 'Sunday Suspense: Indrapatan',
+      artist: 'Sunday Suspense • Aniruddha Sau',
+      durationSeconds: 15566,
+      thumbnailUrl: 'https://d3wo5wojvuv7l.cloudfront.net/t_rss_itunes_square_1400/images.spreaker.com/original/d36a886547e5ce2af77fd2bda1afcf44.jpg',
+      audioStreamUrl: 'https://dts.podtrac.com/redirect.mp3/api.spreaker.com/download/episode/76387595/indrapatan.mp3',
     ),
   ];
 
@@ -689,7 +708,95 @@ class CuratedTracks {
     ),
   ];
 
+  static final List<YoutubeTrack> youtubeMusicTracks = [
+    const YoutubeTrack(
+      id: 'vxX1WjS2N2M',
+      title: 'Tauba Tauba',
+      artist: 'Karan Aujla • YouTube Music Trending',
+      durationSeconds: 206,
+      thumbnailUrl: 'https://i.ytimg.com/vi/vxX1WjS2N2M/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: 'toE_rM_f_4A',
+      title: 'Illuminati',
+      artist: 'Sushin Shyam, Dabzee • YouTube Music Top 50',
+      durationSeconds: 191,
+      thumbnailUrl: 'https://i.ytimg.com/vi/toE_rM_f_4A/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: 'kPa7bsKwL-8',
+      title: 'Die With A Smile',
+      artist: 'Lady Gaga, Bruno Mars • YouTube Music Global',
+      durationSeconds: 251,
+      thumbnailUrl: 'https://i.ytimg.com/vi/kPa7bsKwL-8/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: 'hOHKltAiKXQ',
+      title: 'Big Dawgs',
+      artist: 'Hanumankind, Kalmi • YouTube Music Viral',
+      durationSeconds: 236,
+      thumbnailUrl: 'https://i.ytimg.com/vi/hOHKltAiKXQ/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: 'eVli-tFD3gk',
+      title: 'Espresso',
+      artist: 'Sabrina Carpenter • YouTube Music Pop',
+      durationSeconds: 175,
+      thumbnailUrl: 'https://i.ytimg.com/vi/eVli-tFD3gk/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: 'VAdGW7QDJUI',
+      title: 'Chaleya',
+      artist: 'Arijit Singh, Shilpa Rao • YouTube Music Hits',
+      durationSeconds: 200,
+      thumbnailUrl: 'https://i.ytimg.com/vi/VAdGW7QDJUI/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: 'G_hP8kHjQfE',
+      title: 'Satranga',
+      artist: 'Arijit Singh • YouTube Music Top 10',
+      durationSeconds: 271,
+      thumbnailUrl: 'https://i.ytimg.com/vi/G_hP8kHjQfE/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: '1F3HM635S0k',
+      title: 'Hukum - Thalaivar Alappara',
+      artist: 'Anirudh Ravichander • YouTube Music Hotlist',
+      durationSeconds: 207,
+      thumbnailUrl: 'https://i.ytimg.com/vi/1F3HM635S0k/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: '8vx0Ufl8WvI',
+      title: 'O Maahi',
+      artist: 'Arijit Singh, Pritam • YouTube Music Melodies',
+      durationSeconds: 233,
+      thumbnailUrl: 'https://i.ytimg.com/vi/8vx0Ufl8WvI/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: 'UNo0TGZuv4A',
+      title: 'Standing Next to You',
+      artist: 'Jung Kook • YouTube Music Global',
+      durationSeconds: 226,
+      thumbnailUrl: 'https://i.ytimg.com/vi/UNo0TGZuv4A/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: 'toZvi6bU164',
+      title: 'Greedy',
+      artist: 'Tate McRae • YouTube Music Dance',
+      durationSeconds: 131,
+      thumbnailUrl: 'https://i.ytimg.com/vi/toZvi6bU164/hqdefault.jpg',
+    ),
+    const YoutubeTrack(
+      id: '4dK8z0X8-u0',
+      title: 'Aayi Nai (Stree 2)',
+      artist: 'Pawan Singh, Simran • YouTube Music Chartbuster',
+      durationSeconds: 180,
+      thumbnailUrl: 'https://i.ytimg.com/vi/4dK8z0X8-u0/hqdefault.jpg',
+    ),
+  ];
+
   static List<YoutubeTrack> get allCatalogTracks => [
+    ...youtubeMusicTracks,
     ...jumpBackInTracks,
     ...madeForYouTracks,
     ...trendingTracks,
@@ -701,6 +808,8 @@ class CuratedTracks {
 
   static List<YoutubeTrack> getTracksForFilter(String filter) {
     switch (filter) {
+      case 'YouTube Music':
+        return youtubeMusicTracks;
       case 'Trending':
         return trendingTracks;
       case 'Chill':

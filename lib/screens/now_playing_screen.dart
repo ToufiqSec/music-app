@@ -277,6 +277,40 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                             ),
                           ),
 
+                          // YouTube Music Badge
+                          if (track.artist.contains('YouTube Music') || track.thumbnailUrl.contains('ytimg.com')) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 4,
+                              ),
+                              margin: const EdgeInsets.only(right: 6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFF0000).withValues(alpha: 0.15),
+                                borderRadius: AppRadii.borderSmall,
+                                border: Border.all(
+                                  color: const Color(0xFFFF0000).withValues(alpha: 0.4),
+                                  width: 1,
+                                ),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.play_arrow_rounded, color: Color(0xFFFF0000), size: 12),
+                                  SizedBox(width: 2),
+                                  Text(
+                                    'YT Music',
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFFFF4E4E),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+
                           // High-Res Audio Badge
                           Container(
                             padding: const EdgeInsets.symmetric(

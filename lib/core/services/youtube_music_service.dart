@@ -6,11 +6,13 @@ import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 import '../../features/music/models/music_models.dart';
 import '../crypto/des_ecb.dart';
 import 'audio_cache_service.dart';
+import 'curated_tracks.dart';
 
-/// Multi-tier music resolver:
-/// Tier 1: JioSaavn direct API with DES-ECB 320kbps CDN decryption
-/// Tier 2: YouTube audio-only stream extraction (via youtube_explode_dart)
-/// Tier 3: Local offline audio cache
+/// Multi-tier music resolver with direct YouTube Music & Spreaker CDN support:
+/// Tier 1: JioSaavn direct API with DES-ECB 320kbps CDN decryption (lossless, instant)
+/// Tier 2: YouTube & YouTube Music stream extraction (via youtube_explode_dart)
+/// Tier 3: Spreaker official CloudFront MP3 CDN for Sunday Suspense / Mirchi Bangla
+/// Tier 4: Local offline audio cache
 class YoutubeMusicService {
   final YoutubeExplode _yt = YoutubeExplode();
   final Map<String, String> _streamCache = {};
@@ -21,7 +23,7 @@ class YoutubeMusicService {
     _yt.close();
   }
 
-  /// Searches tracks with multi-tier fallback (JioSaavn -> YouTube) and deduplication.
+  /// Searches tracks with multi-tier fallback (YouTube Music -> JioSaavn -> YouTube) and deduplication.
   Future<List<YoutubeTrack>> searchTracks(String query) async {
     final cleanQuery = query.trim();
     if (cleanQuery.isEmpty) return [];
@@ -29,9 +31,41 @@ class YoutubeMusicService {
     final results = <YoutubeTrack>[];
     final seenKeys = <String>{};
 
-    final isPodcastOrDrama = cleanQuery.toLowerCase().contains('suspense') ||
+    final isSundaySuspense = cleanQuery.toLowerCase().contains('suspense') ||
         cleanQuery.toLowerCase().contains('sunday') ||
-        cleanQuery.toLowerCase().contains('podcast') ||
+        cleanQuery.toLowerCase().contains('mirchi') ||
+        cleanQuery.toLowerCase().contains('feluda') ||
+        cleanQuery.toLowerCase().contains('byomkesh') ||
+        cleanQuery.toLowerCase().contains('shonku');
+
+    if (isSundaySuspense) {
+      // 1. Prioritize official Spreaker Sunday Suspense episodes (direct playable MP3s)
+      try {
+        final ssTracks = await searchSundaySuspense(cleanQuery);
+        for (final track in ssTracks) {
+          final key = track.title.toLowerCase();
+          if (!seenKeys.contains(key)) {
+            seenKeys.add(key);
+            results.add(track);
+          }
+        }
+      } catch (_) {}
+
+      // 2. Supplement from YouTube
+      try {
+        final ytTracks = await _searchYouTube(cleanQuery);
+        for (final track in ytTracks) {
+          final key = '${track.title.toLowerCase()}_${track.artist.toLowerCase()}';
+          if (!seenKeys.contains(key)) {
+            seenKeys.add(key);
+            results.add(track);
+          }
+        }
+      } catch (_) {}
+      return results;
+    }
+
+    final isPodcastOrDrama = cleanQuery.toLowerCase().contains('podcast') ||
         cleanQuery.toLowerCase().contains('audio drama') ||
         cleanQuery.toLowerCase().contains('audio story') ||
         cleanQuery.toLowerCase().contains('natok') ||
@@ -39,7 +73,7 @@ class YoutubeMusicService {
         cleanQuery.toLowerCase().contains('episode');
 
     if (isPodcastOrDrama) {
-      // For audio dramas & podcasts, prioritize YouTube directly for full-length episodes
+      // For audio dramas & podcasts, query YouTube directly for full-length episodes
       try {
         final ytTracks = await _searchYouTube(cleanQuery);
         for (final track in ytTracks) {
@@ -62,7 +96,8 @@ class YoutubeMusicService {
         }
       } catch (_) {}
     } else {
-      // For general music, query JioSaavn first for instant lossless 320kbps CDN playback
+      // For general music & YouTube Music:
+      // First, query JioSaavn for instant lossless 320kbps CDN playback
       try {
         final saavnTracks = await _searchJioSaavn(cleanQuery);
         for (final track in saavnTracks) {
@@ -88,6 +123,84 @@ class YoutubeMusicService {
     }
 
     return results;
+  }
+
+  /// Direct YouTube Music search: retrieves official music audio & tracks from YouTube
+  Future<List<YoutubeTrack>> searchYouTubeMusic(String query) async {
+    final cleanQuery = query.trim();
+    if (cleanQuery.isEmpty) return [];
+
+    final musicQuery = cleanQuery.toLowerCase().contains('music') ||
+            cleanQuery.toLowerCase().contains('song')
+        ? cleanQuery
+        : '$cleanQuery official audio music';
+
+    final results = await _searchYouTube(musicQuery);
+    return results;
+  }
+
+  /// Retrieves direct Sunday Suspense episodes from official Spreaker API feeds
+  Future<List<YoutubeTrack>> searchSundaySuspense(String query) async {
+    final tracks = <YoutubeTrack>[];
+    final seenTitles = <String>{};
+
+    // Pre-seed with curated direct episodes
+    for (final episode in CuratedTracks.featuredPodcasts) {
+      if (episode.title.toLowerCase().contains(query.toLowerCase()) ||
+          episode.artist.toLowerCase().contains(query.toLowerCase()) ||
+          query.toLowerCase().contains('sunday') ||
+          query.toLowerCase().contains('suspense') ||
+          query.isEmpty) {
+        final key = episode.title.toLowerCase();
+        if (!seenTitles.contains(key)) {
+          seenTitles.add(key);
+          tracks.add(episode);
+        }
+      }
+    }
+
+    // Query live Spreaker show 4852712 & 6039407 for direct CloudFront MP3 streams
+    try {
+      final showIds = ['4852712', '6039407'];
+      for (final showId in showIds) {
+        final uri = Uri.parse('https://api.spreaker.com/v2/shows/$showId/episodes?limit=15');
+        final response = await http.get(uri).timeout(const Duration(seconds: 4));
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          final items = data['response']?['items'] as List<dynamic>? ?? [];
+          for (final item in items) {
+            final epId = item['episode_id']?.toString() ?? '';
+            final title = item['title']?.toString() ?? 'Sunday Suspense Episode';
+            final durationMs = item['duration'] as num? ?? 0;
+            final durationSec = (durationMs / 1000).round();
+            var imageUrl = item['image_url']?.toString() ?? '';
+            if (imageUrl.contains('t_square_limited_160')) {
+              imageUrl = imageUrl.replaceAll('t_square_limited_160', 't_rss_itunes_square_1400');
+            }
+            final playUrl = 'https://api.spreaker.com/v2/episodes/$epId/play.mp3';
+
+            final key = title.toLowerCase();
+            if (!seenTitles.contains(key)) {
+              seenTitles.add(key);
+              tracks.add(YoutubeTrack(
+                id: 'ss_spk_$epId',
+                title: title.startsWith('Sunday Suspense') ? title : 'Sunday Suspense: $title',
+                artist: 'Sunday Suspense • Mirchi Bangla',
+                durationSeconds: durationSec > 0 ? durationSec : 3600,
+                thumbnailUrl: imageUrl.isNotEmpty
+                    ? imageUrl
+                    : 'https://d3wo5wojvuv7l.cloudfront.net/t_rss_itunes_square_1400/images.spreaker.com/original/1448de548583885ff422361fdb951f38.jpg',
+                audioStreamUrl: playUrl,
+              ));
+            }
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('[YoutubeMusicService] Spreaker Sunday Suspense search failed: $e');
+    }
+
+    return tracks;
   }
 
   /// Queries JioSaavn search API and decrypts encrypted_media_url to audio stream.
@@ -146,7 +259,7 @@ class YoutubeMusicService {
     final searchList = await _yt.search.search(query).timeout(const Duration(seconds: 8));
     final tracks = <YoutubeTrack>[];
 
-    for (final video in searchList.take(10)) {
+    for (final video in searchList.take(12)) {
       final id = video.id.value;
       final duration = video.duration?.inSeconds ?? 0;
 
@@ -194,7 +307,37 @@ class YoutubeMusicService {
       _streamCache.remove(trackId);
     }
 
-    // 2. YouTube Explode stream extraction for valid 11-char YouTube IDs
+    // 2. Direct Sunday Suspense episode handling
+    if (trackId.startsWith('ss_spk_')) {
+      final epId = trackId.replaceFirst('ss_spk_', '');
+      final playUrl = 'https://api.spreaker.com/v2/episodes/$epId/play.mp3';
+      _streamCache[trackId] = playUrl;
+      return playUrl;
+    }
+
+    // 3. High-Priority JioSaavn Match (Lossless 320kbps CD Quality, Instant & Unblockable)
+    // If fallbackQuery is available, check JioSaavn first to avoid YouTube bot-detection blocks
+    if (fallbackQuery != null && fallbackQuery.trim().isNotEmpty) {
+      final isDramaOrSunday = fallbackQuery.toLowerCase().contains('suspense') ||
+          fallbackQuery.toLowerCase().contains('sunday') ||
+          fallbackQuery.toLowerCase().contains('podcast');
+
+      if (!isDramaOrSunday) {
+        try {
+          final saavnTracks = await _searchJioSaavn(fallbackQuery.trim());
+          if (saavnTracks.isNotEmpty && saavnTracks.first.audioStreamUrl != null) {
+            final url = saavnTracks.first.audioStreamUrl!;
+            _streamCache[trackId] = url;
+            debugPrint('[YoutubeMusicService] Resolved lossless JioSaavn stream for "$fallbackQuery"');
+            return url;
+          }
+        } catch (e) {
+          debugPrint('[YoutubeMusicService] JioSaavn resolution attempt failed: $e');
+        }
+      }
+    }
+
+    // 4. YouTube Explode stream extraction for valid 11-char YouTube IDs
     final isYouTubeId = RegExp(r'^[a-zA-Z0-9_-]{11}$').hasMatch(trackId);
     if (isYouTubeId) {
       try {
@@ -222,19 +365,24 @@ class YoutubeMusicService {
           return url;
         }
       } catch (e) {
-        debugPrint('[YoutubeMusicService] getAudioStreamUrl error for $trackId: $e');
+        debugPrint('[YoutubeMusicService] YouTube Explode error for $trackId: $e');
       }
     }
 
-    // 3. Universal Fallback: If trackId is a JioSaavn ID or failed, search YouTube with query
+    // 5. Secondary fallback: Search YouTube with official audio query
     if (fallbackQuery != null && fallbackQuery.trim().isNotEmpty) {
       try {
-        final fallbackTracks = await _searchYouTube(fallbackQuery.trim());
+        final cleanFb = fallbackQuery.trim();
+        final searchTarget = cleanFb.toLowerCase().contains('official') || cleanFb.toLowerCase().contains('audio')
+            ? cleanFb
+            : '$cleanFb official audio';
+
+        final fallbackTracks = await _searchYouTube(searchTarget);
         for (final fb in fallbackTracks) {
           if (fb.id == trackId) continue;
           try {
             final fbManifest = await _yt.videos.streamsClient.getManifest(fb.id).timeout(
-              const Duration(seconds: 15),
+              const Duration(seconds: 12),
             );
             final audioOnly = fbManifest.audioOnly;
             if (audioOnly.isNotEmpty) {
@@ -258,8 +406,21 @@ class YoutubeMusicService {
           }
         }
       } catch (e) {
-        debugPrint('[YoutubeMusicService] fallback search failed for $fallbackQuery: $e');
+        debugPrint('[YoutubeMusicService] Fallback YouTube search failed for $fallbackQuery: $e');
       }
+    }
+
+    // 6. Ultimate JioSaavn Fallback for any missed song
+    if (fallbackQuery != null && fallbackQuery.trim().isNotEmpty) {
+      try {
+        final saavnTracks = await _searchJioSaavn(fallbackQuery.trim());
+        for (final t in saavnTracks) {
+          if (t.audioStreamUrl != null && t.audioStreamUrl!.isNotEmpty) {
+            _streamCache[trackId] = t.audioStreamUrl!;
+            return t.audioStreamUrl!;
+          }
+        }
+      } catch (_) {}
     }
 
     return null;
@@ -274,4 +435,3 @@ class YoutubeMusicService {
         .replaceAll('&gt;', '>');
   }
 }
-

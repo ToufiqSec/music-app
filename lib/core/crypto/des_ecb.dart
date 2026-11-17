@@ -170,6 +170,11 @@ class DesEcbDecryptor {
         url = url.replaceAll('_96.mp4', '_160.mp4');
       }
 
+      // Upgrade to https (Requirement A2.2)
+      if (url.startsWith('http://')) {
+        url = url.replaceFirst('http://', 'https://');
+      }
+
       return url;
     } catch (_) {
       return null;

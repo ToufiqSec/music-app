@@ -55,6 +55,7 @@ class _SearchScreenState extends State<SearchScreen> {
   int _selectedFilterIndex = 0;
   final List<String> _contentFilterTabs = [
     'All',
+    'YouTube Music',
     'Songs',
     'Shows & Drama',
     'Podcasts',
@@ -64,24 +65,30 @@ class _SearchScreenState extends State<SearchScreen> {
 
   List<YoutubeTrack> get _filteredResults {
     if (_selectedFilterIndex == 0) return _searchResults;
+    if (_selectedFilterIndex == 1) {
+      if (_searchResults.isEmpty && _searchController.text.trim().isEmpty) {
+        return CuratedTracks.youtubeMusicTracks;
+      }
+      return _searchResults;
+    }
     final list = _searchResults.where((track) {
       final type = AudioTypeDetector.detect(track.title, track.artist, track.durationSeconds);
       switch (_selectedFilterIndex) {
-        case 1: // Songs
+        case 2: // Songs
           return type == AudioContentType.song;
-        case 2: // Shows & Drama
+        case 3: // Shows & Drama
           return type == AudioContentType.show;
-        case 3: // Podcasts
+        case 4: // Podcasts
           return type == AudioContentType.podcast;
-        case 4: // Audiobooks
+        case 5: // Audiobooks
           return type == AudioContentType.audiobook || track.id.startsWith('ab_');
-        case 5: // Videos
+        case 6: // Videos
           return track.thumbnailUrl.contains('ytimg.com') || track.thumbnailUrl.contains('youtube.com');
         default:
           return true;
       }
     }).toList();
-    if (_selectedFilterIndex == 4 && list.isEmpty) {
+    if (_selectedFilterIndex == 5 && list.isEmpty) {
       return SampleAudiobooks.getAllChaptersAsTracks();
     }
     return list;
@@ -322,7 +329,12 @@ class _SearchScreenState extends State<SearchScreen> {
                     return GestureDetector(
                       onTap: () {
                         HapticFeedback.selectionClick();
-                        setState(() => _selectedFilterIndex = idx);
+                        setState(() {
+                          _selectedFilterIndex = idx;
+                          if (idx == 1 && _searchResults.isEmpty && _searchController.text.trim().isEmpty) {
+                            _searchResults = List.from(CuratedTracks.youtubeMusicTracks);
+                          }
+                        });
                         if (idx > 0 && _lastQuery.trim().isNotEmpty) {
                           final currentFiltered = _filteredResults;
                           if (currentFiltered.isEmpty) {
@@ -527,7 +539,24 @@ class _SearchScreenState extends State<SearchScreen> {
                 ),
                 subtitle: Row(
                   children: [
-                    if (type != AudioContentType.song) ...[
+                    if (track.artist.contains('YouTube Music') || _selectedFilterIndex == 1) ...[
+                      Container(
+                        margin: const EdgeInsets.only(right: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF0000).withValues(alpha: 0.18),
+                          borderRadius: AppRadii.borderSmall,
+                        ),
+                        child: const Text(
+                          'YT Music',
+                          style: TextStyle(
+                            fontSize: 8.5,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFFF4E4E),
+                          ),
+                        ),
+                      ),
+                    ] else if (type != AudioContentType.song) ...[
                       Container(
                         margin: const EdgeInsets.only(right: 6),
                         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),

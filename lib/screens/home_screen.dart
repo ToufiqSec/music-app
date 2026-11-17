@@ -185,6 +185,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
 
   final List<String> _filters = [
     'All',
+    'YouTube Music',
     'Podcast',
     'Trending',
     'Chill',
@@ -240,6 +241,15 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
     String carousel6Query;
 
     switch (_activeFilter) {
+      case 'YouTube Music':
+        quickQuery = 'YouTube Music trending hits 2026';
+        carousel1Query = 'YouTube Music top 50 billboard hits';
+        carousel2Query = 'YouTube Music bollywood chartbusters';
+        carousel3Query = 'YouTube Music new viral songs global';
+        carousel4Query = 'YouTube Music punjabi pop hits';
+        carousel5Query = 'YouTube Music acoustic relaxing sessions';
+        carousel6Query = 'YouTube Music lofi chill beats';
+        break;
       case 'Podcast':
         quickQuery = 'Sunday Suspense Feluda Mirchi Bangla audio story';
         carousel1Query = 'Sunday Suspense Mirchi Bangla audio stories';
@@ -424,7 +434,8 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
                     Text(
                       'Ready to stream lossless audio',
                       style: AppTextStyles.caption.copyWith(
-                        color: AppColors.textSecondary,
+                        color: AppColors.textPrimary.withValues(alpha: 0.92),
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
@@ -682,6 +693,13 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
                   : CuratedTracks.madeForYouTracks,
               audioProvider: audioProvider,
             ),
+            // Direct from YouTube Music Top Charts
+            _buildHomeSection(
+              title: 'Direct from YouTube Music',
+              tracks: CuratedTracks.youtubeMusicTracks,
+              audioProvider: audioProvider,
+              isYouTubeMusic: true,
+            ),
             // 3. Popular Albums and Singles (horizontal scroll)
             _buildHomeSection(
               title: 'Popular Albums and Singles',
@@ -793,6 +811,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
     required List<YoutubeTrack> tracks,
     required AudioProvider audioProvider,
     String actionLabel = 'See all',
+    bool isYouTubeMusic = false,
   }) {
     if (tracks.isEmpty) return const SizedBox.shrink();
 
@@ -805,14 +824,49 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.h3.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.bold,
-                  ),
+                child: Row(
+                  children: [
+                    if (isYouTubeMusic) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF0000).withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(
+                            color: const Color(0xFFFF0000).withValues(alpha: 0.6),
+                            width: 1,
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.play_arrow_rounded, color: Color(0xFFFF0000), size: 14),
+                            SizedBox(width: 2),
+                            Text(
+                              'YT Music',
+                              style: TextStyle(
+                                color: Color(0xFFFF4E4E),
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    Flexible(
+                      child: Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.h3.copyWith(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               Text(
@@ -854,6 +908,8 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
 
   String _getCarousel1Title() {
     switch (_activeFilter) {
+      case 'YouTube Music':
+        return 'YouTube Music Top 50 Hits';
       case 'Podcast':
         return 'Sunday Suspense Audio Stories';
       case 'Trending':
@@ -881,6 +937,8 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
 
   String _getCarousel2Title() {
     switch (_activeFilter) {
+      case 'YouTube Music':
+        return 'YouTube Music Trending Now';
       case 'Podcast':
         return 'Popular Podcasts & Talk Shows';
       case 'Trending':
@@ -907,6 +965,8 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
 
   String _getCarousel3Title() {
     switch (_activeFilter) {
+      case 'YouTube Music':
+        return 'YouTube Music Regional Chartbusters';
       case 'Podcast':
         return 'Mystery & Detective Dramas';
       case 'Trending':
@@ -934,6 +994,8 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
 
   String _getCarousel4Title() {
     switch (_activeFilter) {
+      case 'YouTube Music':
+        return 'YouTube Music Global Releases';
       case 'Podcast':
         return 'The Ranveer Show & Talks';
       case 'Trending':
@@ -960,6 +1022,8 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
 
   String _getCarousel5Title() {
     switch (_activeFilter) {
+      case 'YouTube Music':
+        return 'YouTube Music Acoustic & Chill';
       case 'Podcast':
         return 'Bengali Audio Natok & Thrillers';
       case 'Trending':
@@ -986,6 +1050,8 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
 
   String _getCarousel6Title() {
     switch (_activeFilter) {
+      case 'YouTube Music':
+        return 'YouTube Music Party & Dance Hits';
       case 'Podcast':
         return 'Horror & Paranormal Stories';
       case 'Trending':

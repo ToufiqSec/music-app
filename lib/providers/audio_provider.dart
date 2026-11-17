@@ -11,6 +11,7 @@ import '../core/services/related_tracks_engine.dart';
 import '../core/services/curated_tracks.dart';
 import '../widgets/generated_cover_art.dart';
 import '../services/audio_handler.dart';
+import '../core/services/playback_resolver.dart';
 
 enum RepeatMode { off, all, one }
 
@@ -151,6 +152,13 @@ class AudioProvider extends ChangeNotifier {
       _position = pos;
       _checkAndPrefetchNextTrack(pos);
       _checkAndSaveResumePosition(pos);
+      // Fallback auto-progression trigger if stream finishes without emitting ProcessingState.completed
+      if (_duration > Duration.zero &&
+          pos >= _duration &&
+          !_isTransitioningTrack &&
+          _isPlaying) {
+        _onTrackCompleted();
+      }
       notifyListeners();
     });
 
@@ -405,36 +413,45 @@ class AudioProvider extends ChangeNotifier {
 
     String? resolvedUrl;
     try {
-      // 1. Resolve stream or local file path
-      final cached = await AudioCacheService.getCachedTrackFile(track.id);
-      if (cached != null) {
-        resolvedUrl = cached.path;
-      } else if (track.audioStreamUrl != null && track.audioStreamUrl!.isNotEmpty) {
-        resolvedUrl = track.audioStreamUrl;
-      } else {
-        resolvedUrl = await _musicService.getAudioStreamUrl(
-          track.id,
-          fallbackQuery: '${track.title} ${track.artist}',
-        );
+      // 1. Unified audio resolution across all types (Requirement A2.1 & A5)
+      final resolution = await PlaybackResolver.resolveAudioSource(
+        track: track,
+        musicService: _musicService,
+      );
+
+      if (!resolution.isPlayable || resolution.url == null) {
+        final isEpisode = AudioTypeDetector.detect(track.title, track.artist, track.durationSeconds) != AudioContentType.song;
+        final msg = isEpisode
+            ? 'This episode cannot be played'
+            : 'This song is not available right now';
+        _playbackErrorMessage = msg;
+        debugPrint('[AudioProvider] Playback failure for "${track.title}" (ID: ${track.id}): ${resolution.failureReason}');
+        _isBuffering = false;
+        _bufferingWatchdogTimer?.cancel();
+        notifyListeners();
+
+        // Gracefully advance to next track without crashing the queue (Requirement A2.5)
+        if (_playlistQueue.length > 1) {
+          Future.delayed(const Duration(milliseconds: 600), () => playNext());
+        }
+        return;
       }
 
-      if (resolvedUrl == null) {
-        throw Exception('Unable to resolve audio stream for track ${track.title}');
-      }
+      resolvedUrl = resolution.url!;
 
-      // 2. Play via AudioHandler with automated YouTube fallback recovery
+      // 2. Play via AudioHandler with automated fallback recovery (Requirement A2.3 & A2.4)
       try {
         await _audioHandler.playTrackUrl(track.toMediaItem(), resolvedUrl);
       } catch (playErr) {
-        debugPrint('[AudioProvider] Primary playTrackUrl failed: $playErr. Attempting direct YouTube stream fallback...');
+        debugPrint('[AudioProvider] Primary playback failed: $playErr. Attempting direct fallback...');
         _musicService.invalidateCache(track.id);
-        final fbUrl = await _musicService.getAudioStreamUrl(
-          track.id,
-          fallbackQuery: '${track.title} ${track.artist}',
+        final fbResolution = await PlaybackResolver.resolveAudioSource(
+          track: track,
+          musicService: _musicService,
           forceRefresh: true,
         );
-        if (fbUrl != null) {
-          resolvedUrl = fbUrl;
+        if (fbResolution.isPlayable && fbResolution.url != null) {
+          resolvedUrl = fbResolution.url!;
           await _audioHandler.playTrackUrl(track.toMediaItem(), resolvedUrl);
         } else {
           rethrow;

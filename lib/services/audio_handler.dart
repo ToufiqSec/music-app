@@ -107,14 +107,27 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
     mediaItem.add(item);
     queue.add([item]);
 
+    // Reset player before setting source to prevent native abortion / socket lock (Requirement A2.3)
     try {
-      final isRemote = resolvedUrl.startsWith('http://') || resolvedUrl.startsWith('https://');
-      if (!isRemote && File(resolvedUrl).existsSync()) {
-        await _player.setFilePath(resolvedUrl);
+      if (_player.playing) {
+        await _player.pause();
+      }
+      await _player.stop();
+    } catch (_) {}
+
+    try {
+      var safeUrl = resolvedUrl.trim();
+      if (safeUrl.startsWith('http://')) {
+        safeUrl = safeUrl.replaceFirst('http://', 'https://');
+      }
+
+      final isRemote = safeUrl.startsWith('https://');
+      if (!isRemote && File(safeUrl).existsSync()) {
+        await _player.setFilePath(safeUrl);
       } else {
-        final isYouTubeStream = resolvedUrl.contains('googlevideo.com') ||
-            resolvedUrl.contains('youtube.com') ||
-            resolvedUrl.contains('youtu.be');
+        final isYouTubeStream = safeUrl.contains('googlevideo.com') ||
+            safeUrl.contains('youtube.com') ||
+            safeUrl.contains('youtu.be');
 
         final headers = <String, String>{
           'User-Agent':
@@ -126,7 +139,7 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
         }
 
         await _player.setUrl(
-          resolvedUrl,
+          safeUrl,
           headers: headers,
         ).timeout(const Duration(seconds: 30));
       }
