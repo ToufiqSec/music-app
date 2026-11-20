@@ -304,7 +304,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                 width: 1,
                               ),
                             ),
-                            child: const Text(
+                            child: Text(
                               '320K',
                               style: AppTextStyles.caption.copyWith(
                                 fontSize: 10,
