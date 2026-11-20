@@ -30,6 +30,7 @@ import '../providers/auth_provider.dart';
 import '../features/listen_together/widgets/listen_together_button.dart';
 import '../core/constants/app_strings.dart';
 import '../core/services/greeting_service.dart';
+import 'login_screen.dart';
 
 /// Main Discovery Hub and Navigation Shell for Music App.
 /// Universal UI Design System: Twilight Calm.
@@ -427,18 +428,22 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
         children: [
           const SizedBox(height: 12),
 
-          // 1. Top Header Bar (Issue 6)
+          // 1. Top Header Bar (Part B: 44x44dp targets, 8dp spacing, no shrink, full safe area)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         _getTimeGreeting(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: AppTextStyles.h2.copyWith(fontSize: 22),
                       ),
                       const SizedBox(height: 2),
@@ -456,65 +461,23 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
                 ),
                 const SizedBox(width: 8),
 
-                // Top Action Buttons on dark translucent circular backgrounds (Issue 6)
+                // Top Action Group (Recent history, Search, Profile)
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const ListenTogetherButton(),
-                    const SizedBox(width: 6),
-                    _buildHeaderIconButton(
-                      icon: Icons.search_rounded,
-                      tooltip: 'Search music',
-                      onTap: widget.onNavigateToSearch,
-                    ),
-                    const SizedBox(width: 6),
                     _buildHeaderIconButton(
                       icon: Icons.history_rounded,
-                      tooltip: 'Listening history',
+                      tooltip: 'Recent history',
                       onTap: () => _showHistorySheet(context, audioProvider),
                     ),
-                    const SizedBox(width: 6),
-                    Semantics(
-                      button: true,
-                      label: 'User profile',
-                      child: GestureDetector(
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const ProfileScreen()),
-                          );
-                        },
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppColors.surface2.withValues(alpha: 0.85),
-                            border: Border.all(
-                              color: authProvider.isAuthenticated
-                                  ? AppColors.success.withValues(alpha: 0.6)
-                                  : AppColors.primarySoft.withValues(alpha: 0.4),
-                              width: 1.5,
-                            ),
-                          ),
-                          child: Center(
-                            child: authProvider.isAuthenticated && authProvider.displayName.isNotEmpty
-                                ? Text(
-                                    authProvider.displayName[0].toUpperCase(),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  )
-                                : const Icon(
-                                    Icons.person_rounded,
-                                    size: 20,
-                                    color: Colors.white,
-                                  ),
-                          ),
-                        ),
-                      ),
+                    const SizedBox(width: 8),
+                    _buildHeaderIconButton(
+                      icon: Icons.search_rounded,
+                      tooltip: 'Search',
+                      onTap: widget.onNavigateToSearch,
                     ),
+                    const SizedBox(width: 8),
+                    _buildProfileAvatar(context, authProvider),
                   ],
                 ),
               ],
@@ -836,10 +799,10 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
           color: Colors.transparent,
           child: InkWell(
             onTap: onTap,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(22),
             child: Container(
-              width: 40,
-              height: 40,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: AppColors.surface2.withValues(alpha: 0.85),
@@ -855,6 +818,92 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
                   size: 20,
                 ),
               ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileAvatar(BuildContext context, AuthProvider authProvider) {
+    const double targetSize = 44.0;
+    final isAuthenticated = authProvider.isAuthenticated;
+    final avatarUrl = authProvider.avatarUrl.trim();
+    final displayName = authProvider.displayName.trim();
+    final initial = (displayName.isNotEmpty && displayName != 'Guest' && displayName != 'Music Lover')
+        ? displayName[0].toUpperCase()
+        : (authProvider.email.isNotEmpty && authProvider.email != 'Guest'
+            ? authProvider.email[0].toUpperCase()
+            : '');
+
+    Widget fallbackContent;
+    if (isAuthenticated && initial.isNotEmpty) {
+      fallbackContent = Text(
+        initial,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+        ),
+      );
+    } else {
+      fallbackContent = const Icon(
+        Icons.person_rounded,
+        size: 22,
+        color: Colors.white,
+      );
+    }
+
+    Widget content;
+    if (isAuthenticated && avatarUrl.isNotEmpty) {
+      content = ClipOval(
+        child: CachedNetworkImage(
+          imageUrl: avatarUrl,
+          width: targetSize,
+          height: targetSize,
+          fit: BoxFit.cover,
+          placeholder: (_, __) => Center(child: fallbackContent),
+          errorWidget: (_, __, ___) => Center(child: fallbackContent),
+        ),
+      );
+    } else {
+      content = Center(child: fallbackContent);
+    }
+
+    return Semantics(
+      button: true,
+      label: 'Profile',
+      child: Tooltip(
+        message: 'Profile',
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(targetSize / 2),
+            onTap: () {
+              if (isAuthenticated) {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                );
+              } else {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                );
+              }
+            },
+            child: Container(
+              width: targetSize,
+              height: targetSize,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.surface2.withValues(alpha: 0.85),
+                border: Border.all(
+                  color: isAuthenticated
+                      ? AppColors.primarySoft.withValues(alpha: 0.7)
+                      : AppColors.primarySoft.withValues(alpha: 0.35),
+                  width: 1.2,
+                ),
+              ),
+              child: content,
             ),
           ),
         ),

@@ -184,6 +184,13 @@ class SupabaseService {
 
   static Future<bool> signInWithGoogle() async {
     try {
+      if (kDebugMode) {
+        debugPrint('====================================================');
+        debugPrint('[Google OAuth Diagnostic]');
+        debugPrint('App Redirect URI: io.supabase.musicapp://login-callback');
+        debugPrint('Supabase Callback URI: $supabaseUrl/auth/v1/callback');
+        debugPrint('====================================================');
+      }
       return await client.auth.signInWithOAuth(
         OAuthProvider.google,
         redirectTo: 'io.supabase.musicapp://login-callback',

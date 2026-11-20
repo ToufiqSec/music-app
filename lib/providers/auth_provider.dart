@@ -39,7 +39,15 @@ class AuthProvider extends ChangeNotifier {
     }
     return 'Guest';
   }
-  String get avatarUrl => _profile?.avatarUrl ?? (currentUser?.userMetadata?['avatar_url']?.toString() ?? '');
+  String get avatarUrl {
+    final pUrl = _profile?.avatarUrl?.trim();
+    if (pUrl != null && pUrl.isNotEmpty) return pUrl;
+    final metaAvatar = currentUser?.userMetadata?['avatar_url']?.toString().trim();
+    if (metaAvatar != null && metaAvatar.isNotEmpty) return metaAvatar;
+    final metaPicture = currentUser?.userMetadata?['picture']?.toString().trim();
+    if (metaPicture != null && metaPicture.isNotEmpty) return metaPicture;
+    return '';
+  }
 
   void _initAuthListener() {
     // Read initial state
