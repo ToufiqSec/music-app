@@ -266,7 +266,7 @@ class LyricsTransliterationService {
       'া': 'aa', 'ি': 'i', 'ী': 'ee', 'ু': 'u', 'ূ': 'oo', 'ৃ': 'ri',
       'ে': 'e', 'ৈ': 'oi', 'ো': 'o', 'ৌ': 'ou', '্': '',
       // Signs
-      'ং': 'ng', 'ঁ': 'n', 'ঃ': 'h',
+      'ং': 'ng', 'ঁ': 'n', 'ঃ': 'h', '়': '',
     };
 
     var text = bengali;
@@ -281,6 +281,8 @@ class LyricsTransliterationService {
     }
 
     var result = sb.toString().trim();
+    // Strip any residual Bengali script codepoints (nukta, virama, combining marks)
+    result = result.replaceAll(RegExp(r'[\u0980-\u09FF]'), '');
     result = result.replaceAll(RegExp(r'\s+'), ' ');
     if (result.isNotEmpty) {
       result = result[0].toUpperCase() + result.substring(1);
