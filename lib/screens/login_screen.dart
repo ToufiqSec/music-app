@@ -1,11 +1,14 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../theme/app_radii.dart';
 import '../theme/app_spacing.dart';
 import '../providers/auth_provider.dart';
 import '../providers/audio_provider.dart';
+import '../core/services/supabase_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -23,9 +26,30 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   bool _isSignUp = false;
   bool _obscurePassword = true;
   String? _localError;
+  StreamSubscription<AuthState>? _authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _authSubscription = SupabaseService.authStateChanges.listen((data) {
+      if (data.event == AuthChangeEvent.signedIn && mounted) {
+        final audioProvider = context.read<AudioProvider>();
+        audioProvider.reloadUserLibrary();
+        Navigator.of(context).pop(true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Signed in successfully!', style: TextStyle(color: Colors.white)),
+            backgroundColor: AppColors.surface2,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    });
+  }
 
   @override
   void dispose() {
+    _authSubscription?.cancel();
     _emailController.dispose();
     _passwordController.dispose();
     _nameController.dispose();
@@ -70,7 +94,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       );
     } else {
       setState(() {
-        _localError = authProvider.errorMessage ?? 'Authentication failed. Please check your inputs.';
+        _localError = authProvider.errorMessage ?? 'Authentication failed. Please check your credentials.';
       });
     }
   }
@@ -78,19 +102,90 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   Future<void> _handleGoogleAuth() async {
     setState(() => _localError = null);
     final authProvider = context.read<AuthProvider>();
-    final success = await authProvider.signInWithGoogle();
+    try {
+      final launched = await authProvider.signInWithGoogle();
+      if (!mounted) return;
 
-    if (!mounted) return;
-
-    if (success) {
-      final audioProvider = context.read<AudioProvider>();
-      await audioProvider.reloadUserLibrary();
-      Navigator.of(context).pop(true);
-    } else if (authProvider.errorMessage != null) {
-      setState(() {
-        _localError = authProvider.errorMessage;
-      });
+      if (!launched && authProvider.errorMessage != null) {
+        setState(() => _localError = authProvider.errorMessage);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Opening Google sign-in in your browser...'),
+            backgroundColor: AppColors.surface2,
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _localError = 'Google sign-in error: $e');
+      }
     }
+  }
+
+  void _showForgotPasswordDialog() {
+    final resetEmailController = TextEditingController(text: _emailController.text);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface1,
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(AppRadii.lg))),
+        title: Text('Reset Password', style: AppTextStyles.h3),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Enter your email address to receive password reset instructions.',
+              style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: resetEmailController,
+              keyboardType: TextInputType.emailAddress,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'Email address',
+                hintStyle: const TextStyle(color: Colors.white38),
+                filled: true,
+                fillColor: AppColors.surface2,
+                border: OutlineInputBorder(borderRadius: AppRadii.borderMedium, borderSide: BorderSide.none),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            onPressed: () async {
+              final email = resetEmailController.text.trim();
+              if (email.isEmpty || !email.contains('@')) return;
+              Navigator.of(ctx).pop();
+              final authProvider = context.read<AuthProvider>();
+              final sent = await authProvider.resetPassword(email);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(sent
+                        ? 'Password reset instructions sent to $email'
+                        : authProvider.errorMessage ?? 'Failed to send reset email'),
+                    backgroundColor: AppColors.surface2,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+            child: const Text('Send Reset Link', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -357,7 +452,26 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                         },
                       ),
 
-                      const SizedBox(height: 24),
+                      if (!_isSignUp) ...[
+                        const SizedBox(height: 6),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: isLoading ? null : _showForgotPasswordDialog,
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: Text(
+                              'Forgot Password?',
+                              style: AppTextStyles.caption.copyWith(color: AppColors.primarySoft),
+                            ),
+                          ),
+                        ),
+                      ],
+
+                      const SizedBox(height: 20),
 
                       // Submit Gradient Button
                       GestureDetector(
@@ -455,6 +569,34 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             decoration: TextDecoration.underline,
                           ),
                         ),
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      // Toggle Sign In / Sign Up prompt
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            _isSignUp ? 'Already have an account?' : "Don't have an account?",
+                            style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                          ),
+                          TextButton(
+                            onPressed: isLoading
+                                ? null
+                                : () => setState(() {
+                                      _isSignUp = !_isSignUp;
+                                      _localError = null;
+                                    }),
+                            child: Text(
+                              _isSignUp ? 'Sign In' : 'Sign Up',
+                              style: AppTextStyles.caption.copyWith(
+                                color: AppColors.primarySoft,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),

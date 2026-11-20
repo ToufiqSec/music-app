@@ -94,7 +94,7 @@ class UserSettingsData {
 class SupabaseService {
   static const String supabaseUrl = 'https://pxyyzwxvqrbedvlbtltq.supabase.co';
   static const String supabaseAnonKey =
-      'sb_publishable_e4yvzhY8U_VRIzpsuhSOiA_MdfAafUm';
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB4eXl6d3h2cXJiZWR2bGJ0bHRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwMDUyMzksImV4cCI6MjEwMzU4MTIzOX0.ROOMCQ53aP-dWapuDv_wH5K0_cdWJEhHq02W0kwtoD8';
 
   static SupabaseClient get client => Supabase.instance.client;
 
@@ -109,6 +109,7 @@ class SupabaseService {
       await Supabase.initialize(
         url: supabaseUrl,
         anonKey: supabaseAnonKey,
+        authCallbackUrlHostname: 'login-callback',
         debug: kDebugMode,
       );
       debugPrint('[Supabase] Initialized successfully. Auth user: ${currentUser?.email}');
@@ -193,12 +194,21 @@ class SupabaseService {
       }
       return await client.auth.signInWithOAuth(
         OAuthProvider.google,
-        redirectTo: 'io.supabase.musicapp://login-callback',
+        redirectTo: kIsWeb ? null : 'io.supabase.musicapp://login-callback',
+        authScreenLaunchMode: LaunchMode.externalApplication,
       );
     } catch (e) {
       debugPrint('[Supabase] Google OAuth Error: $e');
       rethrow;
     }
+  }
+
+  static Future<void> resetPassword(String email) async {
+    final trimmed = email.trim();
+    await client.auth.resetPasswordForEmail(
+      trimmed,
+      redirectTo: kIsWeb ? null : 'io.supabase.musicapp://login-callback',
+    );
   }
 
   static Future<void> signOut() async {

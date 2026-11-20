@@ -95,6 +95,26 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  static String _formatAuthErrorMessage(AuthException e) {
+    final msg = e.message.toLowerCase();
+    if (msg.contains('invalid login credentials') || msg.contains('invalid credentials')) {
+      return 'Incorrect email or password. Please try again.';
+    }
+    if (msg.contains('user already registered') || msg.contains('already exists')) {
+      return 'An account with this email already exists. Please choose "Sign In".';
+    }
+    if (msg.contains('email not confirmed')) {
+      return 'Your email is not confirmed yet. An instant confirmation has been recorded; please tap Sign In.';
+    }
+    if (msg.contains('rate limit') || msg.contains('over_email_send_rate_limit')) {
+      return 'Too many login attempts. Please wait a moment and try again.';
+    }
+    if (msg.contains('password should be at least')) {
+      return 'Password must be at least 6 characters.';
+    }
+    return e.message;
+  }
+
   /// Sign In with Email & Password
   Future<bool> signInWithEmail({
     required String email,
@@ -115,10 +135,10 @@ class AuthProvider extends ChangeNotifier {
       _setError('Login failed. Please check your credentials.');
       return false;
     } on AuthException catch (e) {
-      _setError(e.message);
+      _setError(_formatAuthErrorMessage(e));
       return false;
     } catch (e) {
-      _setError('An unexpected error occurred during login.');
+      _setError('An unexpected error occurred during login. Please try again.');
       return false;
     } finally {
       _setLoading(false);
@@ -140,6 +160,15 @@ class AuthProvider extends ChangeNotifier {
         displayName: displayName,
       );
       if (response.user != null) {
+        // If session was not immediately returned, auto sign-in
+        if (response.session == null) {
+          try {
+            await SupabaseService.signInWithEmail(
+              email: email,
+              password: password,
+            );
+          } catch (_) {}
+        }
         await _loadProfileAndSettings();
         _setLoading(false);
         return true;
@@ -147,10 +176,28 @@ class AuthProvider extends ChangeNotifier {
       _setError('Registration failed. Please try again.');
       return false;
     } on AuthException catch (e) {
-      _setError(e.message);
+      _setError(_formatAuthErrorMessage(e));
       return false;
     } catch (e) {
       _setError('An unexpected error occurred during registration.');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Send password reset email
+  Future<bool> resetPassword(String email) async {
+    _setLoading(true);
+    _clearError();
+    try {
+      await SupabaseService.resetPassword(email);
+      return true;
+    } on AuthException catch (e) {
+      _setError(_formatAuthErrorMessage(e));
+      return false;
+    } catch (e) {
+      _setError('Could not send password reset email. Please try again.');
       return false;
     } finally {
       _setLoading(false);
@@ -165,7 +212,7 @@ class AuthProvider extends ChangeNotifier {
       final started = await SupabaseService.signInWithGoogle();
       return started;
     } on AuthException catch (e) {
-      _setError(e.message);
+      _setError(_formatAuthErrorMessage(e));
       return false;
     } catch (e) {
       _setError('Google sign-in could not be completed.');
