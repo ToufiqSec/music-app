@@ -46,6 +46,7 @@ class DualLyricsResult {
   });
 
   bool get hasLyrics => lines.isNotEmpty || (plainLyrics != null && plainLyrics!.isNotEmpty);
+  bool get isBengali => lines.any((l) => l.meaningText != null && LyricsTransliterationService.containsBengali(l.meaningText!));
 }
 
 /// Service that transliterates Hindi/Urdu lyrics to Roman English (Line 1)
