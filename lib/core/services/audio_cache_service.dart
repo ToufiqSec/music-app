@@ -66,8 +66,32 @@ class AudioCacheService {
       return;
     }
 
-    final contentLength = response.contentLength ?? 0;
+    int totalBytes = response.contentLength ?? 0;
+    if (totalBytes <= 0) {
+      final headerLen = response.headers['content-length'];
+      if (headerLen != null) {
+        totalBytes = int.tryParse(headerLen) ?? 0;
+      }
+    }
+    if (totalBytes <= 0) {
+      final contentRange = response.headers['content-range'];
+      if (contentRange != null) {
+        final match = RegExp(r'/(\d+)').firstMatch(contentRange);
+        if (match != null) {
+          totalBytes = int.tryParse(match.group(1)!) ?? 0;
+        }
+      }
+    }
+
+    // Estimated total bytes if chunked / unknown length (Issue 5.3)
+    final estimatedTotal = totalBytes > 0
+        ? totalBytes
+        : (trackMetadata != null && trackMetadata.durationSeconds > 0
+            ? (trackMetadata.durationSeconds * 20000)
+            : 5 * 1024 * 1024);
+
     int bytesReceived = 0;
+    double lastYieldedProgress = 0.0;
 
     final sink = tempFile.openWrite();
 
@@ -75,8 +99,19 @@ class AudioCacheService {
       await for (final chunk in response.stream) {
         sink.add(chunk);
         bytesReceived += chunk.length;
-        if (contentLength > 0) {
-          yield bytesReceived / contentLength;
+        if (totalBytes > 0) {
+          final p = (bytesReceived / totalBytes).clamp(0.0, 1.0);
+          if (p - lastYieldedProgress >= 0.01 || p == 1.0) {
+            lastYieldedProgress = p;
+            yield p;
+          }
+        } else {
+          // Progress feedback for chunked CDNs without known content-length
+          final p = (bytesReceived / estimatedTotal).clamp(0.05, 0.95);
+          if (p - lastYieldedProgress >= 0.02) {
+            lastYieldedProgress = p;
+            yield p;
+          }
         }
       }
       await sink.flush();

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
@@ -13,6 +14,9 @@ class TrackMetadataStore {
   static List<String>? _historyIds;
   static Map<String, List<String>>? _userPlaylists;
   static Map<String, int>? _playbackPositions;
+
+  static Timer? _librarySaveDebounceTimer;
+  static Timer? _metadataSaveDebounceTimer;
 
   static Future<File> _getFile(String filename) async {
     final docsDir = await getApplicationDocumentsDirectory();
@@ -78,10 +82,30 @@ class TrackMetadataStore {
     }
   }
 
-  /// Saves or updates track metadata permanently
+  /// Saves or updates track metadata permanently with change detection and debounced I/O (Issue 4.3)
   static Future<void> saveTrackMetadata(YoutubeTrack track) async {
     if (_cachedTracks == null) await init();
+    final existing = _cachedTracks![track.id];
+    if (existing != null &&
+        existing.title == track.title &&
+        existing.artist == track.artist &&
+        existing.durationSeconds == track.durationSeconds &&
+        existing.audioStreamUrl == track.audioStreamUrl) {
+      return; // Skip redundant serialization when metadata is identical
+    }
     _cachedTracks![track.id] = track;
+    _scheduleSaveMetadataVault();
+  }
+
+  static void _scheduleSaveMetadataVault() {
+    _metadataSaveDebounceTimer?.cancel();
+    _metadataSaveDebounceTimer = Timer(const Duration(milliseconds: 600), () {
+      _saveMetadataVaultImmediate();
+    });
+  }
+
+  static Future<void> _saveMetadataVaultImmediate() async {
+    if (_cachedTracks == null) return;
     try {
       final file = await _getFile(_metadataFileName);
       final mapToSave = _cachedTracks!.map((k, v) => MapEntry(k, v.toJson()));
@@ -105,11 +129,7 @@ class TrackMetadataStore {
   static Future<void> removeTrackMetadata(String trackId) async {
     if (_cachedTracks == null) await init();
     _cachedTracks!.remove(trackId);
-    try {
-      final file = await _getFile(_metadataFileName);
-      final mapToSave = _cachedTracks!.map((k, v) => MapEntry(k, v.toJson()));
-      await file.writeAsString(jsonEncode(mapToSave));
-    } catch (_) {}
+    _scheduleSaveMetadataVault();
   }
 
   // --- Favorites Management ---
@@ -224,18 +244,27 @@ class TrackMetadataStore {
   static Future<void> savePlaybackPosition(String trackId, int seconds) async {
     if (_playbackPositions == null) await init();
     _playbackPositions![trackId] = seconds;
-    await _saveLibraryVault();
+    _scheduleSaveLibraryVault();
   }
 
   static Future<void> clearPlaybackPosition(String trackId) async {
     if (_playbackPositions == null) await init();
     if (_playbackPositions!.containsKey(trackId)) {
       _playbackPositions!.remove(trackId);
-      await _saveLibraryVault();
+      _scheduleSaveLibraryVault();
     }
   }
 
-  static Future<void> _saveLibraryVault() async {
+  static void _scheduleSaveLibraryVault() {
+    _librarySaveDebounceTimer?.cancel();
+    _librarySaveDebounceTimer = Timer(const Duration(milliseconds: 600), () {
+      _saveLibraryVaultImmediate();
+    });
+  }
+
+  static Future<void> _saveLibraryVault() => _saveLibraryVaultImmediate();
+
+  static Future<void> _saveLibraryVaultImmediate() async {
     try {
       final file = await _getFile(_userLibraryFileName);
       final data = {

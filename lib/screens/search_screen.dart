@@ -138,12 +138,22 @@ class _SearchScreenState extends State<SearchScreen> {
     if (trimmed == 'Audiobooks') {
       setState(() {
         _lastQuery = 'Audiobooks';
-        _selectedFilterIndex = 4; // Audiobooks tab
+        _selectedFilterIndex = 5; // Audiobooks tab (Index 5 in _contentFilterTabs)
         _searchResults = SampleAudiobooks.getAllChaptersAsTracks();
         _isSearching = false;
         _errorMessage = '';
         _isOfflineNotice = false;
       });
+      return;
+    }
+
+    if (trimmed == 'Podcasts') {
+      setState(() {
+        _lastQuery = 'Podcasts';
+        _selectedFilterIndex = 4; // Podcasts tab (Index 4 in _contentFilterTabs)
+        _selectedCategory = 'Podcasts';
+      });
+      _executeSearch('Podcasts', isMood: true);
       return;
     }
 

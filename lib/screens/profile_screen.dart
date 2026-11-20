@@ -938,17 +938,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 backgroundColor: AppColors.primary,
                 shape: const RoundedRectangleBorder(borderRadius: AppRadii.borderPill),
               ),
-              onPressed: () {
-                MoodRecommendationEngine.groqApiKey = ctrl.text.trim();
-                Navigator.pop(ctx);
-                setState(() {});
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Groq AI Key saved successfully!'),
-                    backgroundColor: AppColors.surface2,
-                    duration: Duration(seconds: 2),
-                  ),
-                );
+              onPressed: () async {
+                await MoodRecommendationEngine.saveApiKey(ctrl.text.trim());
+                if (ctx.mounted) Navigator.pop(ctx);
+                if (mounted) setState(() {});
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Groq AI Key saved successfully!'),
+                      backgroundColor: AppColors.surface2,
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
               },
               child: const Text('Save', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ),

@@ -18,8 +18,8 @@ class AudiobookChapter {
   YoutubeTrack toTrack(AudiobookModel book) {
     return YoutubeTrack(
       id: id,
-      title: '$title - ${book.title}',
-      artist: '${book.author} audiobook',
+      title: '$title • ${book.title}',
+      artist: '${book.author} (Audiobook)',
       durationSeconds: durationSeconds,
       thumbnailUrl: book.coverUrl,
       audioStreamUrl: audioUrl,

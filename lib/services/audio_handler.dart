@@ -117,12 +117,9 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
     } catch (_) {}
 
     try {
-      var safeUrl = resolvedUrl.trim();
-      if (safeUrl.startsWith('http://')) {
-        safeUrl = safeUrl.replaceFirst('http://', 'https://');
-      }
+      var safeUrl = PlaybackResolver.upgradeToHttps(resolvedUrl.trim());
 
-      final isRemote = safeUrl.startsWith('https://');
+      final isRemote = safeUrl.startsWith('http://') || safeUrl.startsWith('https://');
       if (!isRemote && File(safeUrl).existsSync()) {
         await _player.setFilePath(safeUrl);
       } else {

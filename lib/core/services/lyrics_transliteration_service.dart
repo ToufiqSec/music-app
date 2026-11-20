@@ -68,13 +68,18 @@ class LyricsTransliterationService {
     return RegExp(r'[\u0900-\u097F]').hasMatch(text);
   }
 
-  /// Detects whether a track is Hindi or Urdu based on artist name, title, or lyrics content.
+  /// Checks whether a text contains Bengali script (Issue 3.2).
+  static bool containsBengali(String text) {
+    return RegExp(r'[\u0980-\u09FF]').hasMatch(text);
+  }
+
+  /// Detects whether a track is Hindi, Urdu, or Bengali based on artist name, title, or lyrics content.
   static bool isHindiOrUrduTrack({
     required String title,
     required String artist,
     String? sampleLyrics,
   }) {
-    if (sampleLyrics != null && containsDevanagari(sampleLyrics)) {
+    if (sampleLyrics != null && (containsDevanagari(sampleLyrics) || containsBengali(sampleLyrics))) {
       return true;
     }
 
@@ -88,6 +93,11 @@ class LyricsTransliterationService {
       'pal', 'ilahi', 'agar tum saath ho', 'matargashti', 'bekhayali', 'dil bechara',
       'ae dil hai mushkil', 'rockstar', 'aashiqui', 'tamasha', 'kabir singh',
       'bollywood', 'hindi', 'urdu', 'sufi', 'ghazal', 'qawwali', 'satyajit',
+      // Bengali keywords (Issue 3.2)
+      'rabindranath', 'tagore', 'hemanta', 'manna dey', 'nachiketa', 'rupam islam',
+      'fossils', 'bengali', 'bangla', 'mirchi bangla', 'sunday suspense', 'feluda',
+      'byomkesh', 'shonku', 'natok', 'gaan', 'rabindra sangeet', 'moner manush',
+      'tumi', 'aami', 'bhalobashi', 'kotha', 'hridoy',
     ];
 
     for (final kw in hindiKeywords) {
@@ -96,7 +106,7 @@ class LyricsTransliterationService {
 
     if (sampleLyrics != null && sampleLyrics.trim().isNotEmpty) {
       final lyricLower = sampleLyrics.toLowerCase();
-      final words = ['hai', 'mera', 'meri', 'mere', 'tera', 'teri', 'tere', 'dil', 'ishq', 'pyaar', 'dua', 'hona', 'zindagi', 'saath'];
+      final words = ['hai', 'mera', 'meri', 'mere', 'tera', 'teri', 'tere', 'dil', 'ishq', 'pyaar', 'dua', 'hona', 'zindagi', 'saath', 'tumi', 'aami', 'amar', 'tomar', 'mon', 'bhalobasha'];
       int matches = 0;
       for (final w in words) {
         if (lyricLower.contains(' $w ') || lyricLower.contains('$w ')) {
@@ -204,16 +214,23 @@ class LyricsTransliterationService {
     } catch (_) {}
   }
 
-  /// Pairs a single line: ($1 = Main Roman Line, $2 = Optional Hindi Devanagari Meaning)
+  /// Pairs a single line: ($1 = Main Roman Line, $2 = Optional Script/Meaning Line)
   static (String, String?) _createLinePair(String rawLine, {required bool isHindi, required String trackTitle}) {
     if (!isHindi) {
-      // English / non-Hindi track: Line 1 only, no translation line
+      // English / non-South Asian track: Line 1 only, no translation line
       return (rawLine, null);
     }
 
+    final isBengali = containsBengali(rawLine);
     final isDevanagari = containsDevanagari(rawLine);
 
-    if (isDevanagari) {
+    if (isBengali) {
+      // Line is in Bengali script (e.g. 'তুমি রবে নীরবে') (Issue 3.2)
+      // Line 1: Transliterate to Roman (English) letters
+      final roman = _bengaliToRoman(rawLine);
+      // Line 2: Keep Bengali script for singing along
+      return (roman, rawLine);
+    } else if (isDevanagari) {
       // Line is in Devanagari script (e.g. 'कुन फाया कुन')
       // Line 1: Transliterate to Roman (English) letters
       final roman = _devanagariToRoman(rawLine);
@@ -228,6 +245,46 @@ class LyricsTransliterationService {
       final meaning = _getHindiMeaning(rawLine, roman, trackTitle);
       return (roman, meaning);
     }
+  }
+
+  /// Algorithmic mapping of Bengali characters (\u0980-\u09FF) to Roman English (Issue 3.2)
+  static String _bengaliToRoman(String bengali) {
+    final mapping = {
+      // Vowels
+      'অ': 'o', 'আ': 'aa', 'ই': 'i', 'ঈ': 'ee', 'উ': 'u', 'ঊ': 'oo',
+      'ঋ': 'ri', 'এ': 'e', 'ঐ': 'oi', 'ও': 'o', 'ঔ': 'ou',
+      // Consonants
+      'ক': 'k', 'খ': 'kh', 'গ': 'g', 'ঘ': 'gh', 'ঙ': 'ng',
+      'চ': 'ch', 'ছ': 'chh', 'জ': 'j', 'ঝ': 'jh', 'ঞ': 'ny',
+      'ট': 't', 'ঠ': 'th', 'ড': 'd', 'ঢ': 'dh', 'ণ': 'n',
+      'ত': 't', 'থ': 'th', 'দ': 'd', 'ধ': 'dh', 'ন': 'n',
+      'প': 'p', 'ফ': 'ph', 'ব': 'b', 'ভ': 'bh', 'ম': 'm',
+      'য': 'j', 'র': 'r', 'ল': 'l', 'শ': 'sh', 'ষ': 'sh', 'স': 's', 'হ': 'h',
+      'ড়': 'r', 'ঢ়': 'rh', 'য়': 'y', 'ৎ': 't',
+      // Vowel signs
+      'া': 'aa', 'ি': 'i', 'ী': 'ee', 'ু': 'u', 'ূ': 'oo', 'ৃ': 'ri',
+      'ে': 'e', 'ৈ': 'oi', 'ো': 'o', 'ৌ': 'ou', '্': '',
+      // Signs
+      'ং': 'ng', 'ঁ': 'n', 'ঃ': 'h',
+    };
+
+    var text = bengali;
+    final sb = StringBuffer();
+    for (int i = 0; i < text.length; i++) {
+      final ch = text[i];
+      if (mapping.containsKey(ch)) {
+        sb.write(mapping[ch]);
+      } else {
+        sb.write(ch);
+      }
+    }
+
+    var result = sb.toString().trim();
+    result = result.replaceAll(RegExp(r'\s+'), ' ');
+    if (result.isNotEmpty) {
+      result = result[0].toUpperCase() + result.substring(1);
+    }
+    return result;
   }
 
   /// Reviewed curated meanings dictionary for iconic Hindi/Urdu lines

@@ -176,6 +176,8 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
   String _activeFilter = 'All';
   bool _isLoadingContent = false;
   Timer? _greetingRefreshTimer;
+  int _contentLoadEpoch = 0;
+  String? _lastShownPlaybackError;
 
   List<YoutubeTrack> _quickPickTracks = [];
   List<YoutubeTrack> _carousel1Tracks = [];
@@ -339,49 +341,71 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
         break;
     }
 
+    final epoch = ++_contentLoadEpoch;
+
     try {
-      final results = await Future.wait([
+      // Stage 1: Fast above-the-fold content first (Quick picks, Carousel 1, Featured Podcast)
+      final stage1Results = await Future.wait([
         audioProvider.musicService.searchTracks(quickQuery).catchError((_) => <YoutubeTrack>[]),
         audioProvider.musicService.searchTracks(carousel1Query).catchError((_) => <YoutubeTrack>[]),
-        audioProvider.musicService.searchTracks(carousel2Query).catchError((_) => <YoutubeTrack>[]),
-        audioProvider.musicService.searchTracks(carousel3Query).catchError((_) => <YoutubeTrack>[]),
-        audioProvider.musicService.searchTracks(carousel4Query).catchError((_) => <YoutubeTrack>[]),
-        audioProvider.musicService.searchTracks(carousel5Query).catchError((_) => <YoutubeTrack>[]),
-        audioProvider.musicService.searchTracks(carousel6Query).catchError((_) => <YoutubeTrack>[]),
         audioProvider.musicService.searchTracks('Sunday Suspense Feluda Mirchi Bangla audio stories official').catchError((_) => <YoutubeTrack>[]),
       ]);
 
-      if (mounted) {
-        setState(() {
-          if (results[0].isNotEmpty) {
-            _quickPickTracks = TasteEngine.rerankSearchResults(results[0]).take(10).toList();
-          }
-          if (results[1].isNotEmpty) {
-            _carousel1Tracks = TasteEngine.rerankSearchResults(results[1]).take(20).toList();
-          }
-          if (results[2].isNotEmpty) {
-            _carousel2Tracks = TasteEngine.rerankSearchResults(results[2]).take(20).toList();
-          }
-          if (results[3].isNotEmpty) {
-            _carousel3Tracks = TasteEngine.rerankSearchResults(results[3]).take(20).toList();
-          }
-          if (results[4].isNotEmpty) {
-            _carousel4Tracks = TasteEngine.rerankSearchResults(results[4]).take(20).toList();
-          }
-          if (results[5].isNotEmpty) {
-            _carousel5Tracks = TasteEngine.rerankSearchResults(results[5]).take(20).toList();
-          }
-          if (results[6].isNotEmpty) {
-            _carousel6Tracks = TasteEngine.rerankSearchResults(results[6]).take(20).toList();
-          }
-          if (results.length > 7 && results[7].isNotEmpty) {
-            _featuredPodcast = results[7].first;
-          }
-          _isLoadingContent = false;
-        });
-      }
+      if (!mounted || epoch != _contentLoadEpoch) return;
+
+      setState(() {
+        if (stage1Results[0].isNotEmpty) {
+          _quickPickTracks = TasteEngine.rerankSearchResults(stage1Results[0]).take(10).toList();
+        }
+        if (stage1Results[1].isNotEmpty) {
+          _carousel1Tracks = TasteEngine.rerankSearchResults(stage1Results[1]).take(20).toList();
+        }
+        if (stage1Results[2].isNotEmpty) {
+          _featuredPodcast = stage1Results[2].first;
+        }
+        _isLoadingContent = false;
+      });
+
+      // Stage 2: Stagger remaining carousels smoothly without flooding mobile network
+      final batchA = await Future.wait([
+        audioProvider.musicService.searchTracks(carousel2Query).catchError((_) => <YoutubeTrack>[]),
+        audioProvider.musicService.searchTracks(carousel3Query).catchError((_) => <YoutubeTrack>[]),
+      ]);
+
+      if (!mounted || epoch != _contentLoadEpoch) return;
+
+      setState(() {
+        if (batchA[0].isNotEmpty) {
+          _carousel2Tracks = TasteEngine.rerankSearchResults(batchA[0]).take(20).toList();
+        }
+        if (batchA[1].isNotEmpty) {
+          _carousel3Tracks = TasteEngine.rerankSearchResults(batchA[1]).take(20).toList();
+        }
+      });
+
+      final batchB = await Future.wait([
+        audioProvider.musicService.searchTracks(carousel4Query).catchError((_) => <YoutubeTrack>[]),
+        audioProvider.musicService.searchTracks(carousel5Query).catchError((_) => <YoutubeTrack>[]),
+        audioProvider.musicService.searchTracks(carousel6Query).catchError((_) => <YoutubeTrack>[]),
+      ]);
+
+      if (!mounted || epoch != _contentLoadEpoch) return;
+
+      setState(() {
+        if (batchB[0].isNotEmpty) {
+          _carousel4Tracks = TasteEngine.rerankSearchResults(batchB[0]).take(20).toList();
+        }
+        if (batchB[1].isNotEmpty) {
+          _carousel5Tracks = TasteEngine.rerankSearchResults(batchB[1]).take(20).toList();
+        }
+        if (batchB[2].isNotEmpty) {
+          _carousel6Tracks = TasteEngine.rerankSearchResults(batchB[2]).take(20).toList();
+        }
+      });
     } catch (_) {
-      if (mounted) setState(() => _isLoadingContent = false);
+      if (mounted && epoch == _contentLoadEpoch) {
+        setState(() => _isLoadingContent = false);
+      }
     }
   }
 
@@ -395,9 +419,11 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
     final authProvider = context.watch<AuthProvider>();
 
     final errorMsg = audioProvider.playbackErrorMessage;
-    if (errorMsg != null && errorMsg.isNotEmpty) {
+    if (errorMsg != null && errorMsg.isNotEmpty && errorMsg != _lastShownPlaybackError) {
+      _lastShownPlaybackError = errorMsg;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -419,6 +445,8 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
         );
         audioProvider.clearPlaybackErrorMessage();
       });
+    } else if (errorMsg == null && _lastShownPlaybackError != null) {
+      _lastShownPlaybackError = null;
     }
 
     return SafeArea(
@@ -938,11 +966,20 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
                   ),
                 ),
               ),
-              Text(
-                actionLabel,
-                style: AppTextStyles.caption.copyWith(
-                  color: AppColors.primarySoft,
-                  fontWeight: FontWeight.w600,
+              GestureDetector(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  _showSeeAllModal(title, tracks, audioProvider);
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                  child: Text(
+                    actionLabel,
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.primarySoft,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -972,6 +1009,122 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
         ),
         const SizedBox(height: 28),
       ],
+    );
+  }
+
+  void _showSeeAllModal(String sectionTitle, List<YoutubeTrack> sectionTracks, AudioProvider audioProvider) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface1,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.xl)),
+      ),
+      builder: (ctx) {
+        return SizedBox(
+          height: MediaQuery.of(context).size.height * 0.75,
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          sectionTitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.h3,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded, color: Colors.white70),
+                        onPressed: () => Navigator.of(ctx).pop(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Text(
+                        '${sectionTracks.length} tracks',
+                        style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                      ),
+                      const Spacer(),
+                      TextButton.icon(
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.primarySoft,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        ),
+                        icon: const Icon(Icons.play_arrow_rounded, size: 20),
+                        label: const Text('Play All', style: TextStyle(fontWeight: FontWeight.bold)),
+                        onPressed: () {
+                          Navigator.of(ctx).pop();
+                          if (sectionTracks.isNotEmpty) {
+                            audioProvider.playTrack(sectionTracks.first, sectionTracks);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                  const Divider(color: AppColors.surface2),
+                  Expanded(
+                    child: ListView.separated(
+                      itemCount: sectionTracks.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 6),
+                      itemBuilder: (_, index) {
+                        final t = sectionTracks[index];
+                        final isPlayingThis = audioProvider.currentTrack?.id == t.id;
+                        return ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          leading: ClipRRect(
+                            borderRadius: BorderRadius.circular(AppRadii.small),
+                            child: SizedBox(
+                              width: 48,
+                              height: 48,
+                              child: CachedNetworkImage(
+                                imageUrl: t.thumbnailUrl,
+                                fit: BoxFit.cover,
+                                placeholder: (_, __) => Container(color: AppColors.surface2),
+                                errorWidget: (_, __, ___) => GeneratedCoverArt(title: t.title, artist: t.artist, size: 48),
+                              ),
+                            ),
+                          ),
+                          title: Text(
+                            t.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: isPlayingThis ? AppColors.primarySoft : Colors.white,
+                              fontWeight: isPlayingThis ? FontWeight.bold : FontWeight.normal,
+                            ),
+                          ),
+                          subtitle: Text(
+                            t.artist,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.caption,
+                          ),
+                          trailing: isPlayingThis && audioProvider.isPlaying
+                              ? const Icon(Icons.volume_up_rounded, color: AppColors.primarySoft, size: 20)
+                              : const Icon(Icons.play_circle_outline_rounded, color: AppColors.iconIdle, size: 22),
+                          onTap: () {
+                            Navigator.of(ctx).pop();
+                            audioProvider.playTrack(t, sectionTracks);
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -1206,6 +1359,12 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
                       imageUrl: track.thumbnailUrl,
                       fit: BoxFit.cover,
                       memCacheWidth: 120,
+                      placeholder: (_, __) => Container(color: AppColors.surface2),
+                      errorWidget: (_, __, ___) => GeneratedCoverArt(
+                        title: track.title,
+                        artist: track.artist,
+                        size: 56,
+                      ),
                     ),
                   ),
                 ),

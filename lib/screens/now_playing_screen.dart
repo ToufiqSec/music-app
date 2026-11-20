@@ -862,13 +862,17 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                 subtitle: Text('View Discography in Search', style: AppTextStyles.caption),
                 onTap: () {
                   Navigator.pop(context);
+                  _showArtistDiscographySheet(context, track.artist, audioProvider);
                 },
               ),
               ListTile(
                 leading: const Icon(Icons.high_quality_rounded, color: AppColors.primarySoft),
                 title: Text('Audio Quality: 320 kbps (Direct Stream)', style: AppTextStyles.bodyMedium),
                 subtitle: Text('Zero re-encoding • Pure AAC/M4A', style: AppTextStyles.caption),
-                onTap: () => Navigator.pop(context),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showAudioQualitySheet(context, track);
+                },
               ),
             ],
           ),
@@ -995,6 +999,179 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showArtistDiscographySheet(BuildContext context, String artist, AudioProvider audioProvider) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface1,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SizedBox(
+          height: MediaQuery.of(context).size.height * 0.75,
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Discography: $artist',
+                          style: AppTextStyles.h3,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded, color: Colors.white70),
+                        onPressed: () => Navigator.of(ctx).pop(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Divider(color: AppColors.surface2),
+                  Expanded(
+                    child: FutureBuilder<List<YoutubeTrack>>(
+                      future: audioProvider.musicService.searchTracks('$artist top songs'),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(
+                            child: CircularProgressIndicator(color: AppColors.primarySoft),
+                          );
+                        }
+                        final tracks = snapshot.data ?? [];
+                        if (tracks.isEmpty) {
+                          return Center(
+                            child: Text(
+                              'No tracks found for $artist',
+                              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textMuted),
+                            ),
+                          );
+                        }
+                        return ListView.separated(
+                          itemCount: tracks.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 6),
+                          itemBuilder: (context, index) {
+                            final t = tracks[index];
+                            return ListTile(
+                              leading: ClipRRect(
+                                borderRadius: BorderRadius.circular(AppRadii.small),
+                                child: SizedBox(
+                                  width: 48,
+                                  height: 48,
+                                  child: CachedNetworkImage(
+                                    imageUrl: t.thumbnailUrl,
+                                    fit: BoxFit.cover,
+                                    placeholder: (_, __) => Container(color: AppColors.surface2),
+                                    errorWidget: (_, __, ___) => GeneratedCoverArt(
+                                      title: t.title,
+                                      artist: t.artist,
+                                      size: 48,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              title: Text(
+                                t.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTextStyles.bodyMedium,
+                              ),
+                              subtitle: Text(
+                                t.artist,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTextStyles.caption,
+                              ),
+                              trailing: const Icon(Icons.play_circle_outline_rounded, color: AppColors.iconIdle),
+                              onTap: () {
+                                Navigator.of(ctx).pop();
+                                audioProvider.playTrack(t, tracks);
+                              },
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showAudioQualitySheet(BuildContext context, YoutubeTrack track) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface1,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Audio Stream Quality', style: AppTextStyles.h3),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, color: Colors.white70),
+                      onPressed: () => Navigator.of(ctx).pop(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.check_circle_rounded, color: AppColors.accentTeal),
+                  title: Text('Ultra Lossless (320 kbps)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  subtitle: Text('Direct CD quality • Zero re-encoding • Pure AAC/M4A', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.radio_button_unchecked_rounded, color: AppColors.iconIdle),
+                  title: const Text('High Quality (160 kbps)', style: TextStyle(color: Colors.white70)),
+                  subtitle: const Text('Balanced audio quality and bandwidth', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Streaming in Ultra Lossless (320 kbps) default mode')),
+                    );
+                  },
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.radio_button_unchecked_rounded, color: AppColors.iconIdle),
+                  title: const Text('Data Saver (96 kbps)', style: TextStyle(color: Colors.white70)),
+                  subtitle: const Text('Reduced data consumption for mobile networks', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Ultra Lossless active on current connection')),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

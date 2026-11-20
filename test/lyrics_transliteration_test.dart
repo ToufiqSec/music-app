@@ -90,5 +90,32 @@ void main() {
       // Line 2 must be null (no translation line for English songs)
       expect(line1.meaningText, isNull);
     });
+
+    test('Bengali-lyric song shows Romanized lyric on Line 1 and original Bengali script on Line 2', () async {
+      const rawLrc = '[00:10.00] আমি বাংলায় গান গাই\n[00:15.00] আমি বাংলার গান গাই';
+      final rawResult = LyricsResult(
+        isSynced: true,
+        syncedLines: LyricsService.parseLrc(rawLrc),
+        provider: 'Test',
+      );
+
+      final dual = await LyricsTransliterationService.processLyrics(
+        trackId: 'test_ami_banglay_gan_gai',
+        title: 'Ami Banglay Gan Gai',
+        artist: 'Pratul Mukhopadhyay',
+        rawResult: rawResult,
+      );
+
+      expect(dual, isNotNull);
+      expect(dual!.isBengali, isTrue);
+      expect(dual.lines.isNotEmpty, isTrue);
+
+      final line1 = dual.lines[0];
+      // Line 1 is Romanized
+      expect(LyricsTransliterationService.containsBengali(line1.mainText), isFalse);
+      // Line 2 is original Bengali
+      expect(line1.meaningText, isNotNull);
+      expect(LyricsTransliterationService.containsBengali(line1.meaningText!), isTrue);
+    });
   });
 }

@@ -25,45 +25,23 @@ class ContentCard extends StatefulWidget {
   State<ContentCard> createState() => _ContentCardState();
 }
 
-class _ContentCardState extends State<ContentCard> with SingleTickerProviderStateMixin {
+class _ContentCardState extends State<ContentCard> {
   bool _isPressed = false;
-  late final AnimationController _shimmerController;
-
-  @override
-  void initState() {
-    super.initState();
-    _shimmerController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1400),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _shimmerController.dispose();
-    super.dispose();
-  }
 
   Widget _buildShimmerSkeleton() {
-    return AnimatedBuilder(
-      animation: _shimmerController,
-      builder: (context, _) {
-        return Container(
-          decoration: BoxDecoration(
-            borderRadius: AppRadii.borderMedium,
-            gradient: LinearGradient(
-              begin: Alignment(-1.5 + (_shimmerController.value * 3), -0.3),
-              end: Alignment(0.5 + (_shimmerController.value * 3), 0.3),
-              colors: [
-                AppColors.surface1,
-                AppColors.surface2,
-                AppColors.surface1,
-              ],
-              stops: const [0.1, 0.5, 0.9],
-            ),
-          ),
-        );
-      },
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface2,
+        borderRadius: AppRadii.borderMedium,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.surface1,
+            AppColors.surface2,
+          ],
+        ),
+      ),
     );
   }
 

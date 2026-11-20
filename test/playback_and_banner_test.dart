@@ -34,7 +34,7 @@ void main() {
       }
     });
 
-    test('PlaybackResolver upgrades http to https', () {
+    test('PlaybackResolver upgrades http to https safely and preserves LAN/localhost HTTP', () {
       expect(
         PlaybackResolver.upgradeToHttps('http://example.com/audio.mp3'),
         'https://example.com/audio.mp3',
@@ -42,6 +42,19 @@ void main() {
       expect(
         PlaybackResolver.upgradeToHttps('https://example.com/audio.mp3'),
         'https://example.com/audio.mp3',
+      );
+      // Preserves LAN / local HTTP addresses (Issue 1.2)
+      expect(
+        PlaybackResolver.upgradeToHttps('http://localhost:8000/stream.mp3'),
+        'http://localhost:8000/stream.mp3',
+      );
+      expect(
+        PlaybackResolver.upgradeToHttps('http://192.168.1.100:8080/audio.aac'),
+        'http://192.168.1.100:8080/audio.aac',
+      );
+      expect(
+        PlaybackResolver.upgradeToHttps('http://10.0.0.5/music.mp3'),
+        'http://10.0.0.5/music.mp3',
       );
     });
 

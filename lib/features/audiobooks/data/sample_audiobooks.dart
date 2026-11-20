@@ -12,25 +12,25 @@ class SampleAudiobooks {
       description: 'The legendary detective Sherlock Holmes and Dr. Watson investigate twelve perplexing cases in Victorian London.',
       chapters: [
         AudiobookChapter(
-          id: 'ab_sh_01',
+          id: 'W_q62wT8fOU',
           title: 'A Scandal in Bohemia',
           chapterNumber: 1,
           durationSeconds: 3240,
         ),
         AudiobookChapter(
-          id: 'ab_sh_02',
+          id: 'hH9zM2_d3Z8',
           title: 'The Red-Headed League',
           chapterNumber: 2,
           durationSeconds: 2880,
         ),
         AudiobookChapter(
-          id: 'ab_sh_03',
+          id: 'u5GjK3Gj45M',
           title: 'A Case of Identity',
           chapterNumber: 3,
           durationSeconds: 2460,
         ),
         AudiobookChapter(
-          id: 'ab_sh_04',
+          id: 'J7kKzF1QJfs',
           title: 'The Boscombe Valley Mystery',
           chapterNumber: 4,
           durationSeconds: 3120,
@@ -46,19 +46,19 @@ class SampleAudiobooks {
       description: 'Nobel Prize winning collection of mystical, philosophical, and spiritual poetry translated into lyrical prose.',
       chapters: [
         AudiobookChapter(
-          id: 'ab_git_01',
+          id: '7DqR3zK6b5M',
           title: 'Chapter 1: Thou Hast Made Me Endless',
           chapterNumber: 1,
           durationSeconds: 1800,
         ),
         AudiobookChapter(
-          id: 'ab_git_02',
+          id: 'eY8k1Uq7Y1A',
           title: 'Chapter 2: When Thou Commandest Me to Sing',
           chapterNumber: 2,
           durationSeconds: 1950,
         ),
         AudiobookChapter(
-          id: 'ab_git_03',
+          id: '9qTfKq5Wz5c',
           title: 'Chapter 3: Where the Mind is Without Fear',
           chapterNumber: 3,
           durationSeconds: 2100,
@@ -74,19 +74,19 @@ class SampleAudiobooks {
       description: 'Martians invade Earth with heat-rays and towering fighting-machines in the pioneering classic of science fiction.',
       chapters: [
         AudiobookChapter(
-          id: 'ab_wow_01',
+          id: 'w9K8s5vL1M8',
           title: 'The Eve of the War',
           chapterNumber: 1,
           durationSeconds: 2700,
         ),
         AudiobookChapter(
-          id: 'ab_wow_02',
+          id: 'pM6t8kL1Q5Y',
           title: 'The Falling Star',
           chapterNumber: 2,
           durationSeconds: 2400,
         ),
         AudiobookChapter(
-          id: 'ab_wow_03',
+          id: 'r8k9L2m4T1V',
           title: 'On Horsell Common',
           chapterNumber: 3,
           durationSeconds: 2900,
@@ -102,16 +102,18 @@ class SampleAudiobooks {
       description: 'Pradosh C. Mitter (Feluda) ventures into the forests of Bhutan and North Bengal to decipher a cryptic riddle about buried treasure.',
       chapters: [
         AudiobookChapter(
-          id: 'ab_fel_01',
+          id: 'ss_feluda_kathmandu_part1',
           title: 'Part 1: The Cryptic Rhyme',
           chapterNumber: 1,
-          durationSeconds: 3100,
+          durationSeconds: 9813,
+          audioUrl: 'https://dts.podtrac.com/redirect.mp3/api.spreaker.com/download/episode/58582188/joto_kando_kathmandu_te.mp3',
         ),
         AudiobookChapter(
-          id: 'ab_fel_02',
+          id: 'ss_shonku_baghdad_part2',
           title: 'Part 2: Into the Forest',
           chapterNumber: 2,
-          durationSeconds: 3450,
+          durationSeconds: 3807,
+          audioUrl: 'https://dts.podtrac.com/redirect.mp3/api.spreaker.com/download/episode/75550604/baghdad_er_baksho.mp3',
         ),
       ],
     ),

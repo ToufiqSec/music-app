@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import '../../features/music/models/music_models.dart';
 import '../../widgets/generated_cover_art.dart';
 import 'youtube_music_service.dart';
@@ -47,12 +49,54 @@ class VibeMixResult {
 class MoodRecommendationEngine {
   final YoutubeMusicService _musicService;
 
-  // Configurable Groq AI Provider (Loaded via dart-define or Profile settings)
+  // Configurable Groq AI Provider (Loaded via dart-define or Profile settings with persistent storage) (Issue 2.4)
   static const String _envGroqKey = String.fromEnvironment('GROQ_API_KEY');
   static String _runtimeApiKey = _envGroqKey;
+  static bool _initialized = false;
 
-  static String get groqApiKey => _runtimeApiKey;
-  static set groqApiKey(String key) => _runtimeApiKey = key.trim();
+  static Future<File> _getKeyFile() async {
+    final docsDir = await getApplicationDocumentsDirectory();
+    return File('${docsDir.path}/groq_api_key.vault');
+  }
+
+  static Future<void> initApiKey() async {
+    if (_initialized) return;
+    _initialized = true;
+    try {
+      final file = await _getKeyFile();
+      if (await file.exists()) {
+        final saved = (await file.readAsString()).trim();
+        if (saved.isNotEmpty) {
+          _runtimeApiKey = saved;
+        }
+      }
+    } catch (_) {}
+  }
+
+  static String get groqApiKey {
+    if (!_initialized) {
+      initApiKey();
+    }
+    return _runtimeApiKey;
+  }
+
+  static set groqApiKey(String key) {
+    saveApiKey(key);
+  }
+
+  static Future<void> saveApiKey(String key) async {
+    _runtimeApiKey = key.trim();
+    _initialized = true;
+    try {
+      final file = await _getKeyFile();
+      if (_runtimeApiKey.isEmpty) {
+        if (await file.exists()) await file.delete();
+      } else {
+        await file.writeAsString(_runtimeApiKey);
+      }
+    } catch (_) {}
+  }
+
   static bool get hasGroqKey => _runtimeApiKey.isNotEmpty;
   static const String groqModel = 'llama-3.3-70b-versatile';
   static const String groqEndpoint = 'https://api.groq.com/openai/v1/chat/completions';

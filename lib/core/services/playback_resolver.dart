@@ -52,10 +52,37 @@ class PlaybackResolver {
     '.mp4',
   ];
 
-  /// Upgrades http:// to https:// (Requirement A2.2)
+  /// Determines if an http:// URL is safe to upgrade to https://.
+  /// Preserves plain HTTP for localhost, LAN IPs, mDNS, and custom ports (Issue 1.2).
+  static bool shouldUpgradeToHttps(String url) {
+    final lower = url.trim().toLowerCase();
+    if (!lower.startsWith('http://')) return false;
+
+    // Do NOT upgrade localhost or loopback
+    if (lower.contains('://localhost') || lower.contains('://127.0.0.1')) {
+      return false;
+    }
+    // Do NOT upgrade private LAN IP addresses (RFC 1918)
+    if (RegExp(r'://(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)').hasMatch(lower)) {
+      return false;
+    }
+    // Do NOT upgrade local mDNS / LAN hostnames
+    if (lower.contains('.local:') || lower.endsWith('.local') || lower.contains('.lan')) {
+      return false;
+    }
+    // Do NOT upgrade custom non-standard HTTP audio ports (like Icecast/Shoutcast :8000, :8080)
+    final uri = Uri.tryParse(url);
+    if (uri != null && uri.hasPort && uri.port != 80 && uri.port != 443) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /// Upgrades http:// to https:// safely without breaking LAN / local streams (Requirement A2.2 & Issue 1.2)
   static String upgradeToHttps(String url) {
     final trimmed = url.trim();
-    if (trimmed.startsWith('http://')) {
+    if (shouldUpgradeToHttps(trimmed)) {
       return trimmed.replaceFirst('http://', 'https://');
     }
     return trimmed;
