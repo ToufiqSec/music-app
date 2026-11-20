@@ -109,7 +109,6 @@ class SupabaseService {
       await Supabase.initialize(
         url: supabaseUrl,
         anonKey: supabaseAnonKey,
-        authCallbackUrlHostname: 'login-callback',
         debug: kDebugMode,
       );
       debugPrint('[Supabase] Initialized successfully. Auth user: ${currentUser?.email}');
