@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:music_app/widgets/generated_cover_art.dart';
 import 'package:music_app/core/services/curated_tracks.dart';
 import 'package:music_app/core/services/supabase_service.dart';
+import 'package:music_app/core/services/playback_resolver.dart';
+import 'package:music_app/core/services/youtube_music_service.dart';
 
 void main() {
   group('Podcast & Music Playback Tests', () {
@@ -30,6 +32,38 @@ void main() {
         expect(podcast.thumbnailUrl.startsWith('https://'), isTrue);
         expect(podcast.durationSeconds, greaterThan(1200)); // > 20 minutes
       }
+    });
+
+    test('PlaybackResolver upgrades http to https', () {
+      expect(
+        PlaybackResolver.upgradeToHttps('http://example.com/audio.mp3'),
+        'https://example.com/audio.mp3',
+      );
+      expect(
+        PlaybackResolver.upgradeToHttps('https://example.com/audio.mp3'),
+        'https://example.com/audio.mp3',
+      );
+    });
+
+    test('PlaybackResolver correctly identifies web pages and rejects non-audio enclosures', () {
+      expect(PlaybackResolver.isLikelyWebPage('https://www.youtube.com/watch?v=12345'), isTrue);
+      expect(PlaybackResolver.isLikelyWebPage('https://youtu.be/12345'), isTrue);
+      expect(PlaybackResolver.isLikelyWebPage('https://www.spreaker.com/episode/feluda-test--12345'), isTrue);
+      expect(PlaybackResolver.isLikelyWebPage('https://anchor.fm/episodes/my-podcast-123'), isTrue);
+      expect(PlaybackResolver.isLikelyWebPage('https://example.com/index.html'), isTrue);
+      expect(PlaybackResolver.isLikelyWebPage('https://d1bxy2pveef3fq.cloudfront.net/episodes/original/123.mp3'), isFalse);
+      expect(PlaybackResolver.isLikelyWebPage('https://dts.podtrac.com/redirect.mp3/example.mp3'), isFalse);
+    });
+
+    test('YoutubeMusicService.cleanFallbackQuery strips parentheticals and audio tags cleanly', () {
+      expect(
+        YoutubeMusicService.cleanFallbackQuery('Channa Mereya (Ae Dil Hai Mushkil) [Official Video]'),
+        'Channa Mereya',
+      );
+      expect(
+        YoutubeMusicService.cleanFallbackQuery('Sunday Suspense - Feluda - Kathmandu (Mirchi Bangla)'),
+        'Sunday Suspense Feluda Kathmandu',
+      );
     });
 
     test('UserProfileData parses and falls back to user email cleanly', () {

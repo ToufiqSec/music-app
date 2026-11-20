@@ -174,7 +174,7 @@ class YoutubeMusicService {
     return results;
   }
 
-  /// Retrieves direct Sunday Suspense episodes from official Spreaker API feeds
+  /// Retrieves direct Sunday Suspense episodes from official Spreaker API feeds & search
   Future<List<YoutubeTrack>> searchSundaySuspense(String query) async {
     final tracks = <YoutubeTrack>[];
     final seenTitles = <String>{};
@@ -194,40 +194,40 @@ class YoutubeMusicService {
       }
     }
 
-    // Query live Spreaker show 4852712 & 6039407 for direct CloudFront MP3 streams
+    // Query active Spreaker search API for direct playable CloudFront MP3 streams
     try {
-      final showIds = ['4852712', '6039407'];
-      for (final showId in showIds) {
-        final uri = Uri.parse('https://api.spreaker.com/v2/shows/$showId/episodes?limit=15');
-        final response = await http.get(uri).timeout(const Duration(seconds: 4));
-        if (response.statusCode == 200) {
-          final data = json.decode(response.body);
-          final items = data['response']?['items'] as List<dynamic>? ?? [];
-          for (final item in items) {
-            final epId = item['episode_id']?.toString() ?? '';
-            final title = item['title']?.toString() ?? 'Sunday Suspense Episode';
-            final durationMs = item['duration'] as num? ?? 0;
-            final durationSec = (durationMs / 1000).round();
-            var imageUrl = item['image_url']?.toString() ?? '';
-            if (imageUrl.contains('t_square_limited_160')) {
-              imageUrl = imageUrl.replaceAll('t_square_limited_160', 't_rss_itunes_square_1400');
-            }
-            final playUrl = 'https://api.spreaker.com/v2/episodes/$epId/play.mp3';
+      final searchQuery = query.trim().isNotEmpty ? query.trim() : 'sunday suspense';
+      final uri = Uri.parse(
+        'https://api.spreaker.com/v2/search?q=${Uri.encodeComponent(searchQuery)}&type=episodes&limit=15',
+      );
+      final response = await http.get(uri).timeout(const Duration(seconds: 5));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final items = data['response']?['items'] as List<dynamic>? ?? [];
+        for (final item in items) {
+          final epId = item['episode_id']?.toString() ?? '';
+          final title = item['title']?.toString() ?? 'Sunday Suspense Episode';
+          final durationMs = item['duration'] as num? ?? 0;
+          final durationSec = (durationMs / 1000).round();
+          var imageUrl = item['image_url']?.toString() ?? '';
+          if (imageUrl.contains('t_square_limited_160')) {
+            imageUrl = imageUrl.replaceAll('t_square_limited_160', 't_rss_itunes_square_1400');
+          }
+          final playUrl = 'https://api.spreaker.com/v2/episodes/$epId/play.mp3';
 
-            final key = title.toLowerCase();
-            if (!seenTitles.contains(key)) {
-              seenTitles.add(key);
-              tracks.add(YoutubeTrack(
-                id: 'ss_spk_$epId',
-                title: title.startsWith('Sunday Suspense') ? title : 'Sunday Suspense: $title',
-                artist: 'Sunday Suspense • Mirchi Bangla',
-                durationSeconds: durationSec > 0 ? durationSec : 3600,
-                thumbnailUrl: imageUrl.isNotEmpty
-                    ? imageUrl
-                    : 'https://d3wo5wojvuv7l.cloudfront.net/t_rss_itunes_square_1400/images.spreaker.com/original/1448de548583885ff422361fdb951f38.jpg',
-                audioStreamUrl: playUrl,
-              ));
-            }
+          final key = title.toLowerCase();
+          if (!seenTitles.contains(key)) {
+            seenTitles.add(key);
+            tracks.add(YoutubeTrack(
+              id: 'ss_spk_$epId',
+              title: title.startsWith('Sunday Suspense') ? title : 'Sunday Suspense: $title',
+              artist: 'Sunday Suspense • Mirchi Bangla',
+              durationSeconds: durationSec > 0 ? durationSec : 3600,
+              thumbnailUrl: imageUrl.isNotEmpty
+                  ? imageUrl
+                  : 'https://d3wo5wojvuv7l.cloudfront.net/t_rss_itunes_square_1400/images.spreaker.com/original/1448de548583885ff422361fdb951f38.jpg',
+              audioStreamUrl: playUrl,
+            ));
           }
         }
       }
@@ -366,7 +366,13 @@ class YoutubeMusicService {
     if (fallbackQuery != null && fallbackQuery.trim().isNotEmpty) {
       final isDramaOrSunday = fallbackQuery.toLowerCase().contains('suspense') ||
           fallbackQuery.toLowerCase().contains('sunday') ||
-          fallbackQuery.toLowerCase().contains('podcast');
+          fallbackQuery.toLowerCase().contains('podcast') ||
+          fallbackQuery.toLowerCase().contains('episode') ||
+          fallbackQuery.toLowerCase().contains('story') ||
+          fallbackQuery.toLowerCase().contains('natok') ||
+          fallbackQuery.toLowerCase().contains('drama') ||
+          fallbackQuery.toLowerCase().contains('beerbiceps') ||
+          fallbackQuery.toLowerCase().contains('ranveer');
 
       if (!isDramaOrSunday) {
         // Try cleaned query first (e.g. strips film tag '(Ae Dil Hai Mushkil)')
@@ -435,9 +441,21 @@ class YoutubeMusicService {
     if (fallbackQuery != null && fallbackQuery.trim().isNotEmpty) {
       try {
         final cleanFb = cleanFallbackQuery(fallbackQuery);
-        final searchTarget = cleanFb.toLowerCase().contains('official') || cleanFb.toLowerCase().contains('audio')
+        final isPodcastOrStory = cleanFb.toLowerCase().contains('suspense') ||
+            cleanFb.toLowerCase().contains('sunday') ||
+            cleanFb.toLowerCase().contains('podcast') ||
+            cleanFb.toLowerCase().contains('episode') ||
+            cleanFb.toLowerCase().contains('story') ||
+            cleanFb.toLowerCase().contains('natok') ||
+            cleanFb.toLowerCase().contains('drama') ||
+            cleanFb.toLowerCase().contains('beerbiceps') ||
+            cleanFb.toLowerCase().contains('ranveer');
+
+        final searchTarget = isPodcastOrStory
             ? cleanFb
-            : '$cleanFb official audio';
+            : (cleanFb.toLowerCase().contains('official') || cleanFb.toLowerCase().contains('audio')
+                ? cleanFb
+                : '$cleanFb official audio');
 
         final fallbackTracks = await _searchYouTube(searchTarget);
         for (final fb in fallbackTracks) {
@@ -486,20 +504,29 @@ class YoutubeMusicService {
 
     // 6. Ultimate JioSaavn Fallback for any missed song
     if (fallbackQuery != null && fallbackQuery.trim().isNotEmpty) {
-      try {
-        final cleaned = cleanFallbackQuery(fallbackQuery);
-        final saavnTracks = await _searchJioSaavn(cleaned);
-        for (final t in saavnTracks) {
-          if (t.audioStreamUrl != null && t.audioStreamUrl!.isNotEmpty) {
-            _streamCache[trackId] = CachedStreamItem(
-              url: t.audioStreamUrl!,
-              expiresAt: parseStreamExpiry(t.audioStreamUrl!),
-            );
-            return t.audioStreamUrl!;
+      final isPodcastOrStory = fallbackQuery.toLowerCase().contains('suspense') ||
+          fallbackQuery.toLowerCase().contains('sunday') ||
+          fallbackQuery.toLowerCase().contains('podcast') ||
+          fallbackQuery.toLowerCase().contains('episode') ||
+          fallbackQuery.toLowerCase().contains('story') ||
+          fallbackQuery.toLowerCase().contains('drama');
+
+      if (!isPodcastOrStory) {
+        try {
+          final cleaned = cleanFallbackQuery(fallbackQuery);
+          final saavnTracks = await _searchJioSaavn(cleaned);
+          for (final t in saavnTracks) {
+            if (t.audioStreamUrl != null && t.audioStreamUrl!.isNotEmpty) {
+              _streamCache[trackId] = CachedStreamItem(
+                url: t.audioStreamUrl!,
+                expiresAt: parseStreamExpiry(t.audioStreamUrl!),
+              );
+              return t.audioStreamUrl!;
+            }
           }
+        } catch (e) {
+          debugPrint('[StreamResolverAudit] Ultimate fallback failed for "$fallbackQuery": $e');
         }
-      } catch (e) {
-        debugPrint('[StreamResolverAudit] Ultimate fallback failed for "$fallbackQuery": $e');
       }
     }
 

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
+import '../core/services/playback_resolver.dart';
 
 /// Background Audio Handler using audio_service and just_audio.
 class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
@@ -125,6 +126,14 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
       if (!isRemote && File(safeUrl).existsSync()) {
         await _player.setFilePath(safeUrl);
       } else {
+        // Pre-resolve multi-hop redirect podcast enclosures if passed directly
+        if (isRemote && (safeUrl.contains('podtrac.com') || safeUrl.contains('spreaker.com'))) {
+          final preResolved = await PlaybackResolver.resolveFinalAudioUrl(safeUrl);
+          if (preResolved != null && preResolved.isNotEmpty) {
+            safeUrl = preResolved;
+          }
+        }
+
         final isYouTubeStream = safeUrl.contains('googlevideo.com') ||
             safeUrl.contains('youtube.com') ||
             safeUrl.contains('youtu.be');

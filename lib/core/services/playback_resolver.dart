@@ -79,13 +79,111 @@ class PlaybackResolver {
     return false;
   }
 
+  /// Pre-resolves multi-hop HTTP redirect chains (e.g. Podtrac -> Spreaker -> CloudFront CDN)
+  /// into the final direct playable media stream URL so native ExoPlayer / just_audio
+  /// does not drop or fail on cross-domain redirect chains.
+  static Future<String?> resolveFinalAudioUrl(String url) async {
+    final clean = upgradeToHttps(url);
+    if (clean.contains('googlevideo.com')) {
+      return clean;
+    }
+
+    try {
+      var currentUri = Uri.parse(clean);
+      final client = HttpClient()
+        ..connectionTimeout = const Duration(seconds: 8)
+        ..badCertificateCallback = ((_, __, ___) => true);
+
+      int redirectCount = 0;
+      const maxHops = 10;
+
+      while (redirectCount < maxHops) {
+        final request = await client.headUrl(currentUri);
+        request.followRedirects = false;
+        request.headers.set(
+          'User-Agent',
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        );
+
+        final response = await request.close().timeout(const Duration(seconds: 8));
+
+        // If HEAD returns 405 Method Not Allowed or 501 Not Implemented, fallback to GET range bytes=0-0
+        if (response.statusCode == HttpStatus.methodNotAllowed || response.statusCode == HttpStatus.notImplemented) {
+          final getReq = await client.getUrl(currentUri);
+          getReq.followRedirects = false;
+          getReq.headers.set(
+            'User-Agent',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+          );
+          getReq.headers.set('Range', 'bytes=0-0');
+          final getResp = await getReq.close().timeout(const Duration(seconds: 8));
+
+          if (getResp.statusCode == HttpStatus.movedPermanently ||
+              getResp.statusCode == HttpStatus.movedTemporarily ||
+              getResp.statusCode == HttpStatus.seeOther ||
+              getResp.statusCode == HttpStatus.temporaryRedirect ||
+              getResp.statusCode == HttpStatus.permanentRedirect) {
+            final location = getResp.headers.value(HttpHeaders.locationHeader);
+            if (location != null && location.isNotEmpty) {
+              currentUri = currentUri.resolve(location);
+              redirectCount++;
+              continue;
+            }
+          }
+
+          if (getResp.statusCode >= 200 && getResp.statusCode < 300) {
+            client.close(force: true);
+            return upgradeToHttps(currentUri.toString());
+          }
+          client.close(force: true);
+          return null;
+        }
+
+        // Check redirect status
+        if (response.statusCode == HttpStatus.movedPermanently ||
+            response.statusCode == HttpStatus.movedTemporarily ||
+            response.statusCode == HttpStatus.seeOther ||
+            response.statusCode == HttpStatus.temporaryRedirect ||
+            response.statusCode == HttpStatus.permanentRedirect) {
+          final location = response.headers.value(HttpHeaders.locationHeader);
+          if (location != null && location.isNotEmpty) {
+            currentUri = currentUri.resolve(location);
+            redirectCount++;
+            continue;
+          }
+        }
+
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          client.close(force: true);
+          return upgradeToHttps(currentUri.toString());
+        }
+
+        debugPrint('[PlaybackResolver] Candidate URL check returned HTTP ${response.statusCode} for $currentUri');
+        client.close(force: true);
+        return null;
+      }
+
+      client.close(force: true);
+      return upgradeToHttps(currentUri.toString());
+    } catch (e) {
+      debugPrint('[PlaybackResolver] Error resolving final URL for $url: $e');
+      if (url.contains('podtrac.com') ||
+          url.contains('spreaker.com/download') ||
+          url.contains('chrt.fm') ||
+          url.contains('pdst.fm')) {
+        return null;
+      }
+      return url;
+    }
+  }
+
   /// Resolves the audio source into ONE shared function (Requirement A2.1)
   static Future<PlaybackResolutionResult> resolveAudioSource({
     required YoutubeTrack track,
     required YoutubeMusicService musicService,
     bool forceRefresh = false,
   }) async {
-    debugPrint('[PlaybackResolver] Resolving track ID: "${track.id}", Title: "${track.title}"');
+    debugPrint('[PlaybackResolver] Resolving track ID: "${track.id}", Title: "${track.title}" (forceRefresh: $forceRefresh)');
 
     // 1. Local disk cache (fastest, offline-ready)
     try {
@@ -101,35 +199,43 @@ class PlaybackResolver {
       debugPrint('[PlaybackResolver] Local cache check error: $e');
     }
 
-    // 2. Direct Enclosure / AudioStreamUrl
-    final candidates = <String?>[
-      track.audioStreamUrl,
-      track.localFilePath,
-      if (track.id.startsWith('http://') || track.id.startsWith('https://')) track.id,
-    ];
+    // 2. Direct Enclosure / AudioStreamUrl (Bypassed if forceRefresh == true to enable fallback recovery)
+    if (!forceRefresh) {
+      final candidates = <String?>[
+        track.audioStreamUrl,
+        track.localFilePath,
+        if (track.id.startsWith('http://') || track.id.startsWith('https://')) track.id,
+      ];
 
-    for (final candidate in candidates) {
-      if (candidate != null && candidate.trim().isNotEmpty) {
-        var cleanUrl = upgradeToHttps(candidate);
+      for (final candidate in candidates) {
+        if (candidate != null && candidate.trim().isNotEmpty) {
+          var cleanUrl = upgradeToHttps(candidate);
 
-        // Check if candidate points to an HTML webpage rather than an audio stream
-        if (isLikelyWebPage(cleanUrl)) {
-          debugPrint('[PlaybackResolver] Candidate is a webpage URL: $cleanUrl');
-          continue;
-        }
+          // Check if candidate points to an HTML webpage rather than an audio stream
+          if (isLikelyWebPage(cleanUrl)) {
+            debugPrint('[PlaybackResolver] Candidate is a webpage URL: $cleanUrl');
+            continue;
+          }
 
-        // Validate local file or remote URL
-        if (cleanUrl.startsWith('https://')) {
-          debugPrint('[PlaybackResolver] Resolved playable direct stream: $cleanUrl');
-          return PlaybackResolutionResult.success(
-            url: cleanUrl,
-            sourceType: 'direct_enclosure',
-          );
-        } else if (File(cleanUrl).existsSync()) {
-          return PlaybackResolutionResult.success(
-            url: cleanUrl,
-            sourceType: 'local_file',
-          );
+          // Validate local file or remote URL with redirect pre-resolution
+          if (cleanUrl.startsWith('https://')) {
+            final resolvedUrl = await resolveFinalAudioUrl(cleanUrl);
+            if (resolvedUrl != null && resolvedUrl.isNotEmpty) {
+              debugPrint('[PlaybackResolver] Resolved playable direct stream: $resolvedUrl');
+              return PlaybackResolutionResult.success(
+                url: resolvedUrl,
+                sourceType: 'direct_enclosure',
+              );
+            } else {
+              debugPrint('[PlaybackResolver] Candidate URL unreachable or dead: $cleanUrl');
+              continue;
+            }
+          } else if (File(cleanUrl).existsSync()) {
+            return PlaybackResolutionResult.success(
+              url: cleanUrl,
+              sourceType: 'local_file',
+            );
+          }
         }
       }
     }
@@ -144,7 +250,13 @@ class PlaybackResolver {
       );
 
       if (streamUrl != null && streamUrl.isNotEmpty) {
-        final secureUrl = upgradeToHttps(streamUrl);
+        var secureUrl = upgradeToHttps(streamUrl);
+        if (secureUrl.contains('spreaker.com') || secureUrl.contains('podtrac.com')) {
+          final preResolved = await resolveFinalAudioUrl(secureUrl);
+          if (preResolved != null) {
+            secureUrl = preResolved;
+          }
+        }
         debugPrint('[PlaybackResolver] Resolved streaming URL: $secureUrl');
         return PlaybackResolutionResult.success(
           url: secureUrl,

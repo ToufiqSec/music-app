@@ -400,6 +400,10 @@ class AudioProvider extends ChangeNotifier {
     int resumeSeconds = 0;
     if (isLong) {
       resumeSeconds = await TrackMetadataStore.getPlaybackPosition(track.id);
+      // Reset if already near the end of the episode to avoid immediate completion/skip
+      if (track.durationSeconds > 0 && resumeSeconds >= (track.durationSeconds - 15)) {
+        resumeSeconds = 0;
+      }
     }
 
     // Record to listening history
