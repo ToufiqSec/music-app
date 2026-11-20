@@ -195,13 +195,20 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                         child: Hero(
                           tag: 'album_art_${track.id}',
                           child: Container(
+                            key: ValueKey('cover_container_${track.id}'),
                             width: artSize,
                             height: artSize,
                             decoration: BoxDecoration(
                               borderRadius: AppRadii.borderLarge,
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.50),
+                                  color: AppColors.primarySoft.withValues(alpha: 0.32),
+                                  blurRadius: 44,
+                                  spreadRadius: 2,
+                                  offset: const Offset(0, 10),
+                                ),
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.55),
                                   blurRadius: 36,
                                   spreadRadius: 4,
                                   offset: const Offset(0, 16),
@@ -212,6 +219,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                 ? ClipRRect(
                                     borderRadius: AppRadii.borderLarge,
                                     child: CachedNetworkImage(
+                                      key: ValueKey('art_img_${track.id}'),
                                       imageUrl: track.thumbnailUrl,
                                       fit: BoxFit.cover,
                                       memCacheWidth: 800,
@@ -225,6 +233,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                         ),
                                       ),
                                       errorWidget: (_, __, ___) => GeneratedCoverArt(
+                                        key: ValueKey('art_err_${track.id}'),
                                         title: track.title,
                                         artist: track.artist,
                                         thumbnailUrl: track.thumbnailUrl,
@@ -234,6 +243,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                     ),
                                   )
                                 : GeneratedCoverArt(
+                                    key: ValueKey('art_gen_${track.id}'),
                                     title: track.title,
                                     artist: track.artist,
                                     thumbnailUrl: track.thumbnailUrl,
@@ -270,46 +280,14 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: AppTextStyles.bodyMedium.copyWith(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w400,
                                     color: AppColors.textSecondary,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-
-                          // YouTube Music Badge
-                          if (track.artist.contains('YouTube Music') || track.thumbnailUrl.contains('ytimg.com')) ...[
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 4,
-                              ),
-                              margin: const EdgeInsets.only(right: 6),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFF0000).withValues(alpha: 0.15),
-                                borderRadius: AppRadii.borderSmall,
-                                border: Border.all(
-                                  color: const Color(0xFFFF0000).withValues(alpha: 0.4),
-                                  width: 1,
-                                ),
-                              ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.play_arrow_rounded, color: Color(0xFFFF0000), size: 12),
-                                  SizedBox(width: 2),
-                                  Text(
-                                    'YT Music',
-                                    style: TextStyle(
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFFFF4E4E),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
 
                           // High-Res Audio Badge
                           Container(
@@ -326,7 +304,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                 width: 1,
                               ),
                             ),
-                            child: Text(
+                            child: const Text(
                               '320K',
                               style: AppTextStyles.caption.copyWith(
                                 fontSize: 10,

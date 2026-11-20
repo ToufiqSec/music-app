@@ -8,14 +8,23 @@ import '../crypto/des_ecb.dart';
 import 'audio_cache_service.dart';
 import 'curated_tracks.dart';
 
-/// Multi-tier music resolver with direct YouTube Music & Spreaker CDN support:
+class CachedStreamItem {
+  final String url;
+  final DateTime expiresAt;
+
+  const CachedStreamItem({required this.url, required this.expiresAt});
+
+  bool get isExpired => DateTime.now().isAfter(expiresAt);
+}
+
+/// Multi-tier music resolver with direct CloudFront MP3 & JioSaavn 320kbps CDN support:
 /// Tier 1: JioSaavn direct API with DES-ECB 320kbps CDN decryption (lossless, instant)
-/// Tier 2: YouTube & YouTube Music stream extraction (via youtube_explode_dart)
+/// Tier 2: YouTube audio stream extraction (via youtube_explode_dart) with expiry validation
 /// Tier 3: Spreaker official CloudFront MP3 CDN for Sunday Suspense / Mirchi Bangla
 /// Tier 4: Local offline audio cache
 class YoutubeMusicService {
   final YoutubeExplode _yt = YoutubeExplode();
-  final Map<String, String> _streamCache = {};
+  final Map<String, CachedStreamItem> _streamCache = {};
   Timer? _debounceTimer;
 
   void dispose() {
@@ -23,7 +32,33 @@ class YoutubeMusicService {
     _yt.close();
   }
 
-  /// Searches tracks with multi-tier fallback (YouTube Music -> JioSaavn -> YouTube) and deduplication.
+  /// Cleans query strings by stripping parenthetical film tags, audio tags, and punctuation
+  static String cleanFallbackQuery(String raw) {
+    return raw
+        .replaceAll(RegExp(r'\([^)]*\)'), '')
+        .replaceAll(RegExp(r'\[[^\]]*\]'), '')
+        .replaceAll(RegExp(r'official\s+(audio|video|music\s+video|lyric\s+video)', caseSensitive: false), '')
+        .replaceAll(RegExp(r'(full\s+song|remastered|hd|4k|audio)', caseSensitive: false), '')
+        .replaceAll(RegExp(r'[-|]'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+  }
+
+  /// Parses URL expiration timestamp (e.g. YouTube &expire=... parameter)
+  static DateTime parseStreamExpiry(String url) {
+    final match = RegExp(r'[?&]expire=(\d+)').firstMatch(url);
+    if (match != null) {
+      final seconds = int.tryParse(match.group(1)!) ?? 0;
+      if (seconds > 0) {
+        // Subtract 5 minutes safety buffer so stream is never played right at expiration
+        return DateTime.fromMillisecondsSinceEpoch(seconds * 1000).subtract(const Duration(minutes: 5));
+      }
+    }
+    // Default safe expiry: 4 hours
+    return DateTime.now().add(const Duration(hours: 4));
+  }
+
+  /// Searches tracks with multi-tier fallback and deduplication.
   Future<List<YoutubeTrack>> searchTracks(String query) async {
     final cleanQuery = query.trim();
     if (cleanQuery.isEmpty) return [];
@@ -96,7 +131,7 @@ class YoutubeMusicService {
         }
       } catch (_) {}
     } else {
-      // For general music & YouTube Music:
+      // For general music:
       // First, query JioSaavn for instant lossless 320kbps CDN playback
       try {
         final saavnTracks = await _searchJioSaavn(cleanQuery);
@@ -125,7 +160,7 @@ class YoutubeMusicService {
     return results;
   }
 
-  /// Direct YouTube Music search: retrieves official music audio & tracks from YouTube
+  /// Searches official music audio & tracks from YouTube
   Future<List<YoutubeTrack>> searchYouTubeMusic(String query) async {
     final cleanQuery = query.trim();
     if (cleanQuery.isEmpty) return [];
@@ -197,7 +232,7 @@ class YoutubeMusicService {
         }
       }
     } catch (e) {
-      debugPrint('[YoutubeMusicService] Spreaker Sunday Suspense search failed: $e');
+      debugPrint('[StreamResolver] Spreaker Sunday Suspense search error: $e');
     }
 
     return tracks;
@@ -238,7 +273,10 @@ class YoutubeMusicService {
       }
 
       if (streamUrl != null) {
-        _streamCache[id] = streamUrl;
+        _streamCache[id] = CachedStreamItem(
+          url: streamUrl,
+          expiresAt: parseStreamExpiry(streamUrl),
+        );
       }
 
       tracks.add(YoutubeTrack(
@@ -281,7 +319,7 @@ class YoutubeMusicService {
     _streamCache.remove(trackId);
   }
 
-  /// Resolves the direct playable audio stream URL (with in-memory cache & universal AAC hardware decoding).
+  /// Resolves the direct playable audio stream URL (with expiry validation & universal AAC hardware decoding).
   Future<String?> getAudioStreamUrl(
     String trackId, {
     String? fallbackQuery,
@@ -299,9 +337,15 @@ class YoutubeMusicService {
         return cached.path;
       }
 
-      // 1. In-memory stream cache
+      // 1. In-memory stream cache with expiration check (Issue 2)
       if (_streamCache.containsKey(trackId)) {
-        return _streamCache[trackId];
+        final item = _streamCache[trackId]!;
+        if (!item.isExpired) {
+          return item.url;
+        } else {
+          debugPrint('[StreamResolver] Stream URL expired for $trackId, refreshing...');
+          _streamCache.remove(trackId);
+        }
       }
     } else {
       _streamCache.remove(trackId);
@@ -311,28 +355,40 @@ class YoutubeMusicService {
     if (trackId.startsWith('ss_spk_')) {
       final epId = trackId.replaceFirst('ss_spk_', '');
       final playUrl = 'https://api.spreaker.com/v2/episodes/$epId/play.mp3';
-      _streamCache[trackId] = playUrl;
+      _streamCache[trackId] = CachedStreamItem(
+        url: playUrl,
+        expiresAt: DateTime.now().add(const Duration(hours: 12)),
+      );
       return playUrl;
     }
 
     // 3. High-Priority JioSaavn Match (Lossless 320kbps CD Quality, Instant & Unblockable)
-    // If fallbackQuery is available, check JioSaavn first to avoid YouTube bot-detection blocks
     if (fallbackQuery != null && fallbackQuery.trim().isNotEmpty) {
       final isDramaOrSunday = fallbackQuery.toLowerCase().contains('suspense') ||
           fallbackQuery.toLowerCase().contains('sunday') ||
           fallbackQuery.toLowerCase().contains('podcast');
 
       if (!isDramaOrSunday) {
-        try {
-          final saavnTracks = await _searchJioSaavn(fallbackQuery.trim());
-          if (saavnTracks.isNotEmpty && saavnTracks.first.audioStreamUrl != null) {
-            final url = saavnTracks.first.audioStreamUrl!;
-            _streamCache[trackId] = url;
-            debugPrint('[YoutubeMusicService] Resolved lossless JioSaavn stream for "$fallbackQuery"');
-            return url;
+        // Try cleaned query first (e.g. strips film tag '(Ae Dil Hai Mushkil)')
+        final cleaned = cleanFallbackQuery(fallbackQuery);
+        final queriesToTry = [cleaned, fallbackQuery.trim()];
+
+        for (final q in queriesToTry) {
+          if (q.isEmpty) continue;
+          try {
+            final saavnTracks = await _searchJioSaavn(q);
+            if (saavnTracks.isNotEmpty && saavnTracks.first.audioStreamUrl != null) {
+              final url = saavnTracks.first.audioStreamUrl!;
+              _streamCache[trackId] = CachedStreamItem(
+                url: url,
+                expiresAt: parseStreamExpiry(url),
+              );
+              debugPrint('[StreamResolver] Resolved lossless JioSaavn stream for "$q"');
+              return url;
+            }
+          } catch (e) {
+            debugPrint('[StreamResolver] JioSaavn resolution attempt failed for "$q": $e');
           }
-        } catch (e) {
-          debugPrint('[YoutubeMusicService] JioSaavn resolution attempt failed: $e');
         }
       }
     }
@@ -354,25 +410,31 @@ class YoutubeMusicService {
               ? aacStreams.withHighestBitrate()
               : audioOnlyStreams.withHighestBitrate();
           final url = selected.url.toString();
-          _streamCache[trackId] = url;
+          _streamCache[trackId] = CachedStreamItem(
+            url: url,
+            expiresAt: parseStreamExpiry(url),
+          );
           return url;
         }
         // Fallback: Check muxed streams if audioOnly is empty
         if (manifest.muxed.isNotEmpty) {
           final bestMuxed = manifest.muxed.withHighestBitrate();
           final url = bestMuxed.url.toString();
-          _streamCache[trackId] = url;
+          _streamCache[trackId] = CachedStreamItem(
+            url: url,
+            expiresAt: parseStreamExpiry(url),
+          );
           return url;
         }
       } catch (e) {
-        debugPrint('[YoutubeMusicService] YouTube Explode error for $trackId: $e');
+        debugPrint('[StreamResolverAudit] YouTube Explode error for $trackId: $e');
       }
     }
 
     // 5. Secondary fallback: Search YouTube with official audio query
     if (fallbackQuery != null && fallbackQuery.trim().isNotEmpty) {
       try {
-        final cleanFb = fallbackQuery.trim();
+        final cleanFb = cleanFallbackQuery(fallbackQuery);
         final searchTarget = cleanFb.toLowerCase().contains('official') || cleanFb.toLowerCase().contains('audio')
             ? cleanFb
             : '$cleanFb official audio';
@@ -391,14 +453,26 @@ class YoutubeMusicService {
               );
               final selected = aac.isNotEmpty ? aac.withHighestBitrate() : audioOnly.withHighestBitrate();
               final url = selected.url.toString();
-              _streamCache[trackId] = url;
-              _streamCache[fb.id] = url;
+              _streamCache[trackId] = CachedStreamItem(
+                url: url,
+                expiresAt: parseStreamExpiry(url),
+              );
+              _streamCache[fb.id] = CachedStreamItem(
+                url: url,
+                expiresAt: parseStreamExpiry(url),
+              );
               return url;
             }
             if (fbManifest.muxed.isNotEmpty) {
               final url = fbManifest.muxed.withHighestBitrate().url.toString();
-              _streamCache[trackId] = url;
-              _streamCache[fb.id] = url;
+              _streamCache[trackId] = CachedStreamItem(
+                url: url,
+                expiresAt: parseStreamExpiry(url),
+              );
+              _streamCache[fb.id] = CachedStreamItem(
+                url: url,
+                expiresAt: parseStreamExpiry(url),
+              );
               return url;
             }
           } catch (_) {
@@ -406,23 +480,30 @@ class YoutubeMusicService {
           }
         }
       } catch (e) {
-        debugPrint('[YoutubeMusicService] Fallback YouTube search failed for $fallbackQuery: $e');
+        debugPrint('[StreamResolverAudit] Fallback YouTube search failed for "$fallbackQuery": $e');
       }
     }
 
     // 6. Ultimate JioSaavn Fallback for any missed song
     if (fallbackQuery != null && fallbackQuery.trim().isNotEmpty) {
       try {
-        final saavnTracks = await _searchJioSaavn(fallbackQuery.trim());
+        final cleaned = cleanFallbackQuery(fallbackQuery);
+        final saavnTracks = await _searchJioSaavn(cleaned);
         for (final t in saavnTracks) {
           if (t.audioStreamUrl != null && t.audioStreamUrl!.isNotEmpty) {
-            _streamCache[trackId] = t.audioStreamUrl!;
+            _streamCache[trackId] = CachedStreamItem(
+              url: t.audioStreamUrl!,
+              expiresAt: parseStreamExpiry(t.audioStreamUrl!),
+            );
             return t.audioStreamUrl!;
           }
         }
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[StreamResolverAudit] Ultimate fallback failed for "$fallbackQuery": $e');
+      }
     }
 
+    debugPrint('[StreamResolverAudit] FAIL trackId=$trackId, query="$fallbackQuery", reason=no_stream_found');
     return null;
   }
 

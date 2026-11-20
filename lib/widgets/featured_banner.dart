@@ -25,79 +25,114 @@ class FeaturedBanner extends StatelessWidget {
     return GestureDetector(
       onTap: onActionTap,
       child: Container(
-        height: 112,
+        height: 154,
         margin: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(
           borderRadius: AppRadii.borderLarge,
           color: AppColors.surface1,
-          boxShadow: const [AppShadows.shadowSoft],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.35),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
         child: ClipRRect(
           borderRadius: AppRadii.borderLarge,
           child: Stack(
-          children: [
-            if (imageUrl != null)
+            children: [
+              if (imageUrl != null)
+                Positioned.fill(
+                  child: CachedNetworkImage(
+                    imageUrl: imageUrl!,
+                    fit: BoxFit.cover,
+                    errorWidget: (_, __, ___) => Container(color: AppColors.surface1),
+                  ),
+                ),
               Positioned.fill(
-                child: CachedNetworkImage(
-                  imageUrl: imageUrl!,
-                  fit: BoxFit.cover,
-                  errorWidget: (_, __, ___) => Container(color: AppColors.surface1),
-                ),
-              ),
-            Positioned.fill(
-              child: Container(
-                decoration: const BoxDecoration(
-                  gradient: AppColors.cardImageOverlay,
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.cardTitle,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          metaText.toUpperCase(),
-                          style: AppTextStyles.meta,
-                        ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.30),
+                        Colors.black.withValues(alpha: 0.88),
                       ],
+                      stops: const [0.0, 0.45, 1.0],
                     ),
                   ),
-                  GestureDetector(
-                    onTap: onActionTap,
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white,
-                        boxShadow: [AppShadows.shadowSoft],
-                      ),
-                      child: const Icon(
-                        Icons.play_arrow,
-                        size: 20,
-                        color: AppColors.textOnLight,
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ],
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            metaText.toUpperCase(),
+                            style: AppTextStyles.meta.copyWith(
+                              color: AppColors.primarySoft,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.2,
+                              fontSize: 11,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.cardTitle.copyWith(
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              height: 1.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    GestureDetector(
+                      onTap: onActionTap,
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white,
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primarySoft.withValues(alpha: 0.60),
+                              blurRadius: 18,
+                              spreadRadius: 2,
+                              offset: const Offset(0, 2),
+                            ),
+                            AppShadows.shadowSoft,
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.play_arrow_rounded,
+                          size: 26,
+                          color: AppColors.textOnLight,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
 }
 }

@@ -458,21 +458,21 @@ class CuratedTracks {
       title: 'Tum Hi Ho (Aashiqui 2)',
       artist: 'Arijit Singh, Mithoon',
       durationSeconds: 262,
-      thumbnailUrl: 'https://i.ytimg.com/vi/IJq0ydz4628/hqdefault.jpg',
+      thumbnailUrl: 'https://c.saavncdn.com/840/Best-Of-Arijit-Singh-Collection-Of-Romantic-Songs-Hindi-2025-20251203161112-500x500.jpg',
     ),
     const YoutubeTrack(
       id: 'T94PHkuydcw',
       title: 'Kun Faya Kun (Rockstar)',
       artist: 'A.R. Rahman, Mohit Chauhan, Javed Ali',
       durationSeconds: 473,
-      thumbnailUrl: 'https://i.ytimg.com/vi/T94PHkuydcw/hqdefault.jpg',
+      thumbnailUrl: 'https://c.saavncdn.com/408/Rockstar-Hindi-2011-20221212023139-500x500.jpg',
     ),
     const YoutubeTrack(
       id: '6wZZ4b9A-g8',
       title: 'Ilahi (Yeh Jawaani Hai Deewani)',
       artist: 'Arijit Singh, Pritam',
       durationSeconds: 228,
-      thumbnailUrl: 'https://i.ytimg.com/vi/6wZZ4b9A-g8/hqdefault.jpg',
+      thumbnailUrl: 'https://c.saavncdn.com/840/Best-Of-Arijit-Singh-Collection-Of-Romantic-Songs-Hindi-2025-20251203161112-500x500.jpg',
     ),
     const YoutubeTrack(
       id: 'BddP6PYo2gs',
@@ -517,7 +517,7 @@ class CuratedTracks {
       title: 'Channa Mereya (Ae Dil Hai Mushkil)',
       artist: 'Arijit Singh, Pritam',
       durationSeconds: 289,
-      thumbnailUrl: 'https://i.ytimg.com/vi/Z_PODraXg4E/hqdefault.jpg',
+      thumbnailUrl: 'https://c.saavncdn.com/608/Ae-Dil-Hai-Mushkil-Deluxe-Edition-Hindi-2016-500x500.jpg',
     ),
     const YoutubeTrack(
       id: 'pELk1MYhpPk',
@@ -708,95 +708,97 @@ class CuratedTracks {
     ),
   ];
 
-  static final List<YoutubeTrack> youtubeMusicTracks = [
+  static final List<YoutubeTrack> freshPicksTracks = [
     const YoutubeTrack(
       id: 'vxX1WjS2N2M',
       title: 'Tauba Tauba',
-      artist: 'Karan Aujla • YouTube Music Trending',
+      artist: 'Karan Aujla',
       durationSeconds: 206,
       thumbnailUrl: 'https://i.ytimg.com/vi/vxX1WjS2N2M/hqdefault.jpg',
     ),
     const YoutubeTrack(
       id: 'toE_rM_f_4A',
       title: 'Illuminati',
-      artist: 'Sushin Shyam, Dabzee • YouTube Music Top 50',
+      artist: 'Sushin Shyam, Dabzee',
       durationSeconds: 191,
       thumbnailUrl: 'https://i.ytimg.com/vi/toE_rM_f_4A/hqdefault.jpg',
     ),
     const YoutubeTrack(
       id: 'kPa7bsKwL-8',
       title: 'Die With A Smile',
-      artist: 'Lady Gaga, Bruno Mars • YouTube Music Global',
+      artist: 'Lady Gaga, Bruno Mars',
       durationSeconds: 251,
       thumbnailUrl: 'https://i.ytimg.com/vi/kPa7bsKwL-8/hqdefault.jpg',
     ),
     const YoutubeTrack(
       id: 'hOHKltAiKXQ',
       title: 'Big Dawgs',
-      artist: 'Hanumankind, Kalmi • YouTube Music Viral',
+      artist: 'Hanumankind, Kalmi',
       durationSeconds: 236,
       thumbnailUrl: 'https://i.ytimg.com/vi/hOHKltAiKXQ/hqdefault.jpg',
     ),
     const YoutubeTrack(
       id: 'eVli-tFD3gk',
       title: 'Espresso',
-      artist: 'Sabrina Carpenter • YouTube Music Pop',
+      artist: 'Sabrina Carpenter',
       durationSeconds: 175,
       thumbnailUrl: 'https://i.ytimg.com/vi/eVli-tFD3gk/hqdefault.jpg',
     ),
     const YoutubeTrack(
       id: 'VAdGW7QDJUI',
       title: 'Chaleya',
-      artist: 'Arijit Singh, Shilpa Rao • YouTube Music Hits',
+      artist: 'Arijit Singh, Shilpa Rao',
       durationSeconds: 200,
       thumbnailUrl: 'https://i.ytimg.com/vi/VAdGW7QDJUI/hqdefault.jpg',
     ),
     const YoutubeTrack(
       id: 'G_hP8kHjQfE',
       title: 'Satranga',
-      artist: 'Arijit Singh • YouTube Music Top 10',
+      artist: 'Arijit Singh',
       durationSeconds: 271,
       thumbnailUrl: 'https://i.ytimg.com/vi/G_hP8kHjQfE/hqdefault.jpg',
     ),
     const YoutubeTrack(
       id: '1F3HM635S0k',
       title: 'Hukum - Thalaivar Alappara',
-      artist: 'Anirudh Ravichander • YouTube Music Hotlist',
+      artist: 'Anirudh Ravichander',
       durationSeconds: 207,
       thumbnailUrl: 'https://i.ytimg.com/vi/1F3HM635S0k/hqdefault.jpg',
     ),
     const YoutubeTrack(
       id: '8vx0Ufl8WvI',
       title: 'O Maahi',
-      artist: 'Arijit Singh, Pritam • YouTube Music Melodies',
+      artist: 'Arijit Singh, Pritam',
       durationSeconds: 233,
       thumbnailUrl: 'https://i.ytimg.com/vi/8vx0Ufl8WvI/hqdefault.jpg',
     ),
     const YoutubeTrack(
       id: 'UNo0TGZuv4A',
       title: 'Standing Next to You',
-      artist: 'Jung Kook • YouTube Music Global',
+      artist: 'Jung Kook',
       durationSeconds: 226,
       thumbnailUrl: 'https://i.ytimg.com/vi/UNo0TGZuv4A/hqdefault.jpg',
     ),
     const YoutubeTrack(
       id: 'toZvi6bU164',
       title: 'Greedy',
-      artist: 'Tate McRae • YouTube Music Dance',
+      artist: 'Tate McRae',
       durationSeconds: 131,
       thumbnailUrl: 'https://i.ytimg.com/vi/toZvi6bU164/hqdefault.jpg',
     ),
     const YoutubeTrack(
       id: '4dK8z0X8-u0',
       title: 'Aayi Nai (Stree 2)',
-      artist: 'Pawan Singh, Simran • YouTube Music Chartbuster',
+      artist: 'Pawan Singh, Simran',
       durationSeconds: 180,
       thumbnailUrl: 'https://i.ytimg.com/vi/4dK8z0X8-u0/hqdefault.jpg',
     ),
   ];
 
+  static List<YoutubeTrack> get youtubeMusicTracks => freshPicksTracks;
+
   static List<YoutubeTrack> get allCatalogTracks => [
-    ...youtubeMusicTracks,
+    ...freshPicksTracks,
     ...jumpBackInTracks,
     ...madeForYouTracks,
     ...trendingTracks,
@@ -808,8 +810,10 @@ class CuratedTracks {
 
   static List<YoutubeTrack> getTracksForFilter(String filter) {
     switch (filter) {
+      case 'Fresh Picks':
+      case 'New and Trending':
       case 'YouTube Music':
-        return youtubeMusicTracks;
+        return freshPicksTracks;
       case 'Trending':
         return trendingTracks;
       case 'Chill':

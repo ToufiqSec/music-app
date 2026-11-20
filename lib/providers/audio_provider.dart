@@ -414,23 +414,39 @@ class AudioProvider extends ChangeNotifier {
     String? resolvedUrl;
     try {
       // 1. Unified audio resolution across all types (Requirement A2.1 & A5)
-      final resolution = await PlaybackResolver.resolveAudioSource(
+      var resolution = await PlaybackResolver.resolveAudioSource(
         track: track,
         musicService: _musicService,
       );
 
+      // Retry once on failure with forceRefresh if initial resolution failed (Issue 2)
       if (!resolution.isPlayable || resolution.url == null) {
-        final isEpisode = AudioTypeDetector.detect(track.title, track.artist, track.durationSeconds) != AudioContentType.song;
-        final msg = isEpisode
-            ? 'This episode cannot be played'
-            : 'This song is not available right now';
+        debugPrint('[AudioProvider] Initial resolution failed for "${track.title}". Retrying once with forceRefresh: true...');
+        _musicService.invalidateCache(track.id);
+        resolution = await PlaybackResolver.resolveAudioSource(
+          track: track,
+          musicService: _musicService,
+          forceRefresh: true,
+        );
+      }
+
+      if (!resolution.isPlayable || resolution.url == null) {
+        const msg = 'Skipped a track that is unavailable';
         _playbackErrorMessage = msg;
         debugPrint('[AudioProvider] Playback failure for "${track.title}" (ID: ${track.id}): ${resolution.failureReason}');
         _isBuffering = false;
         _bufferingWatchdogTimer?.cancel();
         notifyListeners();
 
-        // Gracefully advance to next track without crashing the queue (Requirement A2.5)
+        // Clear error message within 2 seconds so player never stays stuck at 0:00 (Issue 2)
+        Timer(const Duration(seconds: 2), () {
+          if (_playbackErrorMessage == msg) {
+            _playbackErrorMessage = null;
+            notifyListeners();
+          }
+        });
+
+        // Gracefully advance to next track without crashing the queue (Issue 2)
         if (_playlistQueue.length > 1) {
           Future.delayed(const Duration(milliseconds: 600), () => playNext());
         }
@@ -494,8 +510,17 @@ class AudioProvider extends ChangeNotifier {
 
       _isBuffering = false;
       _bufferingWatchdogTimer?.cancel();
-      _playbackErrorMessage = 'Unable to play "${track.title}". Trying next...';
+      const msg = 'Skipped a track that is unavailable';
+      _playbackErrorMessage = msg;
       notifyListeners();
+
+      // Clear error message within 2 seconds (Issue 2)
+      Timer(const Duration(seconds: 2), () {
+        if (_playbackErrorMessage == msg) {
+          _playbackErrorMessage = null;
+          notifyListeners();
+        }
+      });
 
       // If a track in queue fails to load, gracefully advance to next track so playback doesn't stall
       if (_playlistQueue.length > 1) {

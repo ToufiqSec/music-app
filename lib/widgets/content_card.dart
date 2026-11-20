@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../theme/app_colors.dart';
-import '../theme/app_radii.dart';
-import '../theme/app_text_styles.dart';
 import '../theme/app_motion.dart';
+import '../theme/app_radii.dart';
 import '../theme/app_shadows.dart';
+import '../theme/app_text_styles.dart';
+import 'generated_cover_art.dart';
 
-/// Content card from Section 7 of Universal UI Design System: Twilight Calm.
 class ContentCard extends StatefulWidget {
   final String title;
   final String subtitle;
@@ -25,8 +25,56 @@ class ContentCard extends StatefulWidget {
   State<ContentCard> createState() => _ContentCardState();
 }
 
-class _ContentCardState extends State<ContentCard> {
+class _ContentCardState extends State<ContentCard> with SingleTickerProviderStateMixin {
   bool _isPressed = false;
+  late final AnimationController _shimmerController;
+
+  @override
+  void initState() {
+    super.initState();
+    _shimmerController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _shimmerController.dispose();
+    super.dispose();
+  }
+
+  Widget _buildShimmerSkeleton() {
+    return AnimatedBuilder(
+      animation: _shimmerController,
+      builder: (context, _) {
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: AppRadii.borderMedium,
+            gradient: LinearGradient(
+              begin: Alignment(-1.5 + (_shimmerController.value * 3), -0.3),
+              end: Alignment(0.5 + (_shimmerController.value * 3), 0.3),
+              colors: [
+                AppColors.surface1,
+                AppColors.surface2,
+                AppColors.surface1,
+              ],
+              stops: const [0.1, 0.5, 0.9],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDesignedPlaceholder() {
+    return GeneratedCoverArt(
+      title: widget.title,
+      artist: widget.subtitle,
+      size: 156,
+      borderRadius: AppRadii.borderMedium,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -63,18 +111,16 @@ class _ContentCardState extends State<ContentCard> {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      if (widget.imageUrl != null)
+                      if (widget.imageUrl != null && widget.imageUrl!.trim().isNotEmpty)
                         CachedNetworkImage(
                           imageUrl: widget.imageUrl!,
                           fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) => const Center(
-                            child: Icon(Icons.music_note, color: AppColors.primarySoft, size: 36),
-                          ),
+                          memCacheWidth: 400,
+                          placeholder: (_, __) => _buildShimmerSkeleton(),
+                          errorWidget: (_, __, ___) => _buildDesignedPlaceholder(),
                         )
                       else
-                        const Center(
-                          child: Icon(Icons.music_note, color: AppColors.primarySoft, size: 36),
-                        ),
+                        _buildDesignedPlaceholder(),
                       if (_isPressed)
                         Container(color: AppColors.surfaceGlow.withValues(alpha: 0.2)),
                     ],

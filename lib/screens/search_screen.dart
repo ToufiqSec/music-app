@@ -13,6 +13,7 @@ import '../features/audiobooks/models/audiobook_model.dart';
 import 'audiobook_details_screen.dart';
 import '../core/services/search_cache_store.dart';
 import '../core/services/curated_tracks.dart';
+import '../core/constants/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radii.dart';
 import '../theme/app_text_styles.dart';
@@ -56,7 +57,7 @@ class _SearchScreenState extends State<SearchScreen> {
   int _selectedFilterIndex = 0;
   final List<String> _contentFilterTabs = [
     'All',
-    'YouTube Music',
+    AppStrings.freshPicksSearchTab,
     'Songs',
     'Shows & Drama',
     'Podcasts',
@@ -68,7 +69,7 @@ class _SearchScreenState extends State<SearchScreen> {
     if (_selectedFilterIndex == 0) return _searchResults;
     if (_selectedFilterIndex == 1) {
       if (_searchResults.isEmpty && _searchController.text.trim().isEmpty) {
-        return CuratedTracks.youtubeMusicTracks;
+        return CuratedTracks.freshPicksTracks;
       }
       return _searchResults;
     }
@@ -333,7 +334,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         setState(() {
                           _selectedFilterIndex = idx;
                           if (idx == 1 && _searchResults.isEmpty && _searchController.text.trim().isEmpty) {
-                            _searchResults = List.from(CuratedTracks.youtubeMusicTracks);
+                            _searchResults = List.from(CuratedTracks.freshPicksTracks);
                           }
                         });
                         if (idx > 0 && _lastQuery.trim().isNotEmpty) {
@@ -540,24 +541,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 ),
                 subtitle: Row(
                   children: [
-                    if (track.artist.contains('YouTube Music') || _selectedFilterIndex == 1) ...[
-                      Container(
-                        margin: const EdgeInsets.only(right: 6),
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFF0000).withValues(alpha: 0.18),
-                          borderRadius: AppRadii.borderSmall,
-                        ),
-                        child: const Text(
-                          'YT Music',
-                          style: TextStyle(
-                            fontSize: 8.5,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFFFF4E4E),
-                          ),
-                        ),
-                      ),
-                    ] else if (type != AudioContentType.song) ...[
+                    if (type != AudioContentType.song) ...[
                       Container(
                         margin: const EdgeInsets.only(right: 6),
                         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
@@ -567,7 +551,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         ),
                         child: Text(
                           AudioTypeDetector.getBadgeText(type),
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 8.5,
                             fontWeight: FontWeight.bold,
                             color: AppColors.primarySoft,

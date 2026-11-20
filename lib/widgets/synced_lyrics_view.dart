@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/audio_provider.dart';
 import '../core/services/lyrics_service.dart';
+import '../core/services/lyrics_transliteration_service.dart';
 import '../features/music/models/music_models.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radii.dart';
@@ -21,9 +22,10 @@ class SyncedLyricsView extends StatefulWidget {
 
 class _SyncedLyricsViewState extends State<SyncedLyricsView> {
   final ScrollController _scrollController = ScrollController();
-  LyricsResult? _lyricsResult;
+  DualLyricsResult? _dualResult;
   bool _isLoading = true;
   bool _userScrolled = false;
+  bool _showOriginalScript = false;
   Timer? _resumeAutoScrollTimer;
   int _lastActiveIndex = -1;
 
@@ -55,22 +57,29 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> {
       _lastActiveIndex = -1;
     });
 
-    final res = await LyricsService.fetchLyrics(
+    final rawRes = await LyricsService.fetchLyrics(
       trackId: widget.track.id,
       title: widget.track.title,
       artist: widget.track.artist,
       durationSeconds: widget.track.durationSeconds,
     );
 
+    final dualRes = await LyricsTransliterationService.processLyrics(
+      trackId: widget.track.id,
+      title: widget.track.title,
+      artist: widget.track.artist,
+      rawResult: rawRes,
+    );
+
     if (mounted) {
       setState(() {
-        _lyricsResult = res;
+        _dualResult = dualRes;
         _isLoading = false;
       });
     }
   }
 
-  int _findActiveIndex(Duration position, List<LyricLine> lines) {
+  int _findActiveIndex(Duration position, List<DualLyricLine> lines) {
     if (lines.isEmpty) return -1;
     for (int i = lines.length - 1; i >= 0; i--) {
       if (position >= lines[i].timestamp) {
@@ -83,8 +92,8 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> {
   void _scrollToActiveIndex(int index) {
     if (_userScrolled || !_scrollController.hasClients || index < 0) return;
 
-    // Approximate offset: index * line height (~48) - half screen height
-    final targetOffset = (index * 52.0) - 80.0;
+    // Approximate offset: index * line height (~68 for dual lines) - half screen height
+    final targetOffset = (index * 68.0) - 80.0;
     _scrollController.animateTo(
       targetOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
       duration: const Duration(milliseconds: 350),
@@ -108,7 +117,7 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Finding synced lyrics...',
+              'Finding synced lyrics & translations...',
               style: AppTextStyles.caption.copyWith(color: AppColors.textMuted),
             ),
           ],
@@ -116,7 +125,7 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> {
       );
     }
 
-    if (_lyricsResult == null || !_lyricsResult!.hasLyrics) {
+    if (_dualResult == null || !_dualResult!.hasLyrics) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -137,157 +146,201 @@ class _SyncedLyricsViewState extends State<SyncedLyricsView> {
       );
     }
 
-    // Fallback: Plain unsynced lyrics
-    if (!_lyricsResult!.isSynced) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: ListView(
-          physics: const BouncingScrollPhysics(),
-          children: [
-            Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: AppColors.surface2,
-                  borderRadius: AppRadii.borderPill,
-                ),
-                child: Text(
-                  'Plain Lyrics • Sync not available',
-                  style: AppTextStyles.meta.copyWith(color: AppColors.textSecondary),
-                ),
-              ),
-            ),
-            Text(
-              _lyricsResult!.plainLyrics ?? '',
-              textAlign: TextAlign.center,
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textPrimary,
-                height: 1.8,
-                fontSize: 15,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
+    final lines = _dualResult!.lines;
+    final isHindi = _dualResult!.isHindiOrUrdu;
 
-    // Synced Karaoke Lyrics View
-    final lines = _lyricsResult!.syncedLines;
-
-    return Selector<AudioProvider, Duration>(
-      selector: (_, ap) => ap.position,
-      builder: (context, pos, child) {
-        final activeIndex = _findActiveIndex(pos, lines);
-
-        if (activeIndex != _lastActiveIndex) {
-          _lastActiveIndex = activeIndex;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _scrollToActiveIndex(activeIndex);
-          });
-        }
-
-        return Stack(
-          children: [
-            NotificationListener<ScrollNotification>(
-              onNotification: (scrollInfo) {
-                if (scrollInfo is UserScrollNotification) {
-                  setState(() => _userScrolled = true);
-                  _resumeAutoScrollTimer?.cancel();
-                  _resumeAutoScrollTimer = Timer(const Duration(seconds: 4), () {
-                    if (mounted) setState(() => _userScrolled = false);
-                  });
-                }
-                return false;
-              },
-              child: ListView.builder(
-                controller: _scrollController,
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 40),
-                itemCount: lines.length,
-                itemBuilder: (context, index) {
-                  final line = lines[index];
-                  final isActive = index == activeIndex;
-                  final isPast = index < activeIndex;
-
-                  return GestureDetector(
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      audioProvider.seekTo(line.timestamp);
-                      setState(() => _userScrolled = false);
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 250),
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      alignment: Alignment.center,
-                      child: Text(
-                        line.text,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: isActive ? 20 : 15,
-                          fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-                          color: isActive
-                              ? Colors.white
-                              : isPast
-                                  ? AppColors.textMuted
-                                  : AppColors.textSecondary.withValues(alpha: 0.7),
-                          shadows: isActive
-                              ? [
-                                  Shadow(
-                                    color: AppColors.primarySoft.withValues(alpha: 0.8),
-                                    blurRadius: 16,
-                                  ),
-                                ]
-                              : null,
-                        ),
+    return Column(
+      children: [
+        // Top Script Toggle (Issue 4 Optional Requirement)
+        if (isHindi)
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    setState(() => _showOriginalScript = !_showOriginalScript);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface2.withValues(alpha: 0.8),
+                      borderRadius: AppRadii.borderPill,
+                      border: Border.all(
+                        color: AppColors.primarySoft.withValues(alpha: 0.3),
+                        width: 1,
                       ),
                     ),
-                  );
-                },
-              ),
-            ),
-
-            // "Resume Sync" Floating Button when user manually scrolled
-            if (_userScrolled)
-              Positioned(
-                bottom: 12,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() => _userScrolled = false);
-                      _scrollToActiveIndex(activeIndex);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface2,
-                        borderRadius: AppRadii.borderPill,
-                        border: Border.all(color: AppColors.primarySoft.withValues(alpha: 0.5)),
-                        boxShadow: [AppShadows.shadowSoft],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.sync_rounded, color: AppColors.primarySoft, size: 14),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Resume Sync',
-                            style: AppTextStyles.caption.copyWith(
-                              color: AppColors.primarySoft,
-                              fontWeight: FontWeight.bold,
-                            ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _showOriginalScript ? Icons.translate_rounded : Icons.subtitles_rounded,
+                          size: 13,
+                          color: AppColors.primarySoft,
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          _showOriginalScript ? 'Show Roman + Meaning' : 'Show Original Script',
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.primarySoft,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              ),
-          ],
-        );
-      },
+              ],
+            ),
+          ),
+
+        // Main Lyrics Area
+        Expanded(
+          child: Selector<AudioProvider, Duration>(
+            selector: (_, ap) => ap.position,
+            builder: (context, pos, child) {
+              final activeIndex = _findActiveIndex(pos, lines);
+
+              if (activeIndex != _lastActiveIndex) {
+                _lastActiveIndex = activeIndex;
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  _scrollToActiveIndex(activeIndex);
+                });
+              }
+
+              return Stack(
+                children: [
+                  NotificationListener<ScrollNotification>(
+                    onNotification: (scrollInfo) {
+                      if (scrollInfo is UserScrollNotification) {
+                        setState(() => _userScrolled = true);
+                        _resumeAutoScrollTimer?.cancel();
+                        _resumeAutoScrollTimer = Timer(const Duration(seconds: 4), () {
+                          if (mounted) setState(() => _userScrolled = false);
+                        });
+                      }
+                      return false;
+                    },
+                    child: ListView.builder(
+                      controller: _scrollController,
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+                      itemCount: lines.length,
+                      itemBuilder: (context, index) {
+                        final line = lines[index];
+                        final isActive = index == activeIndex;
+                        final isPast = index < activeIndex;
+
+                        final displayText = _showOriginalScript ? line.originalText : line.mainText;
+                        final meaningText = _showOriginalScript ? null : line.meaningText;
+
+                        return GestureDetector(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            audioProvider.seekTo(line.timestamp);
+                            setState(() => _userScrolled = false);
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 250),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            alignment: Alignment.center,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Line 1: Romanized English letters (Issue 4 Line 1)
+                                Text(
+                                  displayText,
+                                  textAlign: TextAlign.center,
+                                  style: AppTextStyles.lyricsRoman.copyWith(
+                                    fontSize: isActive ? 20 : 15,
+                                    fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+                                    color: isActive
+                                        ? Colors.white
+                                        : isPast
+                                            ? AppColors.textMuted
+                                            : AppColors.textSecondary.withValues(alpha: 0.7),
+                                    shadows: isActive
+                                        ? [
+                                            Shadow(
+                                              color: AppColors.primarySoft.withValues(alpha: 0.8),
+                                              blurRadius: 16,
+                                            ),
+                                          ]
+                                        : null,
+                                  ),
+                                ),
+
+                                // Line 2: Meaning in Hindi Devanagari (Issue 4 Line 2 - Smaller, lighter style)
+                                if (meaningText != null && meaningText.isNotEmpty) ...[
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    meaningText,
+                                    textAlign: TextAlign.center,
+                                    style: AppTextStyles.lyricsDevanagari.copyWith(
+                                      fontSize: isActive ? 13 : 11,
+                                      fontWeight: isActive ? FontWeight.w500 : FontWeight.w400,
+                                      color: isActive
+                                          ? AppColors.primarySoft.withValues(alpha: 0.95)
+                                          : AppColors.textMuted.withValues(alpha: 0.75),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+
+                  // "Resume Sync" Floating Button when user manually scrolled
+                  if (_userScrolled)
+                    Positioned(
+                      bottom: 12,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() => _userScrolled = false);
+                            _scrollToActiveIndex(activeIndex);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: AppColors.surface2,
+                              borderRadius: AppRadii.borderPill,
+                              border: Border.all(color: AppColors.primarySoft.withValues(alpha: 0.5)),
+                              boxShadow: [AppShadows.shadowSoft],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.sync_rounded, color: AppColors.primarySoft, size: 14),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Resume Sync',
+                                  style: AppTextStyles.caption.copyWith(
+                                    color: AppColors.primarySoft,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

@@ -105,4 +105,20 @@ class AppTextStyles {
   static TextStyle get caption => meta;
   static TextStyle get heroTitle => displayTitle;
   static TextStyle get button => buttonLabel;
+
+  /// Distinctive, readable Romanized lyric typeface token (Issue 4)
+  static TextStyle get lyricsRoman => GoogleFonts.poppins(
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+        height: 1.35,
+        color: Colors.white,
+      );
+
+  /// Devanagari Hindi meaning font style token (Issue 4)
+  static TextStyle get lyricsDevanagari => GoogleFonts.notoSansDevanagari(
+        fontSize: 13,
+        fontWeight: FontWeight.w400,
+        height: 1.3,
+        color: AppColors.textSecondary.withValues(alpha: 0.85),
+      );
 }

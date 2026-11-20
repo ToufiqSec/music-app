@@ -28,6 +28,8 @@ import 'mood_hub_screen.dart';
 import '../core/services/taste_engine.dart';
 import '../providers/auth_provider.dart';
 import '../features/listen_together/widgets/listen_together_button.dart';
+import '../core/constants/app_strings.dart';
+import '../core/services/greeting_service.dart';
 
 /// Main Discovery Hub and Navigation Shell for Music App.
 /// Universal UI Design System: Twilight Calm.
@@ -169,7 +171,7 @@ class _HomeDiscoveryView extends StatefulWidget {
   State<_HomeDiscoveryView> createState() => _HomeDiscoveryViewState();
 }
 
-class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
+class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBindingObserver {
   String _activeFilter = 'All';
   bool _isLoadingContent = false;
   Timer? _greetingRefreshTimer;
@@ -185,7 +187,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
 
   final List<String> _filters = [
     'All',
-    'YouTube Music',
+    AppStrings.freshPicksFilterLabel,
     'Podcast',
     'Trending',
     'Chill',
@@ -197,6 +199,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _quickPickTracks = List.from(CuratedTracks.jumpBackInTracks);
     _carousel1Tracks = List.from(CuratedTracks.madeForYouTracks);
     _carousel2Tracks = List.from(CuratedTracks.trendingTracks);
@@ -205,7 +208,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
     _carousel5Tracks = List.from(CuratedTracks.chillTracks + CuratedTracks.lateNightTracks);
     _carousel6Tracks = List.from(CuratedTracks.lateNightTracks + CuratedTracks.chillTracks);
 
-    // Live greeting refresh every minute without restart (Issue 1)
+    // Live greeting refresh every minute without restart (Issue 7)
     _greetingRefreshTimer = Timer.periodic(const Duration(seconds: 60), (_) {
       if (mounted) setState(() {});
     });
@@ -216,7 +219,16 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      // Re-evaluate greeting immediately when app comes to foreground (Issue 7)
+      setState(() {});
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _greetingRefreshTimer?.cancel();
     super.dispose();
   }
@@ -241,14 +253,16 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
     String carousel6Query;
 
     switch (_activeFilter) {
+      case AppStrings.freshPicksFilterLabel:
+      case 'Fresh Picks':
       case 'YouTube Music':
-        quickQuery = 'YouTube Music trending hits 2026';
-        carousel1Query = 'YouTube Music top 50 billboard hits';
-        carousel2Query = 'YouTube Music bollywood chartbusters';
-        carousel3Query = 'YouTube Music new viral songs global';
-        carousel4Query = 'YouTube Music punjabi pop hits';
-        carousel5Query = 'YouTube Music acoustic relaxing sessions';
-        carousel6Query = 'YouTube Music lofi chill beats';
+        quickQuery = 'trending hits 2026';
+        carousel1Query = 'top 50 billboard hits';
+        carousel2Query = 'bollywood chartbusters';
+        carousel3Query = 'new viral songs global';
+        carousel4Query = 'punjabi pop hits';
+        carousel5Query = 'acoustic relaxing sessions';
+        carousel6Query = 'lofi chill beats';
         break;
       case 'Podcast':
         quickQuery = 'Sunday Suspense Feluda Mirchi Bangla audio story';
@@ -371,11 +385,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
   }
 
   String _getTimeGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour >= 5 && hour < 12) return 'Good Morning';
-    if (hour >= 12 && hour < 17) return 'Good Afternoon';
-    if (hour >= 17 && hour < 21) return 'Good Evening';
-    return 'Good Night';
+    return GreetingService.getGreeting();
   }
 
   @override
@@ -413,88 +423,95 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
     return SafeArea(
       bottom: false,
       child: ListView(
-        padding: const EdgeInsets.only(bottom: 160),
+        padding: const EdgeInsets.only(bottom: 240),
         children: [
           const SizedBox(height: 12),
 
-          // 1. Top Header Bar
+          // 1. Top Header Bar (Issue 6)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _getTimeGreeting(),
-                      style: AppTextStyles.h2.copyWith(fontSize: 22),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Ready to stream lossless audio',
-                      style: AppTextStyles.caption.copyWith(
-                        color: AppColors.textPrimary.withValues(alpha: 0.92),
-                        fontWeight: FontWeight.w500,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _getTimeGreeting(),
+                        style: AppTextStyles.h2.copyWith(fontSize: 22),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 2),
+                      Text(
+                        'Ready to stream lossless audio',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.textPrimary.withValues(alpha: 0.92),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
 
-                // Top Action Buttons (Listen Together, Search, History, Profile)
+                // Top Action Buttons on dark translucent circular backgrounds (Issue 6)
                 Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     const ListenTogetherButton(),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.search_rounded,
-                        color: AppColors.iconIdle,
-                        size: 24,
-                      ),
-                      onPressed: widget.onNavigateToSearch,
+                    const SizedBox(width: 6),
+                    _buildHeaderIconButton(
+                      icon: Icons.search_rounded,
+                      tooltip: 'Search music',
+                      onTap: widget.onNavigateToSearch,
                     ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.history_rounded,
-                        color: AppColors.iconIdle,
-                        size: 24,
-                      ),
-                      onPressed: () => _showHistorySheet(context, audioProvider),
+                    const SizedBox(width: 6),
+                    _buildHeaderIconButton(
+                      icon: Icons.history_rounded,
+                      tooltip: 'Listening history',
+                      onTap: () => _showHistorySheet(context, audioProvider),
                     ),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const ProfileScreen()),
-                        );
-                      },
-                      child: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppColors.surface2,
-                          border: Border.all(
-                            color: authProvider.isAuthenticated
-                                ? AppColors.success.withValues(alpha: 0.6)
-                                : AppColors.primarySoft.withValues(alpha: 0.4),
-                            width: 1.5,
+                    const SizedBox(width: 6),
+                    Semantics(
+                      button: true,
+                      label: 'User profile',
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                          );
+                        },
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppColors.surface2.withValues(alpha: 0.85),
+                            border: Border.all(
+                              color: authProvider.isAuthenticated
+                                  ? AppColors.success.withValues(alpha: 0.6)
+                                  : AppColors.primarySoft.withValues(alpha: 0.4),
+                              width: 1.5,
+                            ),
                           ),
-                        ),
-                        child: Center(
-                          child: authProvider.isAuthenticated && authProvider.displayName.isNotEmpty
-                              ? Text(
-                                  authProvider.displayName[0].toUpperCase(),
-                                  style: const TextStyle(
+                          child: Center(
+                            child: authProvider.isAuthenticated && authProvider.displayName.isNotEmpty
+                                ? Text(
+                                    authProvider.displayName[0].toUpperCase(),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  )
+                                : const Icon(
+                                    Icons.person_rounded,
+                                    size: 20,
                                     color: Colors.white,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
                                   ),
-                                )
-                              : const Icon(
-                                  Icons.person_rounded,
-                                  size: 20,
-                                  color: AppColors.primarySoft,
-                                ),
+                          ),
                         ),
                       ),
                     ),
@@ -693,12 +710,11 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
                   : CuratedTracks.madeForYouTracks,
               audioProvider: audioProvider,
             ),
-            // Direct from YouTube Music Top Charts
+            // Fresh Picks Top Charts (Issue 1)
             _buildHomeSection(
-              title: 'Direct from YouTube Music',
-              tracks: CuratedTracks.youtubeMusicTracks,
+              title: AppStrings.freshPicksSectionTitle,
+              tracks: CuratedTracks.freshPicksTracks,
               audioProvider: audioProvider,
-              isYouTubeMusic: true,
             ),
             // 3. Popular Albums and Singles (horizontal scroll)
             _buildHomeSection(
@@ -806,12 +822,51 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
     );
   }
 
+  Widget _buildHeaderIconButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return Semantics(
+      button: true,
+      label: tooltip,
+      child: Tooltip(
+        message: tooltip,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.surface2.withValues(alpha: 0.85),
+                border: Border.all(
+                  color: AppColors.primarySoft.withValues(alpha: 0.35),
+                  width: 1.2,
+                ),
+              ),
+              child: Center(
+                child: Icon(
+                  icon,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildHomeSection({
     required String title,
     required List<YoutubeTrack> tracks,
     required AudioProvider audioProvider,
     String actionLabel = 'See all',
-    bool isYouTubeMusic = false,
   }) {
     if (tracks.isEmpty) return const SizedBox.shrink();
 
@@ -824,49 +879,14 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: Row(
-                  children: [
-                    if (isYouTubeMusic) ...[
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        margin: const EdgeInsets.only(right: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFF0000).withValues(alpha: 0.18),
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(
-                            color: const Color(0xFFFF0000).withValues(alpha: 0.6),
-                            width: 1,
-                          ),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.play_arrow_rounded, color: Color(0xFFFF0000), size: 14),
-                            SizedBox(width: 2),
-                            Text(
-                              'YT Music',
-                              style: TextStyle(
-                                color: Color(0xFFFF4E4E),
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                    Flexible(
-                      child: Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.h3.copyWith(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.h3.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               Text(
@@ -908,8 +928,9 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
 
   String _getCarousel1Title() {
     switch (_activeFilter) {
+      case 'Fresh Picks':
       case 'YouTube Music':
-        return 'YouTube Music Top 50 Hits';
+        return 'Top 50 Fresh Picks';
       case 'Podcast':
         return 'Sunday Suspense Audio Stories';
       case 'Trending':
@@ -937,8 +958,9 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
 
   String _getCarousel2Title() {
     switch (_activeFilter) {
+      case 'Fresh Picks':
       case 'YouTube Music':
-        return 'YouTube Music Trending Now';
+        return 'Trending Fresh Hits';
       case 'Podcast':
         return 'Popular Podcasts & Talk Shows';
       case 'Trending':
@@ -965,8 +987,9 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
 
   String _getCarousel3Title() {
     switch (_activeFilter) {
+      case 'Fresh Picks':
       case 'YouTube Music':
-        return 'YouTube Music Regional Chartbusters';
+        return 'Regional Chartbusters';
       case 'Podcast':
         return 'Mystery & Detective Dramas';
       case 'Trending':
@@ -994,8 +1017,9 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
 
   String _getCarousel4Title() {
     switch (_activeFilter) {
+      case 'Fresh Picks':
       case 'YouTube Music':
-        return 'YouTube Music Global Releases';
+        return 'Global Fresh Releases';
       case 'Podcast':
         return 'The Ranveer Show & Talks';
       case 'Trending':
@@ -1022,8 +1046,9 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
 
   String _getCarousel5Title() {
     switch (_activeFilter) {
+      case 'Fresh Picks':
       case 'YouTube Music':
-        return 'YouTube Music Acoustic & Chill';
+        return 'Acoustic & Chill Mix';
       case 'Podcast':
         return 'Bengali Audio Natok & Thrillers';
       case 'Trending':
@@ -1050,8 +1075,9 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> {
 
   String _getCarousel6Title() {
     switch (_activeFilter) {
+      case 'Fresh Picks':
       case 'YouTube Music':
-        return 'YouTube Music Party & Dance Hits';
+        return 'Party & Dance Fresh Hits';
       case 'Podcast':
         return 'Horror & Paranormal Stories';
       case 'Trending':
