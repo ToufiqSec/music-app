@@ -127,7 +127,7 @@ class SearchCacheStore {
   }
 
   /// Saves query results to cache and persists to disk (debounced to avoid I/O blocking)
-  static void putCached(String query, List<YoutubeTrack> tracks) {
+  static Future<void> putCached(String query, List<YoutubeTrack> tracks) async {
     final cleanQuery = query.trim().toLowerCase();
     _memoryCache[cleanQuery] = CachedQueryResult(
       tracks: tracks,
