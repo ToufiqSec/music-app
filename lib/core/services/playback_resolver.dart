@@ -118,8 +118,7 @@ class PlaybackResolver {
     try {
       var currentUri = Uri.parse(clean);
       final client = HttpClient()
-        ..connectionTimeout = const Duration(seconds: 8)
-        ..badCertificateCallback = ((_, __, ___) => true);
+        ..connectionTimeout = const Duration(seconds: 8);
 
       int redirectCount = 0;
       const maxHops = 10;

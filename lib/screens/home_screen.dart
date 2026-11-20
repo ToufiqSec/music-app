@@ -686,14 +686,13 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
 
           // Home Recommendation Sections (Issue 3: 12 Sections in exact order)
           if (_activeFilter == 'All') ...[
-            // 1. Recently Played (horizontal scroll)
-            _buildHomeSection(
-              title: 'Recently Played',
-              tracks: audioProvider.historyTracks.isNotEmpty
-                  ? audioProvider.historyTracks
-                  : CuratedTracks.jumpBackInTracks,
-              audioProvider: audioProvider,
-            ),
+            // 1. Recently Played (horizontal scroll - only shown when history exists)
+            if (audioProvider.historyTracks.isNotEmpty)
+              _buildHomeSection(
+                title: 'Recently Played',
+                tracks: audioProvider.historyTracks,
+                audioProvider: audioProvider,
+              ),
             // 2. Recommended Today (horizontal scroll)
             _buildHomeSection(
               title: 'Recommended Today',

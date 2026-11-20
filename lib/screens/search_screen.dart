@@ -147,7 +147,7 @@ class _SearchScreenState extends State<SearchScreen> {
       return;
     }
 
-    if (trimmed == 'Podcasts') {
+    if (!isMood && trimmed == 'Podcasts') {
       setState(() {
         _lastQuery = 'Podcasts';
         _selectedFilterIndex = 4; // Podcasts tab (Index 4 in _contentFilterTabs)
@@ -157,7 +157,7 @@ class _SearchScreenState extends State<SearchScreen> {
       return;
     }
 
-    if (trimmed == 'All') {
+    if (!isMood && trimmed == 'All') {
       setState(() {
         _selectedFilterIndex = 0;
         _selectedCategory = 'All';
@@ -347,11 +347,12 @@ class _SearchScreenState extends State<SearchScreen> {
                             _searchResults = List.from(CuratedTracks.freshPicksTracks);
                           }
                         });
-                        if (idx > 0 && _lastQuery.trim().isNotEmpty) {
+                        if (idx > 0 && _searchController.text.trim().isNotEmpty) {
                           final currentFiltered = _filteredResults;
                           if (currentFiltered.isEmpty) {
+                            final base = _searchController.text.trim();
                             final tabKeyword = tab.toLowerCase().replaceAll('&', '').trim();
-                            _executeSearch('$_lastQuery $tabKeyword');
+                            _executeSearch('$base $tabKeyword');
                           }
                         }
                       },
@@ -471,12 +472,13 @@ class _SearchScreenState extends State<SearchScreen> {
       );
     }
 
+    final bottomPadding = 72.0 + 64.0 + MediaQuery.of(context).padding.bottom + 20.0;
     return ListView.separated(
-      padding: const EdgeInsets.only(
+      padding: EdgeInsets.only(
         left: 16,
         right: 16,
         top: 8,
-        bottom: 160,
+        bottom: bottomPadding,
       ),
       itemCount: list.length,
       separatorBuilder: (_, __) => const SizedBox(height: 8),

@@ -311,6 +311,35 @@ class RoomService {
     }
   }
 
+  /// Bulk Queue Management for Playlists (Issue 4.1)
+  Future<void> addBatchToQueue(String roomId, List<YoutubeTrack> tracks, String addedByName) async {
+    if (tracks.isEmpty) return;
+    final user = _client.auth.currentUser;
+    final userId = user?.id ?? 'anonymous';
+    try {
+      final queueItems = await fetchQueue(roomId);
+      int nextPos = queueItems.isEmpty ? 0 : queueItems.map((q) => q.position).reduce((a, b) => a > b ? a : b) + 1;
+
+      final rows = tracks.map((track) {
+        return {
+          'room_id': roomId,
+          'track_id': track.id,
+          'track_metadata': track.toJson(),
+          'position': nextPos++,
+          'added_by': userId,
+          'added_by_name': addedByName,
+        };
+      }).toList();
+
+      await _client.from('room_queue').insert(rows);
+    } catch (e) {
+      debugPrint('[RoomService] addBatchToQueue bulk insert failed, falling back: $e');
+      for (final track in tracks.take(15)) {
+        await addToQueue(roomId, track, addedByName);
+      }
+    }
+  }
+
   Future<void> removeFromQueue(String roomId, String queueItemId) async {
     try {
       await _client.rpc('remove_from_room_queue', params: {

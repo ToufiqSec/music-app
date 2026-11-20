@@ -92,5 +92,19 @@ void main() {
       expect(p3.email, 'user123@domain.org');
       expect(p3.displayName, 'user123');
     });
+
+    test('YoutubeTrack.fromJson safely parses integer IDs and numbers without throwing TypeErrors', () {
+      final jsonWithInts = {
+        'id': 987654321,
+        'title': 'Test Song',
+        'artist': 'Test Artist',
+        'durationSeconds': 240,
+        'thumbnailUrl': 'https://example.com/art.jpg',
+      };
+      final track = YoutubeTrack.fromJson(jsonWithInts);
+      expect(track.id, '987654321');
+      expect(track.title, 'Test Song');
+      expect(track.durationSeconds, 240);
+    });
   });
 }

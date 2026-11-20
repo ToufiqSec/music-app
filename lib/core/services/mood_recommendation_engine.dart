@@ -73,12 +73,7 @@ class MoodRecommendationEngine {
     } catch (_) {}
   }
 
-  static String get groqApiKey {
-    if (!_initialized) {
-      initApiKey();
-    }
-    return _runtimeApiKey;
-  }
+  static String get groqApiKey => _runtimeApiKey;
 
   static set groqApiKey(String key) {
     saveApiKey(key);

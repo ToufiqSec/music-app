@@ -188,7 +188,9 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                     : _downloadedTracks.isEmpty
                         ? _buildEmptyState()
                         : ListView.separated(
-                            padding: const EdgeInsets.only(bottom: 160), // Space for MiniPlayer
+                            padding: EdgeInsets.only(
+                              bottom: 72.0 + 64.0 + MediaQuery.of(context).padding.bottom + 20.0,
+                            ), // Dynamic space for MiniPlayer & BottomNavBar
                             itemCount: _downloadedTracks.length,
                             separatorBuilder: (_, __) => const SizedBox(height: 8),
                             itemBuilder: (context, index) {

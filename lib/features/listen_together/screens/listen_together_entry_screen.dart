@@ -94,15 +94,10 @@ class _ListenTogetherEntryScreenState extends State<ListenTogetherEntryScreen> {
     setState(() => _isCreating = false);
 
     if (success && roomProvider.currentRoom != null) {
-      final code = roomProvider.currentRoom!.code;
-      // Navigate to Room Screen
+      // Navigate to Room Screen with auto-show share sheet
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const RoomScreen()),
+        MaterialPageRoute(builder: (_) => const RoomScreen(autoShowShare: true)),
       );
-      // Show share sheet right away (Spec Section 7.7)
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        RoomShareSheet.show(context, code);
-      });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

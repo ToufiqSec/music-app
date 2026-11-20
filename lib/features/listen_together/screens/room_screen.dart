@@ -14,7 +14,8 @@ import '../providers/room_provider.dart';
 import '../widgets/room_share_sheet.dart';
 
 class RoomScreen extends StatefulWidget {
-  const RoomScreen({super.key});
+  final bool autoShowShare;
+  const RoomScreen({super.key, this.autoShowShare = false});
 
   @override
   State<RoomScreen> createState() => _RoomScreenState();
@@ -30,6 +31,16 @@ class _RoomScreenState extends State<RoomScreen> with SingleTickerProviderStateM
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    if (widget.autoShowShare) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final roomProvider = context.read<RoomProvider>();
+        final code = roomProvider.currentRoom?.code;
+        if (code != null && code.isNotEmpty) {
+          RoomShareSheet.show(context, code);
+        }
+      });
+    }
   }
 
   @override

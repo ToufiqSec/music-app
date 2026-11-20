@@ -79,6 +79,9 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
       } else {
         _focusNodes[index].unfocus();
       }
+    } else if (index > 0) {
+      // Backspace navigation to previous box (Issue 5.3)
+      _focusNodes[index - 1].requestFocus();
     }
   }
 
@@ -175,52 +178,42 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
                   return SizedBox(
                     width: 48,
                     height: 58,
-                    child: RawKeyboardListener(
-                      focusNode: FocusNode(),
-                      onKey: (event) {
-                        if (event.logicalKey == LogicalKeyboardKey.backspace &&
-                            _codeControllers[index].text.isEmpty &&
-                            index > 0) {
-                          _focusNodes[index - 1].requestFocus();
-                        }
-                      },
-                      child: TextField(
-                        controller: _codeControllers[index],
-                        focusNode: _focusNodes[index],
-                        textAlign: TextAlign.center,
-                        textCapitalization: TextCapitalization.characters,
-                        keyboardType: TextInputType.text,
-                        maxLength: 1,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'monospace',
-                        ),
-                        decoration: InputDecoration(
-                          counterText: '',
-                          filled: true,
-                          fillColor: AppColors.surface1,
-                          contentPadding: EdgeInsets.zero,
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppRadii.md),
-                            borderSide: BorderSide(
-                              color: _codeControllers[index].text.isNotEmpty
-                                  ? AppColors.primarySoft
-                                  : AppColors.cardBorder,
-                              width: 1.5,
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppRadii.md),
-                            borderSide: const BorderSide(
-                              color: AppColors.accentTeal,
-                              width: 2,
-                            ),
-                          ),
-                        ),
-                        onChanged: (val) => _onCodeChanged(index, val),
+                    child: TextField(
+                      controller: _codeControllers[index],
+                      focusNode: _focusNodes[index],
+                      textAlign: TextAlign.center,
+                      textCapitalization: TextCapitalization.characters,
+                      keyboardType: TextInputType.text,
+                      maxLength: 1,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'monospace',
                       ),
+                      decoration: InputDecoration(
+                        counterText: '',
+                        filled: true,
+                        fillColor: AppColors.surface1,
+                        contentPadding: EdgeInsets.zero,
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppRadii.md),
+                          borderSide: BorderSide(
+                            color: _codeControllers[index].text.isNotEmpty
+                                ? AppColors.primarySoft
+                                : AppColors.cardBorder,
+                            width: 1.5,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppRadii.md),
+                          borderSide: const BorderSide(
+                            color: AppColors.accentTeal,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                      onChanged: (val) => _onCodeChanged(index, val),
                     ),
                   );
                 }),

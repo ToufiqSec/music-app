@@ -98,35 +98,42 @@ class SearchCacheStore {
     return _memoryCache[query.trim().toLowerCase()];
   }
 
-  /// Saves query results to cache and persists to disk
-  static Future<void> putCached(String query, List<YoutubeTrack> tracks) async {
+  static Timer? _debounceSaveTimer;
+
+  static void _scheduleSave() {
+    _debounceSaveTimer?.cancel();
+    _debounceSaveTimer = Timer(const Duration(seconds: 2), () async {
+      try {
+        final cacheFile = await _getCacheFile();
+        final mapToSave = <String, dynamic>{};
+        for (final entry in _memoryCache.entries) {
+          mapToSave[entry.key] = {
+            'timestamp': entry.value.timestamp.toIso8601String(),
+            'tracks': entry.value.tracks.map((t) => {
+              'id': t.id,
+              'title': t.title,
+              'artist': t.artist,
+              'thumbnailUrl': t.thumbnailUrl,
+              'durationSeconds': t.durationSeconds,
+              'audioStreamUrl': t.audioStreamUrl,
+            }).toList(),
+          };
+        }
+        await cacheFile.writeAsString(json.encode(mapToSave));
+      } catch (e) {
+        debugPrint('[SearchCacheStore] Persist cache error: $e');
+      }
+    });
+  }
+
+  /// Saves query results to cache and persists to disk (debounced to avoid I/O blocking)
+  static void putCached(String query, List<YoutubeTrack> tracks) {
     final cleanQuery = query.trim().toLowerCase();
     _memoryCache[cleanQuery] = CachedQueryResult(
       tracks: tracks,
       timestamp: DateTime.now(),
     );
-
-    // Debounced or async write
-    try {
-      final cacheFile = await _getCacheFile();
-      final mapToSave = <String, dynamic>{};
-      for (final entry in _memoryCache.entries) {
-        mapToSave[entry.key] = {
-          'timestamp': entry.value.timestamp.toIso8601String(),
-          'tracks': entry.value.tracks.map((t) => {
-            'id': t.id,
-            'title': t.title,
-            'artist': t.artist,
-            'thumbnailUrl': t.thumbnailUrl,
-            'durationSeconds': t.durationSeconds,
-            'audioStreamUrl': t.audioStreamUrl,
-          }).toList(),
-        };
-      }
-      await cacheFile.writeAsString(json.encode(mapToSave));
-    } catch (e) {
-      debugPrint('[SearchCacheStore] Persist cache error: $e');
-    }
+    _scheduleSave();
   }
 
   /// Recent Searches List

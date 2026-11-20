@@ -458,11 +458,10 @@ class YoutubeMusicService {
                 : '$cleanFb official audio');
 
         final fallbackTracks = await _searchYouTube(searchTarget);
-        for (final fb in fallbackTracks) {
-          if (fb.id == trackId) continue;
+        for (final fb in fallbackTracks.where((fb) => fb.id != trackId).take(3)) {
           try {
             final fbManifest = await _yt.videos.streamsClient.getManifest(fb.id).timeout(
-              const Duration(seconds: 12),
+              const Duration(seconds: 6),
             );
             final audioOnly = fbManifest.audioOnly;
             if (audioOnly.isNotEmpty) {

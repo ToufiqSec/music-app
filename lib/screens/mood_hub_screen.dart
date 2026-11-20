@@ -113,11 +113,11 @@ class _MoodHubScreenState extends State<MoodHubScreen> {
           SafeArea(
             child: ListView(
               physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.only(
+              padding: EdgeInsets.only(
                 left: 16,
                 right: 16,
                 top: 16,
-                bottom: 160,
+                bottom: 72.0 + 64.0 + MediaQuery.of(context).padding.bottom + 20.0,
               ),
               children: [
                 // 1. Header with Glowing AI Companion Avatar

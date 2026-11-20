@@ -8,6 +8,7 @@ import 'providers/auth_provider.dart';
 import 'features/listen_together/providers/room_provider.dart';
 import 'core/services/supabase_service.dart';
 import 'core/services/notification_service.dart';
+import 'core/services/mood_recommendation_engine.dart';
 import 'screens/home_screen.dart';
 import 'theme/app_theme.dart';
 
@@ -110,7 +111,12 @@ class _MusicAppBootstrapState extends State<MusicAppBootstrap> {
       debugPrint('[Startup] NotificationService initialization failed: $e\n$stack');
     }
 
-    // 2. Initialize native AudioService
+    // 3. Initialize AI Services & persistent settings
+    try {
+      await MoodRecommendationEngine.initApiKey();
+    } catch (_) {}
+
+    // 4. Initialize native AudioService
     MyAudioHandler handler;
     try {
       debugPrint('[Startup] Initializing native AudioService...');

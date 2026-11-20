@@ -27,24 +27,32 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   bool _obscurePassword = true;
   String? _localError;
   StreamSubscription<AuthState>? _authSubscription;
+  bool _isDismissed = false;
 
   @override
   void initState() {
     super.initState();
     _authSubscription = SupabaseService.authStateChanges.listen((data) {
       if (data.event == AuthChangeEvent.signedIn && mounted) {
-        final audioProvider = context.read<AudioProvider>();
-        audioProvider.reloadUserLibrary();
-        Navigator.of(context).pop(true);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Signed in successfully!', style: TextStyle(color: Colors.white)),
-            backgroundColor: AppColors.surface2,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        _safeDismiss('Signed in successfully!');
       }
     });
+  }
+
+  void _safeDismiss(String message) {
+    if (_isDismissed || !mounted) return;
+    _isDismissed = true;
+    _authSubscription?.cancel();
+    final audioProvider = context.read<AudioProvider>();
+    audioProvider.reloadUserLibrary();
+    Navigator.of(context).pop(true);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: const TextStyle(color: Colors.white)),
+        backgroundColor: AppColors.surface2,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
@@ -61,7 +69,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     setState(() => _localError = null);
 
     final authProvider = context.read<AuthProvider>();
-    final audioProvider = context.read<AudioProvider>();
 
     bool success;
     if (_isSignUp) {
@@ -80,18 +87,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     if (!mounted) return;
 
     if (success) {
-      await audioProvider.reloadUserLibrary();
-      Navigator.of(context).pop(true);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            _isSignUp ? 'Account created! Welcome.' : 'Signed in successfully!',
-            style: const TextStyle(color: Colors.white),
-          ),
-          backgroundColor: AppColors.surface2,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      _safeDismiss(_isSignUp ? 'Account created! Welcome.' : 'Signed in successfully!');
     } else {
       setState(() {
         _localError = authProvider.errorMessage ?? 'Authentication failed. Please check your credentials.';

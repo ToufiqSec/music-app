@@ -410,11 +410,9 @@ class RoomProvider extends ChangeNotifier {
   }
 
   Future<void> addPlaylistToQueue(List<YoutubeTrack> tracks) async {
-    if (!canManageQueue || _currentRoom == null) return;
+    if (!canManageQueue || _currentRoom == null || tracks.isEmpty) return;
     final myName = _myMembership?.displayName ?? 'Member';
-    for (final track in tracks) {
-      await _roomService.addToQueue(_currentRoom!.id, track, myName);
-    }
+    await _roomService.addBatchToQueue(_currentRoom!.id, tracks, myName);
   }
 
   Future<void> removeFromQueue(String queueItemId) async {

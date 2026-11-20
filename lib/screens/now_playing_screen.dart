@@ -305,7 +305,9 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                               ),
                             ),
                             child: Text(
-                              '320K',
+                              (track.audioStreamUrl != null && (track.audioStreamUrl!.contains('saavn') || track.audioStreamUrl!.contains('jiosaavn')))
+                                  ? '320K'
+                                  : 'HQ AUDIO',
                               style: AppTextStyles.caption.copyWith(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w700,

@@ -118,6 +118,11 @@ class AudioCacheService {
       await sink.close();
 
       if (await tempFile.exists()) {
+        if (await targetFile.exists()) {
+          try {
+            await targetFile.delete();
+          } catch (_) {}
+        }
         await tempFile.rename(targetFile.path);
         yield 1.0;
         // Run asynchronous LRU cache size check

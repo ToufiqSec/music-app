@@ -61,14 +61,14 @@ class YoutubeTrack {
 
   factory YoutubeTrack.fromJson(Map<String, dynamic> json) {
     return YoutubeTrack(
-      id: json['id'] as String,
-      title: json['title'] as String? ?? 'Unknown Title',
-      artist: json['artist'] as String? ?? 'Unknown Artist',
-      durationSeconds: json['durationSeconds'] as int? ?? 0,
-      thumbnailUrl: json['thumbnailUrl'] as String? ?? '',
-      audioStreamUrl: json['audioStreamUrl'] as String?,
+      id: json['id']?.toString() ?? '',
+      title: json['title']?.toString() ?? 'Unknown Title',
+      artist: json['artist']?.toString() ?? 'Unknown Artist',
+      durationSeconds: (json['durationSeconds'] as num?)?.toInt() ?? 0,
+      thumbnailUrl: json['thumbnailUrl']?.toString() ?? '',
+      audioStreamUrl: json['audioStreamUrl']?.toString(),
       isDownloaded: json['isDownloaded'] as bool? ?? false,
-      localFilePath: json['localFilePath'] as String?,
+      localFilePath: json['localFilePath']?.toString(),
     );
   }
 

@@ -486,13 +486,13 @@ class AudioProvider extends ChangeNotifier {
       }
 
       // 3. Network protocol check (robust for Windows & Unix)
-      // Debounce background caching by 8s so initial stream buffer is never starved.
+      // Debounce background caching by 25s so initial stream buffer is never starved.
       // For long podcasts / narrative audio (> 20 mins), skip background whole-file disk caching to avoid network strain.
       final isRemote = resolvedUrl.startsWith('http://') || resolvedUrl.startsWith('https://');
       final isLongNarrative = track.durationSeconds > 1200;
       if (isRemote && !isLongNarrative && !await AudioCacheService.isTrackCached(track.id)) {
         _backgroundCacheTimer?.cancel();
-        _backgroundCacheTimer = Timer(const Duration(seconds: 8), () async {
+        _backgroundCacheTimer = Timer(const Duration(seconds: 25), () async {
           if (_currentTrack?.id == track.id && _isPlaying) {
             _currentDownloadSubscription?.cancel();
             _currentDownloadSubscription = AudioCacheService.downloadAndCacheTrack(
