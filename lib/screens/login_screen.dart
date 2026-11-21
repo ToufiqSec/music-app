@@ -87,7 +87,22 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     if (!mounted) return;
 
     if (success) {
-      _safeDismiss(_isSignUp ? 'Account created! Welcome.' : 'Signed in successfully!');
+      if (_isSignUp && SupabaseService.currentUser?.emailConfirmedAt == null && SupabaseService.client.auth.currentSession == null) {
+        setState(() {
+          _localError = null;
+          _isSignUp = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Account created! Verification link sent to your email. Please click it to verify your account, then sign in.'),
+            backgroundColor: AppColors.surface2,
+            duration: Duration(seconds: 8),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } else {
+        _safeDismiss(_isSignUp ? 'Account created! Welcome.' : 'Signed in successfully!');
+      }
     } else {
       setState(() {
         _localError = authProvider.errorMessage ?? 'Authentication failed. Please check your credentials.';

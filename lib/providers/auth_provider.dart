@@ -97,17 +97,21 @@ class AuthProvider extends ChangeNotifier {
 
   static String _formatAuthErrorMessage(AuthException e) {
     final msg = e.message.toLowerCase();
+    final code = e.statusCode?.toString() ?? '';
     if (msg.contains('invalid login credentials') || msg.contains('invalid credentials')) {
-      return 'Incorrect email or password. Please try again.';
+      return 'Incorrect email or password. Please check your credentials and try again.';
     }
     if (msg.contains('user already registered') || msg.contains('already exists')) {
       return 'An account with this email already exists. Please choose "Sign In".';
     }
     if (msg.contains('email not confirmed')) {
-      return 'Your email is not confirmed yet. An instant confirmation has been recorded; please tap Sign In.';
+      return 'Your email is not confirmed yet. Please check your inbox for the confirmation email, or request a new link.';
     }
-    if (msg.contains('rate limit') || msg.contains('over_email_send_rate_limit')) {
-      return 'Too many login attempts. Please wait a moment and try again.';
+    if (msg.contains('rate limit') || msg.contains('over_email_send_rate_limit') || code == '429') {
+      return 'Email rate limit reached (max 3/hour on free tier). Please wait a few minutes before trying again.';
+    }
+    if (msg.contains('link expired') || msg.contains('token has expired') || msg.contains('otp_expired')) {
+      return 'This verification link has expired. Please sign in again or request a new reset link.';
     }
     if (msg.contains('password should be at least')) {
       return 'Password must be at least 6 characters.';
@@ -160,16 +164,11 @@ class AuthProvider extends ChangeNotifier {
         displayName: displayName,
       );
       if (response.user != null) {
-        // If session was not immediately returned, auto sign-in
-        if (response.session == null) {
-          try {
-            await SupabaseService.signInWithEmail(
-              email: email,
-              password: password,
-            );
-          } catch (_) {}
+        if (response.session != null) {
+          await _loadProfileAndSettings();
+        } else {
+          debugPrint('[AuthProvider] User signed up. Confirmation email pending for $email.');
         }
-        await _loadProfileAndSettings();
         _setLoading(false);
         return true;
       }

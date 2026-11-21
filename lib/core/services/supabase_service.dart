@@ -103,17 +103,36 @@ class SupabaseService {
 
   static Stream<AuthState> get authStateChanges => client.auth.onAuthStateChange;
 
-  /// Initializes Supabase in main.dart
+  /// Initializes Supabase in main.dart with PKCE flow
   static Future<void> initialize() async {
     try {
       await Supabase.initialize(
         url: supabaseUrl,
         anonKey: supabaseAnonKey,
+        authOptions: const FlutterAuthOptions(
+          authFlowType: AuthFlowType.pkce,
+        ),
         debug: kDebugMode,
       );
       debugPrint('[Supabase] Initialized successfully. Auth user: ${currentUser?.email}');
     } catch (e) {
       debugPrint('[Supabase] Init error: $e');
+    }
+  }
+
+  /// Exchanges a PKCE auth code or recovery token from an incoming deep link URL
+  static Future<AuthResponse?> handleDeepLink(Uri uri) async {
+    try {
+      debugPrint('[Supabase] Handling deep link callback: $uri');
+      final response = await client.auth.getSessionFromUrl(uri);
+      if (response.user != null) {
+        debugPrint('[Supabase] Deep link auth successful for: ${response.user?.email}');
+        await syncDownAllUserData();
+      }
+      return response;
+    } catch (e) {
+      debugPrint('[Supabase] Error processing deep link: $e');
+      return null;
     }
   }
 
@@ -132,6 +151,7 @@ class SupabaseService {
     final response = await client.auth.signUp(
       email: trimmedEmail,
       password: password,
+      emailRedirectTo: 'myapp://auth-callback',
       data: {
         'email': trimmedEmail,
         'full_name': name,
@@ -206,7 +226,7 @@ class SupabaseService {
     final trimmed = email.trim();
     await client.auth.resetPasswordForEmail(
       trimmed,
-      redirectTo: kIsWeb ? null : 'io.supabase.musicapp://login-callback',
+      redirectTo: kIsWeb ? null : 'myapp://auth-callback',
     );
   }
 
