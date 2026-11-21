@@ -886,7 +886,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
   }
 
   Widget _buildProfileAvatar(BuildContext context, AuthProvider authProvider) {
-    const double targetSize = 44.0;
+    const double targetSize = 48.0; // 48dp minimum WCAG AA touch target
     final isAuthenticated = authProvider.isAuthenticated;
     final avatarUrl = authProvider.avatarUrl.trim();
     final displayName = authProvider.displayName.trim();

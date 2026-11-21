@@ -121,6 +121,44 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     }
   }
 
+  void _showGoogleOAuthSetupDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface1,
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(AppRadii.lg))),
+        title: Text('Google Sign-In Setup Info', style: AppTextStyles.h3.copyWith(fontSize: 18)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'To prevent "Error 400: redirect_uri_mismatch", configure your Google Cloud Console OAuth 2.0 Web Client with these exact values:',
+                style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary, height: 1.4),
+              ),
+              const SizedBox(height: 14),
+              const Text('Package Name:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+              const SelectableText('com.toufiqsec.music_app', style: TextStyle(color: AppColors.primarySoft, fontFamily: 'monospace', fontSize: 12)),
+              const SizedBox(height: 10),
+              const Text('Authorized Redirect URI (Google Cloud):', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+              const SelectableText('https://wcztbsbcfjoxlypghjil.supabase.co/auth/v1/callback', style: TextStyle(color: AppColors.primarySoft, fontFamily: 'monospace', fontSize: 11)),
+              const SizedBox(height: 10),
+              const Text('App Deep Link Scheme (Supabase URL config):', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+              const SelectableText('io.supabase.musicapp://login-callback', style: TextStyle(color: AppColors.primarySoft, fontFamily: 'monospace', fontSize: 12)),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Got it', style: TextStyle(color: AppColors.primarySoft, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showForgotPasswordDialog() {
     final resetEmailController = TextEditingController(text: _emailController.text);
     showDialog(
@@ -553,7 +591,21 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                         onPressed: isLoading ? null : _handleGoogleAuth,
                       ),
 
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 6),
+
+                      // Google OAuth Setup Info Link
+                      Center(
+                        child: TextButton.icon(
+                          onPressed: _showGoogleOAuthSetupDialog,
+                          icon: const Icon(Icons.info_outline_rounded, size: 14, color: AppColors.primarySoft),
+                          label: const Text(
+                            'Google Sign-In setup details',
+                            style: TextStyle(color: AppColors.primarySoft, fontSize: 11, decoration: TextDecoration.underline),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 10),
 
                       // Continue as Guest Option
                       TextButton(
