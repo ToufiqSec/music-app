@@ -116,14 +116,14 @@ class _CascadingArtworkState extends State<CascadingArtwork> {
             Icon(
               Icons.music_note_rounded,
               color: AppColors.primarySoft,
-              size: (widget.height != null ? widget.height! * 0.3 : 28).clamp(18.0, 42.0),
+              size: (widget.height != null ? widget.height! * 0.3 : 28.0).clamp(18.0, 42.0).toDouble(),
             ),
             const SizedBox(height: 2),
             Text(
               initials,
               style: TextStyle(
                 color: Colors.white70,
-                fontSize: (widget.height != null ? widget.height! * 0.22 : 16).clamp(12.0, 24.0),
+                fontSize: (widget.height != null ? widget.height! * 0.22 : 16.0).clamp(12.0, 24.0).toDouble(),
                 fontWeight: FontWeight.bold,
               ),
             ),
