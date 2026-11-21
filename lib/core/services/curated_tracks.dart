@@ -814,7 +814,7 @@ class CuratedTracks {
         return featuredPodcasts;
       case 'Fresh Picks':
       case 'New and Trending':
-      case 'YouTube Music':
+      case 'Top Charts':
         return freshPicksTracks;
       case 'Trending':
         return trendingTracks;
