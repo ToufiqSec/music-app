@@ -18,6 +18,7 @@ import '../widgets/featured_banner.dart';
 import '../widgets/update_dialog.dart';
 import '../widgets/twilight_scene_background.dart';
 import '../widgets/generated_cover_art.dart';
+import '../widgets/cascading_artwork.dart';
 import '../core/services/app_update_service.dart';
 import 'search_screen.dart';
 import 'library_screen.dart';

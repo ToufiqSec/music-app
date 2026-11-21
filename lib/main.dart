@@ -9,6 +9,7 @@ import 'features/listen_together/providers/room_provider.dart';
 import 'core/services/supabase_service.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/mood_recommendation_engine.dart';
+import 'core/services/home_section_cache_store.dart';
 import 'screens/home_screen.dart';
 import 'theme/app_theme.dart';
 
