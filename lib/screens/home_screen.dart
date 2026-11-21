@@ -378,84 +378,140 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
     final epoch = ++_contentLoadEpoch;
 
     try {
-      // Stage 1: Fast above-the-fold content first (Quick picks, Carousel 1, verified RSS Podcast)
-      final stage1Results = await Future.wait([
-        audioProvider.musicService.searchTracks(quickQuery).catchError((_) => <YoutubeTrack>[]),
-        audioProvider.musicService.searchTracks(carousel1Query).catchError((_) => <YoutubeTrack>[]),
-        PodcastRssService.fetchSundaySuspenseEpisodes(limit: 5).catchError((_) => CuratedTracks.featuredPodcasts),
-      ]);
-
-      if (!mounted || epoch != _contentLoadEpoch) return;
-
-      setState(() {
-        if (stage1Results[0].isNotEmpty) {
-          _quickPickTracks = TasteEngine.rerankSearchResults(stage1Results[0] as List<YoutubeTrack>).take(10).toList();
+      // Parallel stream loading: Each section renders immediately as soon as its data arrives
+      audioProvider.musicService.searchTracks(quickQuery).then((res) {
+        if (!mounted || epoch != _contentLoadEpoch) return;
+        if (res.isNotEmpty) {
+          setState(() {
+            _quickPickTracks = TasteEngine.rerankSearchResults(res).take(10).toList();
+            _isLoadingContent = false;
+          });
+          _prefetchNextImages(_quickPickTracks, 4);
+          _saveCurrentCache();
         }
-        if (stage1Results[1].isNotEmpty) {
-          _carousel1Tracks = TasteEngine.rerankSearchResults(stage1Results[1] as List<YoutubeTrack>).take(20).toList();
-        }
-        if (stage1Results[2].isNotEmpty) {
-          _featuredPodcast = (stage1Results[2] as List<YoutubeTrack>).first;
-        }
-        _isLoadingContent = false;
-      });
+      }).catchError((_) => <YoutubeTrack>[]);
 
-      // Stage 2: Stagger remaining carousels smoothly without flooding mobile network
-      final batchA = await Future.wait([
-        audioProvider.musicService.searchTracks(carousel2Query).catchError((_) => <YoutubeTrack>[]),
-        audioProvider.musicService.searchTracks(carousel3Query).catchError((_) => <YoutubeTrack>[]),
-      ]);
-
-      if (!mounted || epoch != _contentLoadEpoch) return;
-
-      setState(() {
-        if (batchA[0].isNotEmpty) {
-          _carousel2Tracks = TasteEngine.rerankSearchResults(batchA[0]).take(20).toList();
+      audioProvider.musicService.searchTracks(carousel1Query).then((res) {
+        if (!mounted || epoch != _contentLoadEpoch) return;
+        if (res.isNotEmpty) {
+          setState(() {
+            _carousel1Tracks = TasteEngine.rerankSearchResults(res).take(20).toList();
+            _isLoadingContent = false;
+          });
+          _prefetchNextImages(_carousel1Tracks, 6);
+          _saveCurrentCache();
         }
-        if (batchA[1].isNotEmpty) {
-          _carousel3Tracks = TasteEngine.rerankSearchResults(batchA[1]).take(20).toList();
-        }
-      });
+      }).catchError((_) => <YoutubeTrack>[]);
 
-      final batchB = await Future.wait([
-        audioProvider.musicService.searchTracks(carousel4Query).catchError((_) => <YoutubeTrack>[]),
-        audioProvider.musicService.searchTracks(carousel5Query).catchError((_) => <YoutubeTrack>[]),
-        audioProvider.musicService.searchTracks(carousel6Query).catchError((_) => <YoutubeTrack>[]),
-      ]);
-
-      if (!mounted || epoch != _contentLoadEpoch) return;
-
-      setState(() {
-        if (batchB[0].isNotEmpty) {
-          _carousel4Tracks = TasteEngine.rerankSearchResults(batchB[0]).take(20).toList();
+      PodcastRssService.fetchSundaySuspenseEpisodes(limit: 5).then((res) {
+        if (!mounted || epoch != _contentLoadEpoch) return;
+        if (res.isNotEmpty) {
+          setState(() {
+            _featuredPodcast = res.first;
+          });
         }
-        if (batchB[1].isNotEmpty) {
-          _carousel5Tracks = TasteEngine.rerankSearchResults(batchB[1]).take(20).toList();
-        }
-        if (batchB[2].isNotEmpty) {
-          _carousel6Tracks = TasteEngine.rerankSearchResults(batchB[2]).take(20).toList();
-        }
-      });
+      }).catchError((_) => CuratedTracks.featuredPodcasts);
 
-      // Persist to 10-minute cache (Phase 5)
-      HomeSectionCacheStore.save(
-        _activeFilter,
-        HomeCachedData(
-          quickPicks: _quickPickTracks,
-          carousel1: _carousel1Tracks,
-          carousel2: _carousel2Tracks,
-          carousel3: _carousel3Tracks,
-          carousel4: _carousel4Tracks,
-          carousel5: _carousel5Tracks,
-          carousel6: _carousel6Tracks,
-          timestamp: DateTime.now(),
-        ),
-      );
+      audioProvider.musicService.searchTracks(carousel2Query).then((res) {
+        if (!mounted || epoch != _contentLoadEpoch) return;
+        if (res.isNotEmpty) {
+          setState(() {
+            _carousel2Tracks = TasteEngine.rerankSearchResults(res).take(20).toList();
+          });
+          _prefetchNextImages(_carousel2Tracks, 6);
+          _saveCurrentCache();
+        }
+      }).catchError((_) => <YoutubeTrack>[]);
+
+      audioProvider.musicService.searchTracks(carousel3Query).then((res) {
+        if (!mounted || epoch != _contentLoadEpoch) return;
+        if (res.isNotEmpty) {
+          setState(() {
+            _carousel3Tracks = TasteEngine.rerankSearchResults(res).take(20).toList();
+          });
+          _prefetchNextImages(_carousel3Tracks, 6);
+          _saveCurrentCache();
+        }
+      }).catchError((_) => <YoutubeTrack>[]);
+
+      audioProvider.musicService.searchTracks(carousel4Query).then((res) {
+        if (!mounted || epoch != _contentLoadEpoch) return;
+        if (res.isNotEmpty) {
+          setState(() {
+            _carousel4Tracks = TasteEngine.rerankSearchResults(res).take(20).toList();
+          });
+          _prefetchNextImages(_carousel4Tracks, 6);
+          _saveCurrentCache();
+        }
+      }).catchError((_) => <YoutubeTrack>[]);
+
+      audioProvider.musicService.searchTracks(carousel5Query).then((res) {
+        if (!mounted || epoch != _contentLoadEpoch) return;
+        if (res.isNotEmpty) {
+          setState(() {
+            _carousel5Tracks = TasteEngine.rerankSearchResults(res).take(20).toList();
+          });
+          _prefetchNextImages(_carousel5Tracks, 6);
+          _saveCurrentCache();
+        }
+      }).catchError((_) => <YoutubeTrack>[]);
+
+      audioProvider.musicService.searchTracks(carousel6Query).then((res) {
+        if (!mounted || epoch != _contentLoadEpoch) return;
+        if (res.isNotEmpty) {
+          setState(() {
+            _carousel6Tracks = TasteEngine.rerankSearchResults(res).take(20).toList();
+          });
+          _prefetchNextImages(_carousel6Tracks, 6);
+          _saveCurrentCache();
+        }
+      }).catchError((_) => <YoutubeTrack>[]);
     } catch (_) {
       if (mounted && epoch == _contentLoadEpoch) {
         setState(() => _isLoadingContent = false);
       }
     }
+  }
+
+  void _saveCurrentCache() {
+    HomeSectionCacheStore.save(
+      _activeFilter,
+      HomeCachedData(
+        quickPicks: _quickPickTracks,
+        carousel1: _carousel1Tracks,
+        carousel2: _carousel2Tracks,
+        carousel3: _carousel3Tracks,
+        carousel4: _carousel4Tracks,
+        carousel5: _carousel5Tracks,
+        carousel6: _carousel6Tracks,
+        timestamp: DateTime.now(),
+      ),
+    );
+  }
+
+  void _prefetchNextImages(List<YoutubeTrack> tracks, [int count = 6]) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      for (final track in tracks.take(count)) {
+        final url = track.thumbnailUrl.trim();
+        if (url.isNotEmpty) {
+          final targetSize = '156x112';
+          final cacheKey = 'track:${track.id}:$targetSize';
+          try {
+            precacheImage(
+              CachedNetworkImageProvider(
+                url,
+                cacheKey: cacheKey,
+                maxHeight: 168,
+                maxWidth: 234,
+              ),
+              context,
+            );
+          } catch (_) {}
+        }
+      }
+    });
+  }
   }
 
   String _getTimeGreeting() {
@@ -977,7 +1033,9 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
     required AudioProvider audioProvider,
     String actionLabel = 'See all',
   }) {
-    if (tracks.isEmpty) return const SizedBox.shrink();
+    if (tracks.isEmpty) {
+      return _isLoadingContent ? _buildSkeletonHomeSection(title: title) : const SizedBox.shrink();
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1031,6 +1089,8 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
           child: ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             scrollDirection: Axis.horizontal,
+            cacheExtent: 600.0,
+            physics: const BouncingScrollPhysics(),
             itemCount: tracks.length,
             separatorBuilder: (_, __) => const SizedBox(width: 12),
             itemBuilder: (context, index) {
@@ -1047,6 +1107,78 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
                 },
               );
             },
+          ),
+        ),
+        const SizedBox(height: 28),
+      ],
+    );
+  }
+
+  Widget _buildSkeletonHomeSection({required String title}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.h3.copyWith(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 180,
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            scrollDirection: Axis.horizontal,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: 4,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (_, index) => SizedBox(
+              width: 156,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 156,
+                    height: 112,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface1,
+                      borderRadius: AppRadii.borderMedium,
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColors.surface2,
+                          AppColors.surface1.withValues(alpha: 0.5),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    width: 120,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface2,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    width: 80,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface2.withValues(alpha: 0.6),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
         const SizedBox(height: 28),
@@ -1376,6 +1508,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
         final isCurrent = audioProvider.currentTrack?.id == track.id;
 
         return GestureDetector(
+          key: ValueKey('quick_${track.id}'),
           onTap: () {
             HapticFeedback.lightImpact();
             audioProvider.playTrack(track, tracks);
@@ -1405,8 +1538,10 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
                     height: 56,
                     child: CachedNetworkImage(
                       imageUrl: track.thumbnailUrl,
+                      cacheKey: 'track:${track.id}:56x56',
                       fit: BoxFit.cover,
                       memCacheWidth: 120,
+                      memCacheHeight: 120,
                       placeholder: (_, __) => Container(color: AppColors.surface2),
                       errorWidget: (_, __, ___) => GeneratedCoverArt(
                         title: track.title,
@@ -1598,6 +1733,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
 
         final artist = artistsToShow[index - 1];
         return GestureDetector(
+          key: ValueKey('artist_${artist.id}'),
           onTap: () async {
             HapticFeedback.lightImpact();
             final songs = await audioProvider.musicService.searchTracks('${artist.name} top hits');
@@ -1625,7 +1761,10 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
                   child: artist.imageUrl.isNotEmpty
                       ? CachedNetworkImage(
                           imageUrl: artist.imageUrl,
+                          cacheKey: 'artist:${artist.id}:70x70',
                           fit: BoxFit.cover,
+                          memCacheWidth: 140,
+                          memCacheHeight: 140,
                           placeholder: (_, __) => _buildArtistAvatarFallback(artist.name),
                           errorWidget: (_, __, ___) => _buildArtistAvatarFallback(artist.name),
                         )

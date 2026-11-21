@@ -116,30 +116,40 @@ class _CascadingArtworkState extends State<CascadingArtwork> {
   /// (d) a flat placeholder in the app accent colour. The letter tile is removed.
   Widget _buildFlatAccentPlaceholder() {
     final iconSize = (widget.height != null ? widget.height! * 0.35 : 32.0).clamp(20.0, 48.0).toDouble();
-    return Container(
-      width: widget.width,
-      height: widget.height,
-      decoration: BoxDecoration(
-        color: AppColors.surface1,
-        borderRadius: widget.borderRadius ?? AppRadii.borderMedium,
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.primarySoft.withValues(alpha: 0.30),
-            AppColors.surface2,
-          ],
+    return GestureDetector(
+      onTap: () {
+        if (_candidates.isNotEmpty) {
+          setState(() {
+            _fallbackIndex = 0;
+            _buildCandidateList();
+          });
+        }
+      },
+      child: Container(
+        width: widget.width,
+        height: widget.height,
+        decoration: BoxDecoration(
+          color: AppColors.surface1,
+          borderRadius: widget.borderRadius ?? AppRadii.borderMedium,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.primarySoft.withValues(alpha: 0.30),
+              AppColors.surface2,
+            ],
+          ),
+          border: Border.all(
+            color: AppColors.primarySoft.withValues(alpha: 0.20),
+            width: 1,
+          ),
         ),
-        border: Border.all(
-          color: AppColors.primarySoft.withValues(alpha: 0.20),
-          width: 1,
-        ),
-      ),
-      child: Center(
-        child: Icon(
-          Icons.music_note_rounded,
-          color: AppColors.primarySoft.withValues(alpha: 0.8),
-          size: iconSize,
+        child: Center(
+          child: Icon(
+            Icons.music_note_rounded,
+            color: AppColors.primarySoft.withValues(alpha: 0.8),
+            size: iconSize,
+          ),
         ),
       ),
     );
