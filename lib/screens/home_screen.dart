@@ -28,6 +28,7 @@ import 'artist_onboarding_screen.dart';
 import 'mood_hub_screen.dart';
 import '../core/services/taste_engine.dart';
 import '../core/services/podcast_rss_service.dart';
+import '../core/services/home_section_cache_store.dart';
 import '../providers/auth_provider.dart';
 import '../features/listen_together/widgets/listen_together_button.dart';
 import '../core/constants/app_strings.dart';
@@ -241,7 +242,29 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
 
   Future<void> _loadDynamicContent() async {
     if (!mounted) return;
-    setState(() => _isLoadingContent = true);
+
+    // Phase 5: 10-Minute Stale-While-Revalidate Cache
+    await HomeSectionCacheStore.init();
+    final cached = HomeSectionCacheStore.getCached(_activeFilter);
+    if (cached != null) {
+      if (mounted) {
+        setState(() {
+          if (cached.quickPicks.isNotEmpty) _quickPickTracks = cached.quickPicks;
+          if (cached.carousel1.isNotEmpty) _carousel1Tracks = cached.carousel1;
+          if (cached.carousel2.isNotEmpty) _carousel2Tracks = cached.carousel2;
+          if (cached.carousel3.isNotEmpty) _carousel3Tracks = cached.carousel3;
+          if (cached.carousel4.isNotEmpty) _carousel4Tracks = cached.carousel4;
+          if (cached.carousel5.isNotEmpty) _carousel5Tracks = cached.carousel5;
+          if (cached.carousel6.isNotEmpty) _carousel6Tracks = cached.carousel6;
+          _isLoadingContent = false;
+        });
+      }
+      if (!cached.isExpired) {
+        return; // Fresh cache, skip expensive network requests
+      }
+    } else {
+      setState(() => _isLoadingContent = true);
+    }
 
     await TasteEngine.init();
     final audioProvider = context.read<AudioProvider>();
@@ -413,6 +436,21 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
           _carousel6Tracks = TasteEngine.rerankSearchResults(batchB[2]).take(20).toList();
         }
       });
+
+      // Persist to 10-minute cache (Phase 5)
+      HomeSectionCacheStore.save(
+        _activeFilter,
+        HomeCachedData(
+          quickPicks: _quickPickTracks,
+          carousel1: _carousel1Tracks,
+          carousel2: _carousel2Tracks,
+          carousel3: _carousel3Tracks,
+          carousel4: _carousel4Tracks,
+          carousel5: _carousel5Tracks,
+          carousel6: _carousel6Tracks,
+          timestamp: DateTime.now(),
+        ),
+      );
     } catch (_) {
       if (mounted && epoch == _contentLoadEpoch) {
         setState(() => _isLoadingContent = false);
@@ -998,6 +1036,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
             itemBuilder: (context, index) {
               final track = tracks[index];
               return ContentCard(
+                key: ValueKey('${track.id}_$index'),
                 title: track.title,
                 subtitle: track.artist,
                 imageUrl: track.thumbnailUrl,
