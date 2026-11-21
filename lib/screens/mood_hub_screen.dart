@@ -85,7 +85,8 @@ class _MoodHubScreenState extends State<MoodHubScreen> {
   Future<void> _triggerInstantPreset(String name, List<String> moodIds, AudioProvider audio) async {
     HapticFeedback.heavyImpact();
     setState(() {
-      _selectedMoodIds = List.from(moodIds);
+      _selectedMoodIds.clear();
+      _selectedMoodIds.addAll(moodIds);
       _customVibeController.clear();
       _isGenerating = true;
       _statusMessage = 'Launching $name acoustic immersion...';
@@ -93,7 +94,7 @@ class _MoodHubScreenState extends State<MoodHubScreen> {
 
     try {
       final mixResult = await _engine.generateRecommendations(
-        selectedMoodIds: moodIds,
+        selectedMoodIds: _selectedMoodIds,
         customDescription: name,
         style: MoodContentStyle.music,
       );
