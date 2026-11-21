@@ -16,6 +16,7 @@ import '../widgets/glass_icon_button.dart';
 import '../widgets/twilight_scene_background.dart';
 import '../widgets/synced_lyrics_view.dart';
 import '../widgets/generated_cover_art.dart';
+import '../widgets/cascading_artwork.dart';
 import '../features/listen_together/widgets/listen_together_button.dart';
 
 /// Full-Screen Now Playing Sanctuary Player from Universal UI Design System: Twilight Calm.
@@ -215,41 +216,16 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                 ),
                               ],
                             ),
-                            child: track.thumbnailUrl.isNotEmpty
-                                ? ClipRRect(
-                                    borderRadius: AppRadii.borderLarge,
-                                    child: CachedNetworkImage(
-                                      key: ValueKey('art_img_${track.id}'),
-                                      imageUrl: track.thumbnailUrl,
-                                      fit: BoxFit.cover,
-                                      memCacheWidth: 800,
-                                      placeholder: (_, __) => Container(
-                                        color: AppColors.surface1,
-                                        child: const Center(
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: AppColors.primarySoft,
-                                          ),
-                                        ),
-                                      ),
-                                      errorWidget: (_, __, ___) => GeneratedCoverArt(
-                                        key: ValueKey('art_err_${track.id}'),
-                                        title: track.title,
-                                        artist: track.artist,
-                                        thumbnailUrl: track.thumbnailUrl,
-                                        durationSeconds: track.durationSeconds,
-                                        size: artSize,
-                                      ),
-                                    ),
-                                  )
-                                : GeneratedCoverArt(
-                                    key: ValueKey('art_gen_${track.id}'),
-                                    title: track.title,
-                                    artist: track.artist,
-                                    thumbnailUrl: track.thumbnailUrl,
-                                    durationSeconds: track.durationSeconds,
-                                    size: artSize,
-                                  ),
+                            child: CascadingArtwork(
+                              key: ValueKey('art_cascading_${track.id}'),
+                              imageUrl: track.thumbnailUrl,
+                              title: track.title,
+                              artist: track.artist,
+                              width: artSize,
+                              height: artSize,
+                              borderRadius: AppRadii.borderLarge,
+                              fit: BoxFit.cover,
+                            ),
                           ),
                         ),
                       ),
