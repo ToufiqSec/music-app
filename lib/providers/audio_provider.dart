@@ -441,7 +441,7 @@ class AudioProvider extends ChangeNotifier {
             track.title.toLowerCase().contains('episode');
         final msg = isPodcast ? 'Audio not available for this episode' : 'Audio stream currently unavailable';
         _playbackErrorMessage = msg;
-        debugPrint('[AudioProvider] Playback failure for "${track.title}" (ID: ${track.id}): ${resolution.failureReason}');
+        debugPrint('[AudioProvider] Playback failure for "${track.title}" (ID: ${track.id}) - Requested URL: "${track.audioStreamUrl}" - Player/Resolver Error: "${resolution.failureReason}"');
         _isBuffering = false;
         _bufferingWatchdogTimer?.cancel();
         notifyListeners();

@@ -276,7 +276,8 @@ class PlaybackResolver {
           track.title.toLowerCase().contains('feluda');
 
       if (isPodcast) {
-        final rssUrl = await PodcastRssService.resolvePodcastEnclosure(track.title);
+        final queryTarget = track.id.startsWith('ss_') ? track.id : track.title;
+        final rssUrl = await PodcastRssService.resolvePodcastEnclosure(queryTarget);
         if (rssUrl != null && rssUrl.isNotEmpty) {
           var secureUrl = upgradeToHttps(rssUrl);
           final preResolved = await resolveFinalAudioUrl(secureUrl);
@@ -288,6 +289,12 @@ class PlaybackResolver {
             );
           }
         }
+        // Policy: Do NOT extract, proxy or re-host YouTube streams for podcasts (Phase 3)
+        debugPrint('[PlaybackResolver] Podcast episode has no audio enclosure: "${track.title}"');
+        return PlaybackResolutionResult.failure(
+          'Audio not available for this episode',
+          sourceType: 'missing_enclosure',
+        );
       }
 
       final streamUrl = await musicService.getAudioStreamUrl(

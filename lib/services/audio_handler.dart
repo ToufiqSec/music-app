@@ -152,7 +152,8 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
       // Guarantee full audible volume immediately
       await _player.setVolume(1.0);
       await _player.play();
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('[AudioHandler] Player Error Code / Exception: $e for stream URL: "$safeUrl"');
       await _player.stop();
       rethrow;
     }
