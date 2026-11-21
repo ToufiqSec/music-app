@@ -710,25 +710,25 @@ class CuratedTracks {
 
   static final List<YoutubeTrack> freshPicksTracks = [
     const YoutubeTrack(
-      id: 'vxX1WjS2N2M',
+      id: 'RLzC55ai0eo',
       title: 'Tauba Tauba',
       artist: 'Karan Aujla',
       durationSeconds: 206,
-      thumbnailUrl: 'https://i.ytimg.com/vi/vxX1WjS2N2M/hqdefault.jpg',
+      thumbnailUrl: 'https://i.ytimg.com/vi/RLzC55ai0eo/hqdefault.jpg',
     ),
     const YoutubeTrack(
-      id: 'toE_rM_f_4A',
+      id: 'tOM-nWPcR4U',
       title: 'Illuminati',
       artist: 'Sushin Shyam, Dabzee',
       durationSeconds: 191,
-      thumbnailUrl: 'https://i.ytimg.com/vi/toE_rM_f_4A/hqdefault.jpg',
+      thumbnailUrl: 'https://i.ytimg.com/vi/tOM-nWPcR4U/hqdefault.jpg',
     ),
     const YoutubeTrack(
-      id: 'kPa7bsKwL-8',
+      id: 'bESGLojNYSo',
       title: 'Die With A Smile',
       artist: 'Lady Gaga, Bruno Mars',
       durationSeconds: 251,
-      thumbnailUrl: 'https://i.ytimg.com/vi/kPa7bsKwL-8/hqdefault.jpg',
+      thumbnailUrl: 'https://i.ytimg.com/vi/bESGLojNYSo/hqdefault.jpg',
     ),
     const YoutubeTrack(
       id: 'hOHKltAiKXQ',

@@ -106,5 +106,18 @@ void main() {
       expect(track.title, 'Test Song');
       expect(track.durationSeconds, 240);
     });
+
+    test('Fresh Picks contains verified valid tracks and thumbnail URLs', () {
+      expect(CuratedTracks.freshPicksTracks.isNotEmpty, isTrue);
+      final tauba = CuratedTracks.freshPicksTracks.firstWhere((t) => t.title == 'Tauba Tauba');
+      expect(tauba.id, 'RLzC55ai0eo');
+      expect(tauba.thumbnailUrl.contains('RLzC55ai0eo'), isTrue);
+
+      final illuminati = CuratedTracks.freshPicksTracks.firstWhere((t) => t.title == 'Illuminati');
+      expect(illuminati.id, 'tOM-nWPcR4U');
+
+      final dieWithASmile = CuratedTracks.freshPicksTracks.firstWhere((t) => t.title == 'Die With A Smile');
+      expect(dieWithASmile.id, 'bESGLojNYSo');
+    });
   });
 }

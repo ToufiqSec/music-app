@@ -5,7 +5,7 @@ import '../theme/app_motion.dart';
 import '../theme/app_radii.dart';
 import '../theme/app_shadows.dart';
 import '../theme/app_text_styles.dart';
-import 'generated_cover_art.dart';
+import 'cascading_artwork.dart';
 
 class ContentCard extends StatefulWidget {
   final String title;
@@ -27,32 +27,6 @@ class ContentCard extends StatefulWidget {
 
 class _ContentCardState extends State<ContentCard> {
   bool _isPressed = false;
-
-  Widget _buildShimmerSkeleton() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface2,
-        borderRadius: AppRadii.borderMedium,
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.surface1,
-            AppColors.surface2,
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDesignedPlaceholder() {
-    return GeneratedCoverArt(
-      title: widget.title,
-      artist: widget.subtitle,
-      size: 156,
-      borderRadius: AppRadii.borderMedium,
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -89,16 +63,15 @@ class _ContentCardState extends State<ContentCard> {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      if (widget.imageUrl != null && widget.imageUrl!.trim().isNotEmpty)
-                        CachedNetworkImage(
-                          imageUrl: widget.imageUrl!,
-                          fit: BoxFit.cover,
-                          memCacheWidth: 400,
-                          placeholder: (_, __) => _buildShimmerSkeleton(),
-                          errorWidget: (_, __, ___) => _buildDesignedPlaceholder(),
-                        )
-                      else
-                        _buildDesignedPlaceholder(),
+                      CascadingArtwork(
+                        imageUrl: widget.imageUrl,
+                        title: widget.title,
+                        artist: widget.subtitle,
+                        width: 156,
+                        height: 112,
+                        borderRadius: AppRadii.borderMedium,
+                        fit: BoxFit.cover,
+                      ),
                       if (_isPressed)
                         Container(color: AppColors.surfaceGlow.withValues(alpha: 0.2)),
                     ],
