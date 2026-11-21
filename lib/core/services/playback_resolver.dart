@@ -289,12 +289,7 @@ class PlaybackResolver {
             );
           }
         }
-        // Policy: Do NOT extract, proxy or re-host YouTube streams for podcasts (Phase 3)
-        debugPrint('[PlaybackResolver] Podcast episode has no audio enclosure: "${track.title}"');
-        return PlaybackResolutionResult.failure(
-          'Audio not available for this episode',
-          sourceType: 'missing_enclosure',
-        );
+        debugPrint('[PlaybackResolver] Podcast has no direct RSS enclosure; falling back to streaming resolver: "${track.title}"');
       }
 
       final streamUrl = await musicService.getAudioStreamUrl(

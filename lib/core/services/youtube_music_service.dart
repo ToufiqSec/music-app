@@ -23,13 +23,63 @@ class CachedStreamItem {
 /// Tier 3: Spreaker official CloudFront MP3 CDN for Sunday Suspense / Mirchi Bangla
 /// Tier 4: Local offline audio cache
 class YoutubeMusicService {
-  final YoutubeExplode _yt = YoutubeExplode();
+  YoutubeExplode _yt = YoutubeExplode();
   final Map<String, CachedStreamItem> _streamCache = {};
   Timer? _debounceTimer;
+
+  void _recreateYoutubeClient() {
+    try {
+      _yt.close();
+    } catch (_) {}
+    _yt = YoutubeExplode();
+  }
 
   void dispose() {
     _debounceTimer?.cancel();
     _yt.close();
+  }
+
+  /// Secondary public resolver for long-form podcasts when direct manifest times out
+  Future<String?> _resolveFromSecondaryInstances(String videoId) async {
+    final instances = [
+      'https://inv.nadeko.net/api/v1/videos/$videoId',
+      'https://invidious.jing.rocks/api/v1/videos/$videoId',
+      'https://pipedapi.tokhmi.xyz/streams/$videoId',
+    ];
+
+    for (final endpoint in instances) {
+      try {
+        final uri = Uri.parse(endpoint);
+        final response = await http.get(uri).timeout(const Duration(seconds: 5));
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          if (data is Map<String, dynamic>) {
+            final adaptive = data['adaptiveFormats'] as List<dynamic>?;
+            if (adaptive != null) {
+              for (final fmt in adaptive) {
+                final type = fmt['type']?.toString().toLowerCase() ?? '';
+                final url = fmt['url']?.toString();
+                if (type.startsWith('audio/') && url != null && url.isNotEmpty) {
+                  debugPrint('[StreamResolver] Resolved secondary stream from Invidious: $endpoint');
+                  return url;
+                }
+              }
+            }
+            final audioStreams = data['audioStreams'] as List<dynamic>?;
+            if (audioStreams != null && audioStreams.isNotEmpty) {
+              final url = audioStreams.first['url']?.toString();
+              if (url != null && url.isNotEmpty) {
+                debugPrint('[StreamResolver] Resolved secondary stream from Piped: $endpoint');
+                return url;
+              }
+            }
+          }
+        }
+      } catch (_) {
+        continue;
+      }
+    }
+    return null;
   }
 
   /// Cleans query strings by stripping parenthetical film tags, audio tags, and punctuation
@@ -403,10 +453,19 @@ class YoutubeMusicService {
     // 4. YouTube Explode stream extraction for valid 11-char YouTube IDs
     final isYouTubeId = RegExp(r'^[a-zA-Z0-9_-]{11}$').hasMatch(trackId);
     if (isYouTubeId) {
+      final isLongOrPodcast = fallbackQuery != null &&
+          (fallbackQuery.toLowerCase().contains('podcast') ||
+           fallbackQuery.toLowerCase().contains('episode') ||
+           fallbackQuery.toLowerCase().contains('trs') ||
+           fallbackQuery.toLowerCase().contains('ranveer') ||
+           fallbackQuery.toLowerCase().contains('suspense') ||
+           fallbackQuery.toLowerCase().contains('show') ||
+           fallbackQuery.toLowerCase().contains('talk'));
+      // Dynamic Adaptive Timeout: 28 seconds for podcasts / long videos, 18 seconds for songs
+      final timeoutDuration = isLongOrPodcast ? const Duration(seconds: 28) : const Duration(seconds: 18);
+
       try {
-        final manifest = await _yt.videos.streamsClient.getManifest(trackId).timeout(
-          const Duration(seconds: 15),
-        );
+        final manifest = await _yt.videos.streamsClient.getManifest(trackId).timeout(timeoutDuration);
         final audioOnlyStreams = manifest.audioOnly;
         if (audioOnlyStreams.isNotEmpty) {
           // Universal hardware decoding: Prefer MP4 / AAC audio stream
@@ -435,6 +494,19 @@ class YoutubeMusicService {
         }
       } catch (e) {
         debugPrint('[StreamResolverAudit] YouTube Explode error for $trackId: $e');
+        _recreateYoutubeClient();
+
+        // Secondary fallback to Invidious / Piped mirror instances
+        try {
+          final secondaryUrl = await _resolveFromSecondaryInstances(trackId);
+          if (secondaryUrl != null) {
+            _streamCache[trackId] = CachedStreamItem(
+              url: secondaryUrl,
+              expiresAt: parseStreamExpiry(secondaryUrl),
+            );
+            return secondaryUrl;
+          }
+        } catch (_) {}
       }
     }
 

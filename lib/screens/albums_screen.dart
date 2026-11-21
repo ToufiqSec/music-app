@@ -1,9 +1,14 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import '../providers/audio_provider.dart';
 import '../features/music/models/music_models.dart';
+import '../core/crypto/des_ecb.dart';
 import '../core/services/curated_tracks.dart';
 import '../core/services/artwork_resolver.dart';
+import '../widgets/app_profile_avatar.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radii.dart';
 import '../theme/app_text_styles.dart';
@@ -36,6 +41,102 @@ class AlbumsScreen extends StatefulWidget {
 class _AlbumsScreenState extends State<AlbumsScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _filterQuery = '';
+  List<AlbumData> _dynamicAlbums = [];
+  bool _isLoadingDynamicAlbums = false;
+  Timer? _searchDebounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchDynamicAlbums('trending 2026');
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _searchDebounce?.cancel();
+    super.dispose();
+  }
+
+  /// Fetches real trending albums from JioSaavn catalog
+  Future<void> _fetchDynamicAlbums(String query) async {
+    setState(() => _isLoadingDynamicAlbums = true);
+    final cleanQuery = query.trim().isNotEmpty ? query.trim() : 'trending 2026';
+
+    try {
+      final uri = Uri.parse(
+        'https://www.jiosaavn.com/api.php?__call=search.getAlbumResults&_format=json&cc=in&n=18&p=1&q=${Uri.encodeComponent(cleanQuery)}',
+      );
+      final response = await http.get(uri, headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'application/json',
+      }).timeout(const Duration(seconds: 7));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final results = data['results'] as List<dynamic>? ?? [];
+
+        final fetched = <AlbumData>[];
+        for (final item in results) {
+          final rawId = item['albumid']?.toString() ?? '';
+          if (rawId.isEmpty) continue;
+
+          final title = _unescapeHtml(item['title']?.toString() ?? item['text']?.toString() ?? 'Album');
+          final artist = _unescapeHtml(item['primary_artists']?.toString() ?? item['music']?.toString() ?? 'Various Artists');
+          var image = item['image']?.toString() ?? '';
+          if (image.contains('150x150')) {
+            image = image.replaceAll('150x150', '500x500');
+          }
+
+          fetched.add(
+            AlbumData(
+              id: 'saavn_album_$rawId',
+              title: title,
+              artist: artist,
+              coverUrl: image,
+              trackCount: 0, // Loaded dynamically on tap
+              tracks: [],
+            ),
+          );
+        }
+
+        if (mounted) {
+          setState(() {
+            _dynamicAlbums = fetched;
+            _isLoadingDynamicAlbums = false;
+          });
+        }
+        return;
+      }
+    } catch (e) {
+      debugPrint('[AlbumsScreen] Failed to fetch dynamic albums: $e');
+    }
+
+    if (mounted) {
+      setState(() => _isLoadingDynamicAlbums = false);
+    }
+  }
+
+  void _onSearchChanged(String val) {
+    setState(() => _filterQuery = val.trim());
+    _searchDebounce?.cancel();
+    if (val.trim().length >= 3) {
+      _searchDebounce = Timer(const Duration(milliseconds: 600), () {
+        _fetchDynamicAlbums(val.trim());
+      });
+    } else if (val.trim().isEmpty) {
+      _fetchDynamicAlbums('trending 2026');
+    }
+  }
+
+  String _unescapeHtml(String text) {
+    return text
+        .replaceAll('&quot;', '"')
+        .replaceAll('&amp;', '&')
+        .replaceAll('&#039;', "'")
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>');
+  }
 
   List<AlbumData> _getAlbums(AudioProvider audio) {
     final List<AlbumData> albums = [];
@@ -47,7 +148,7 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
         AlbumData(
           id: 'user_pl_$name',
           title: name,
-          artist: 'Personal Album',
+          artist: 'Personal Playlist',
           coverUrl: '',
           trackCount: entry.value.length,
           tracks: [],
@@ -55,49 +156,54 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
       );
     }
 
-    // 2. Curated Albums & Compilations
-    albums.addAll([
-      AlbumData(
-        id: 'curated_midnight',
-        title: 'Midnight Melancholy',
-        artist: 'Various Artists • Late Night Session',
-        coverUrl: 'https://i.ytimg.com/vi/aJOTlE1K90k/hqdefault.jpg',
-        trackCount: CuratedTracks.lateNightTracks.length,
-        tracks: CuratedTracks.lateNightTracks,
-      ),
-      AlbumData(
-        id: 'curated_sunset',
-        title: 'Sunset Acoustic Vibes',
-        artist: 'Acoustic Sessions 2026',
-        coverUrl: 'https://i.ytimg.com/vi/1poi0oK3W6U/hqdefault.jpg',
-        trackCount: CuratedTracks.chillTracks.length,
-        tracks: CuratedTracks.chillTracks,
-      ),
-      AlbumData(
-        id: 'curated_trending',
-        title: 'Top Hits Billboard 2026',
-        artist: 'Trending Chartbusters',
-        coverUrl: 'https://i.ytimg.com/vi/IltsbcL43dA/hqdefault.jpg',
-        trackCount: CuratedTracks.trendingTracks.length,
-        tracks: CuratedTracks.trendingTracks,
-      ),
-      AlbumData(
-        id: 'curated_workout',
-        title: 'High Energy Cardio & Bass',
-        artist: 'Workout Motivation',
-        coverUrl: 'https://i.ytimg.com/vi/sCbv_VIdy3A/hqdefault.jpg',
-        trackCount: CuratedTracks.workoutTracks.length,
-        tracks: CuratedTracks.workoutTracks,
-      ),
-      AlbumData(
-        id: 'curated_focus',
-        title: 'Deep Focus & Lo-Fi Beats',
-        artist: 'Study Frequency',
-        coverUrl: 'https://i.ytimg.com/vi/5qap5aO4i9A/hqdefault.jpg',
-        trackCount: CuratedTracks.focusTracks.length,
-        tracks: CuratedTracks.focusTracks,
-      ),
-    ]);
+    // 2. Dynamic Catalog Albums from API
+    if (_dynamicAlbums.isNotEmpty) {
+      albums.addAll(_dynamicAlbums);
+    } else {
+      // Curated Fallbacks if API request is pending or offline
+      albums.addAll([
+        AlbumData(
+          id: 'curated_midnight',
+          title: 'Midnight Melancholy',
+          artist: 'Various Artists • Late Night Session',
+          coverUrl: 'https://i.ytimg.com/vi/aJOTlE1K90k/hqdefault.jpg',
+          trackCount: CuratedTracks.lateNightTracks.length,
+          tracks: CuratedTracks.lateNightTracks,
+        ),
+        AlbumData(
+          id: 'curated_sunset',
+          title: 'Sunset Acoustic Vibes',
+          artist: 'Acoustic Sessions 2026',
+          coverUrl: 'https://i.ytimg.com/vi/1poi0oK3W6U/hqdefault.jpg',
+          trackCount: CuratedTracks.chillTracks.length,
+          tracks: CuratedTracks.chillTracks,
+        ),
+        AlbumData(
+          id: 'curated_trending',
+          title: 'Top Hits Billboard 2026',
+          artist: 'Trending Chartbusters',
+          coverUrl: 'https://i.ytimg.com/vi/IltsbcL43dA/hqdefault.jpg',
+          trackCount: CuratedTracks.trendingTracks.length,
+          tracks: CuratedTracks.trendingTracks,
+        ),
+        AlbumData(
+          id: 'curated_workout',
+          title: 'High Energy Cardio & Bass',
+          artist: 'Workout Motivation',
+          coverUrl: 'https://i.ytimg.com/vi/sCbv_VIdy3A/hqdefault.jpg',
+          trackCount: CuratedTracks.workoutTracks.length,
+          tracks: CuratedTracks.workoutTracks,
+        ),
+        AlbumData(
+          id: 'curated_focus',
+          title: 'Deep Focus & Lo-Fi Beats',
+          artist: 'Study Frequency',
+          coverUrl: 'https://i.ytimg.com/vi/5qap5aO4i9A/hqdefault.jpg',
+          trackCount: CuratedTracks.focusTracks.length,
+          tracks: CuratedTracks.focusTracks,
+        ),
+      ]);
+    }
 
     if (_filterQuery.isEmpty) return albums;
     final q = _filterQuery.toLowerCase();
@@ -105,8 +211,53 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
   }
 
   void _openAlbumDetails(AlbumData album, AudioProvider audio) async {
-    List<YoutubeTrack> tracks = album.tracks;
-    if (tracks.isEmpty && album.id.startsWith('user_pl_')) {
+    List<YoutubeTrack> tracks = List.from(album.tracks);
+
+    // If dynamic JioSaavn album with tracks not yet loaded, fetch them live
+    if (tracks.isEmpty && album.id.startsWith('saavn_album_')) {
+      final rawAlbumId = album.id.replaceFirst('saavn_album_', '');
+      try {
+        final uri = Uri.parse(
+          'https://www.jiosaavn.com/api.php?__call=content.getAlbumDetails&_format=json&cc=in&albumid=$rawAlbumId',
+        );
+        final resp = await http.get(uri).timeout(const Duration(seconds: 7));
+        if (resp.statusCode == 200) {
+          final data = json.decode(resp.body);
+          final songs = data['songs'] as List<dynamic>? ?? [];
+
+          for (final s in songs) {
+            final encryptedUrl = s['encrypted_media_url'] as String? ?? '';
+            final has320 = s['320kbps'] == 'true' || s['320kbps'] == true;
+            String? streamUrl;
+            if (encryptedUrl.isNotEmpty) {
+              streamUrl = DesEcbDecryptor.decryptMediaUrl(encryptedUrl, is320Available: has320);
+            }
+
+            final trackId = s['id']?.toString() ?? DateTime.now().microsecondsSinceEpoch.toString();
+            final title = _unescapeHtml(s['song']?.toString() ?? s['title']?.toString() ?? 'Unknown Song');
+            final artist = _unescapeHtml(s['primary_artists']?.toString() ?? s['singers']?.toString() ?? album.artist);
+            final duration = int.tryParse(s['duration']?.toString() ?? '0') ?? 0;
+            var image = s['image']?.toString();
+            if (image != null && image.contains('150x150')) {
+              image = image.replaceAll('150x150', '500x500');
+            }
+
+            tracks.add(
+              YoutubeTrack(
+                id: trackId,
+                title: title,
+                artist: artist,
+                durationSeconds: duration,
+                thumbnailUrl: image ?? album.coverUrl,
+                audioStreamUrl: streamUrl,
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        debugPrint('[AlbumsScreen] Failed to load album tracks: $e');
+      }
+    } else if (tracks.isEmpty && album.id.startsWith('user_pl_')) {
       tracks = await audio.getPlaylistTracks(album.title);
     }
 
@@ -157,7 +308,10 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
                             const SizedBox(height: 4),
                             Text(album.artist, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppTextStyles.bodySecondary),
                             const SizedBox(height: 4),
-                            Text('${tracks.length} songs', style: const TextStyle(color: AppColors.accentTeal, fontSize: 12)),
+                            Text(
+                              tracks.isNotEmpty ? '${tracks.length} lossless songs' : 'Loading tracks...',
+                              style: const TextStyle(color: AppColors.accentTeal, fontSize: 12, fontWeight: FontWeight.w600),
+                            ),
                           ],
                         ),
                       ),
@@ -177,7 +331,7 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
                 Expanded(
                   child: tracks.isEmpty
                       ? const Center(
-                          child: Text('No tracks in this album yet', style: TextStyle(color: AppColors.textSecondary)),
+                          child: CircularProgressIndicator(color: AppColors.primarySoft),
                         )
                       : ListView.builder(
                           controller: scrollController,
@@ -215,24 +369,28 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
   Widget build(BuildContext context) {
     final audio = context.watch<AudioProvider>();
     final albums = _getAlbums(audio);
+    final bottomInset = 72.0 + 64.0 + MediaQuery.of(context).padding.bottom + 28.0;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SafeArea(
         bottom: false,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 160),
+          padding: EdgeInsets.fromLTRB(16, 16, 16, bottomInset),
           children: [
             Row(
               children: [
                 const Icon(Icons.album_rounded, color: AppColors.accentTeal, size: 28),
                 const SizedBox(width: 10),
-                Text('Albums & Collections', style: AppTextStyles.h1.copyWith(fontSize: 24)),
+                Expanded(
+                  child: Text('Albums & Collections', style: AppTextStyles.h1.copyWith(fontSize: 22)),
+                ),
+                const AppProfileAvatar(),
               ],
             ),
             const SizedBox(height: 6),
             Text(
-              'Browse albums, compilations, and personal records',
+              'Browse live album charts, compilations, and personal records',
               style: AppTextStyles.bodySecondary.copyWith(fontSize: 13),
             ),
             const SizedBox(height: 18),
@@ -242,9 +400,19 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
               controller: _searchController,
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
-                hintText: 'Search albums and artists...',
+                hintText: 'Search live albums and artists...',
                 hintStyle: const TextStyle(color: AppColors.textTertiary, fontSize: 13),
                 prefixIcon: const Icon(Icons.search_rounded, color: AppColors.iconIdle),
+                suffixIcon: _isLoadingDynamicAlbums
+                    ? const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primarySoft),
+                        ),
+                      )
+                    : null,
                 filled: true,
                 fillColor: AppColors.surface1,
                 border: OutlineInputBorder(
@@ -256,7 +424,7 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
                   borderSide: const BorderSide(color: AppColors.cardBorder),
                 ),
               ),
-              onChanged: (val) => setState(() => _filterQuery = val.trim()),
+              onChanged: _onSearchChanged,
             ),
             const SizedBox(height: 20),
 
@@ -317,7 +485,9 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${album.trackCount} tracks',
+                          album.id.startsWith('saavn_album_')
+                              ? 'Lossless CD • Tap to play'
+                              : '${album.trackCount} tracks',
                           style: const TextStyle(
                             color: AppColors.accentTeal,
                             fontSize: 10,

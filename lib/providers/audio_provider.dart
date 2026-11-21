@@ -42,6 +42,7 @@ class AudioProvider extends ChangeNotifier {
   bool _preFetchedNextTrack = false;
   bool _isTransitioningTrack = false;
   String? _playbackErrorMessage;
+  final ValueNotifier<String?> playbackErrorNotifier = ValueNotifier<String?>(null);
   final Set<String> _retriedPreviewCutoffTrackIds = {};
   Timer? _seekDebounceTimer;
   Timer? _backgroundCacheTimer;
@@ -98,6 +99,16 @@ class AudioProvider extends ChangeNotifier {
 
   void clearPlaybackErrorMessage() {
     _playbackErrorMessage = null;
+    playbackErrorNotifier.value = null;
+  }
+
+  Future<void> retryCurrentTrack() async {
+    if (_currentTrack != null) {
+      _playbackErrorMessage = null;
+      playbackErrorNotifier.value = null;
+      _musicService.invalidateCache(_currentTrack!.id);
+      await playTrack(_currentTrack!, _playlistQueue.isNotEmpty ? _playlistQueue : null);
+    }
   }
 
   bool isTrackLiked(String trackId) => _favoriteIds.contains(trackId);
@@ -441,15 +452,17 @@ class AudioProvider extends ChangeNotifier {
             track.title.toLowerCase().contains('episode');
         final msg = isPodcast ? 'Audio not available for this episode' : 'Audio stream currently unavailable';
         _playbackErrorMessage = msg;
+        playbackErrorNotifier.value = msg;
         debugPrint('[AudioProvider] Playback failure for "${track.title}" (ID: ${track.id}) - Requested URL: "${track.audioStreamUrl}" - Player/Resolver Error: "${resolution.failureReason}"');
         _isBuffering = false;
         _bufferingWatchdogTimer?.cancel();
         notifyListeners();
 
-        // Clear error message within 2 seconds so player never stays stuck at 0:00 (Issue 2)
-        Timer(const Duration(seconds: 2), () {
+        // Clear error message after 6 seconds so user has time to tap Retry
+        Timer(const Duration(seconds: 6), () {
           if (_playbackErrorMessage == msg) {
             _playbackErrorMessage = null;
+            playbackErrorNotifier.value = null;
             notifyListeners();
           }
         });

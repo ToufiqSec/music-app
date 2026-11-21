@@ -70,12 +70,17 @@ class _CascadingArtworkState extends State<CascadingArtwork> {
       final ytMatch = RegExp(r'(?:i\.ytimg\.com/vi/|youtube\.com/vi/)([a-zA-Z0-9_-]{11})').firstMatch(original);
       if (ytMatch != null) {
         final videoId = ytMatch.group(1)!;
-        final tiers = [
-          'https://i.ytimg.com/vi/$videoId/hqdefault.jpg',
-          'https://i.ytimg.com/vi/$videoId/mqdefault.jpg',
-          'https://i.ytimg.com/vi/$videoId/sddefault.jpg',
-          'https://i.ytimg.com/vi/$videoId/maxresdefault.jpg',
-        ];
+        final isSmallThumbnail = widget.width != null && widget.width! <= 120;
+        final tiers = isSmallThumbnail
+            ? [
+                'https://i.ytimg.com/vi/$videoId/mqdefault.jpg',
+                'https://i.ytimg.com/vi/$videoId/hqdefault.jpg',
+              ]
+            : [
+                'https://i.ytimg.com/vi/$videoId/hqdefault.jpg',
+                'https://i.ytimg.com/vi/$videoId/mqdefault.jpg',
+                'https://i.ytimg.com/vi/$videoId/sddefault.jpg',
+              ];
         list.clear();
         for (final tier in tiers) {
           if (!list.contains(tier)) {
@@ -95,8 +100,14 @@ class _CascadingArtworkState extends State<CascadingArtwork> {
     } else if (widget.trackId != null && RegExp(r'^[a-zA-Z0-9_-]{11}$').hasMatch(widget.trackId!)) {
       // Fallback from YouTube track ID directly if image URL is null/empty
       final ytId = widget.trackId!;
-      list.add('https://i.ytimg.com/vi/$ytId/hqdefault.jpg');
-      list.add('https://i.ytimg.com/vi/$ytId/mqdefault.jpg');
+      final isSmall = widget.width != null && widget.width! <= 120;
+      if (isSmall) {
+        list.add('https://i.ytimg.com/vi/$ytId/mqdefault.jpg');
+        list.add('https://i.ytimg.com/vi/$ytId/hqdefault.jpg');
+      } else {
+        list.add('https://i.ytimg.com/vi/$ytId/hqdefault.jpg');
+        list.add('https://i.ytimg.com/vi/$ytId/mqdefault.jpg');
+      }
     }
 
     _candidates = list;
@@ -168,8 +179,8 @@ class _CascadingArtworkState extends State<CascadingArtwork> {
     }
 
     final currentUrl = _candidates[_fallbackIndex];
-    final memWidth = (widget.width != null ? (widget.width! * 1.5).toInt() : 200).clamp(100, 500);
-    final memHeight = (widget.height != null ? (widget.height! * 1.5).toInt() : 150).clamp(100, 500);
+    final memWidth = (widget.width != null ? (widget.width! * 1.5).toInt() : 180).clamp(60, 360);
+    final memHeight = (widget.height != null ? (widget.height! * 1.5).toInt() : 180).clamp(60, 360);
     final targetSize = '${(widget.width ?? 156).toInt()}x${(widget.height ?? 112).toInt()}';
     final cacheId = widget.trackId ?? widget.title.hashCode.abs().toString();
     final cacheKey = 'track:${cacheId}_${_fallbackIndex}:$targetSize';
@@ -187,8 +198,8 @@ class _CascadingArtworkState extends State<CascadingArtwork> {
         fit: widget.fit,
         memCacheWidth: memWidth,
         memCacheHeight: memHeight,
-        maxWidthDiskCache: 600,
-        maxHeightDiskCache: 600,
+        maxWidthDiskCache: 360,
+        maxHeightDiskCache: 360,
         placeholder: (_, __) => _buildShimmer(),
         imageBuilder: (context, imageProvider) {
           // If card was recycled and an old image arrived, reject it

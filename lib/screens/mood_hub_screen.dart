@@ -12,6 +12,7 @@ import '../theme/app_shadows.dart';
 import '../widgets/generated_cover_art.dart';
 import '../widgets/cascading_artwork.dart';
 import '../widgets/twilight_scene_background.dart';
+import '../widgets/app_profile_avatar.dart';
 
 /// Full-Screen AI Mood & Vibe Recommendation Hub (Issue 7 - Step 1 & 2)
 /// Designed strictly in the Twilight Calm design system:
@@ -81,6 +82,49 @@ class _MoodHubScreenState extends State<MoodHubScreen> {
     }
   }
 
+  Future<void> _triggerInstantPreset(String name, List<String> moodIds, AudioProvider audio) async {
+    HapticFeedback.heavyImpact();
+    setState(() {
+      _selectedMoodIds = List.from(moodIds);
+      _customVibeController.clear();
+      _isGenerating = true;
+      _statusMessage = 'Launching $name acoustic immersion...';
+    });
+
+    try {
+      final mixResult = await _engine.generateRecommendations(
+        selectedMoodIds: moodIds,
+        customDescription: name,
+        style: MoodContentStyle.music,
+      );
+
+      if (mounted) {
+        setState(() {
+          _recommendedTracks = mixResult.tracks;
+          _companionMessage = mixResult.companionMessage;
+          _isGenerating = false;
+        });
+
+        if (mixResult.tracks.isNotEmpty) {
+          audio.playTrack(mixResult.tracks.first, mixResult.tracks);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: AppColors.surface1,
+              content: Text(
+                '⚡ Immersed in $name • Playing now',
+                style: AppTextStyles.bodySmall.copyWith(color: AppColors.accentTeal),
+              ),
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isGenerating = false);
+    }
+  }
+
   void _playAllMix(AudioProvider audio) {
     if (_recommendedTracks.isEmpty) return;
     HapticFeedback.lightImpact();
@@ -118,14 +162,18 @@ class _MoodHubScreenState extends State<MoodHubScreen> {
                 left: 16,
                 right: 16,
                 top: 16,
-                bottom: 72.0 + 64.0 + MediaQuery.of(context).padding.bottom + 20.0,
+                bottom: 72.0 + 64.0 + MediaQuery.of(context).padding.bottom + 28.0,
               ),
               children: [
-                // 1. Header with Glowing AI Companion Avatar
+                // 1. Header with Glowing AI Companion Avatar & Profile
                 _buildHeader(),
+                const SizedBox(height: 16),
+
+                // 2. Instant 1-Tap Presets (Eliminating Choice Paralysis)
+                _buildInstantPresets(audio),
                 const SizedBox(height: 20),
 
-                // 2. Multi-Select Mixable Mood Grid
+                // 3. Multi-Select Mixable Mood Grid
                 _buildMoodChipsSection(),
                 const SizedBox(height: 20),
 
@@ -208,6 +256,127 @@ class _MoodHubScreenState extends State<MoodHubScreen> {
                 style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
               ),
             ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        const AppProfileAvatar(),
+      ],
+    );
+  }
+
+  /// 1-Tap Glowing Presets: Eliminating choice paralysis with instant acoustic immersion
+  Widget _buildInstantPresets(AudioProvider audio) {
+    final presets = [
+      (
+        icon: '⚡',
+        title: 'Deep Focus',
+        subtitle: 'Study & Lo-Fi',
+        moodIds: ['focus', 'chill', 'instrumental'],
+        gradient: [const Color(0xFF0F2027), const Color(0xFF203A43), const Color(0xFF2C5364)],
+        accent: AppColors.accentTeal,
+      ),
+      (
+        icon: '🌙',
+        title: 'Late Night',
+        subtitle: 'Melancholy Feels',
+        moodIds: ['late_night', 'sad', 'chill'],
+        gradient: [const Color(0xFF141E30), const Color(0xFF243B55), const Color(0xFF3A1C71)],
+        accent: const Color(0xFFB39DDB),
+      ),
+      (
+        icon: '🔥',
+        title: 'High Energy',
+        subtitle: 'Bass & Motivation',
+        moodIds: ['workout', 'party', 'focus'],
+        gradient: [const Color(0xFF200122), const Color(0xFF6f0000), const Color(0xFF900C3F)],
+        accent: const Color(0xFFFF7043),
+      ),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.flash_on_rounded, color: AppColors.accentTeal, size: 16),
+            const SizedBox(width: 6),
+            Text(
+              'Instant Immersion (1-Tap Presets)',
+              style: AppTextStyles.sectionTitle.copyWith(fontSize: 14),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 84,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: presets.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            itemBuilder: (context, i) {
+              final p = presets[i];
+              return InkWell(
+                borderRadius: AppRadii.borderMedium,
+                onTap: () => _triggerInstantPreset(p.title, p.moodIds, audio),
+                child: Container(
+                  width: 140,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: p.gradient,
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: AppRadii.borderMedium,
+                    border: Border.all(
+                      color: p.accent.withValues(alpha: 0.45),
+                      width: 1.2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: p.accent.withValues(alpha: 0.2),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Row(
+                        children: [
+                          Text(p.icon, style: const TextStyle(fontSize: 16)),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              p.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        p.subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.75),
+                          fontSize: 10.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         ),
       ],

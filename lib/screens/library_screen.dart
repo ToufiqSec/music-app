@@ -13,6 +13,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_radii.dart';
 import '../theme/app_text_styles.dart';
 import 'downloads_screen.dart';
+import '../widgets/app_profile_avatar.dart';
 
 class LibraryScreen extends StatelessWidget {
   final VoidCallback? onNavigateToDownloads;
@@ -40,7 +41,7 @@ class LibraryScreen extends StatelessWidget {
                 left: 16,
                 right: 16,
                 top: 12,
-                bottom: 72.0 + 64.0 + MediaQuery.of(context).padding.bottom + 20.0, // Clear mini-player & bottom nav
+                bottom: 72.0 + 64.0 + MediaQuery.of(context).padding.bottom + 28.0, // Clear mini-player & bottom nav
               ),
               children: [
             // Top Bar
@@ -51,12 +52,20 @@ class LibraryScreen extends StatelessWidget {
                   'Your Library',
                   style: AppTextStyles.h1.copyWith(fontSize: 26),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.add_rounded, color: AppColors.iconIdle, size: 28),
-                  onPressed: () {
-                    HapticFeedback.lightImpact();
-                    _showCreatePlaylistDialog(context, audioProvider);
-                  },
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.add_rounded, color: AppColors.iconIdle, size: 28),
+                      tooltip: 'New Playlist',
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        _showCreatePlaylistDialog(context, audioProvider);
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    const AppProfileAvatar(),
+                  ],
                 ),
               ],
             ),

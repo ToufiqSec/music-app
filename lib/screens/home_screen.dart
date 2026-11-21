@@ -48,11 +48,16 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentTabIndex = 0;
   Timer? _periodicUpdateTimer;
+  AudioProvider? _audioProvider;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (mounted) {
+        _audioProvider = context.read<AudioProvider>();
+        _audioProvider?.playbackErrorNotifier.addListener(_onPlaybackError);
+      }
       await AppUpdateService.getInstalledVersionName();
       await Future.delayed(const Duration(milliseconds: 1200));
       if (mounted) {
@@ -65,6 +70,34 @@ class _HomeScreenState extends State<HomeScreen> {
         _checkForUpdates(force: false);
       });
     });
+  }
+
+  void _onPlaybackError() {
+    final err = _audioProvider?.playbackErrorNotifier.value;
+    if (err != null && mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(err, style: const TextStyle(color: Colors.white, fontSize: 13)),
+          backgroundColor: AppColors.surface1,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: AppRadii.borderMedium),
+          margin: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            bottom: 72.0 + 64.0 + MediaQuery.of(context).padding.bottom + 12.0,
+          ),
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: 'Retry',
+            textColor: AppColors.primarySoft,
+            onPressed: () {
+              _audioProvider?.retryCurrentTrack();
+            },
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _checkArtistOnboardingOnFirstLaunch() async {
@@ -83,6 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _audioProvider?.playbackErrorNotifier.removeListener(_onPlaybackError);
     _periodicUpdateTimer?.cancel();
     super.dispose();
   }

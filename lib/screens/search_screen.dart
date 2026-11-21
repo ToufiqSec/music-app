@@ -19,6 +19,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_radii.dart';
 import '../theme/app_text_styles.dart';
 import '../theme/app_shadows.dart';
+import '../widgets/app_profile_avatar.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -254,16 +255,24 @@ class _SearchScreenState extends State<SearchScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. Search Input Header
+            // 1. Search Input Header with Profile Avatar
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: AppSearchField(
-                controller: _searchController,
-                placeholder: 'Search songs, artists, or genres...',
-                onChanged: (q) {
-                  setState(() => _selectedCategory = null);
-                  _onQueryChanged(q);
-                },
+              child: Row(
+                children: [
+                  Expanded(
+                    child: AppSearchField(
+                      controller: _searchController,
+                      placeholder: 'Search songs, artists, or genres...',
+                      onChanged: (q) {
+                        setState(() => _selectedCategory = null);
+                        _onQueryChanged(q);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  const AppProfileAvatar(),
+                ],
               ),
             ),
 
@@ -473,7 +482,7 @@ class _SearchScreenState extends State<SearchScreen> {
       );
     }
 
-    final bottomPadding = 72.0 + 64.0 + MediaQuery.of(context).padding.bottom + 20.0;
+    final bottomPadding = 72.0 + 64.0 + MediaQuery.of(context).padding.bottom + 28.0;
     return ListView.separated(
       padding: EdgeInsets.only(
         left: 16,
@@ -641,10 +650,11 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget _buildRichEmptyState(AudioProvider audio) {
     final recent = SearchCacheStore.getRecentSearches();
     final history = audio.historyTracks;
+    final bottomPadding = 72.0 + 64.0 + MediaQuery.of(context).padding.bottom + 28.0;
 
     return ListView(
       physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.only(left: 16, right: 16, top: 12, bottom: 160),
+      padding: EdgeInsets.only(left: 16, right: 16, top: 12, bottom: bottomPadding),
       children: [
         // 1. Recent Searches Section
         if (recent.isNotEmpty) ...[

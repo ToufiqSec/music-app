@@ -136,12 +136,21 @@ class MiniPlayer extends StatelessWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              track.artist,
+                              isBuffering
+                                  ? ((track.durationSeconds > 1200 ||
+                                          track.title.toLowerCase().contains('podcast') ||
+                                          track.title.toLowerCase().contains('suspense') ||
+                                          track.title.toLowerCase().contains('episode') ||
+                                          track.title.toLowerCase().contains('trs'))
+                                      ? 'Buffering podcast audio...'
+                                      : 'Buffering audio...')
+                                  : track.artist,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: AppTextStyles.caption.copyWith(
-                                color: AppColors.textSecondary,
+                                color: isBuffering ? AppColors.accentTeal : AppColors.textSecondary,
                                 fontSize: 11.5,
+                                fontWeight: isBuffering ? FontWeight.w500 : FontWeight.normal,
                               ),
                             ),
                           ],
