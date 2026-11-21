@@ -138,12 +138,15 @@ jobs:
           body: |
             ### 🎵 Music App v${{ env.APP_VERSION }}
 
-            **What's included:**
-            - 🚫 Ad-Free Zero-Delay Streaming Engine (JioSaavn 320kbps + YouTube audio-only extraction)
-            - 🌙 Universal UI: Twilight Calm Design System
-            - 🎵 Native Background & Lock-Screen Media Controls
-            - 💾 Local Disk Cache & 0ms Offline Playback Vault
-            - 🔄 In-App Auto-Update System (seamless in-place updates)
+            **What's new in this release:**
+            - 🖼️ **One Song, One Image Guarantee:** No more reused compilation banners across songs. Every track gets its own dedicated single/album art.
+            - 🎨 **Crystal-Clear Cover Art:** Replaced broken video IDs with verified high-resolution album covers for curated tracks (*Ishq Bulaava*, *Zehnaseeb*, *Samjhawan*, *Ilahi*, etc.).
+            - 🚫 **Letter Tile Glitch Removed:** Completely eliminated the purple initials box ("I", "Z", "S") in favor of sleek fallback artwork and tap-to-retry actions.
+            - ⚡ **Ultra-Smooth 60 FPS Scrolling:** Bounded memory caching (200x144) and off-screen texture prefetching (`cacheExtent: 600`) eliminate scroll stutter and GPU thrashing.
+            - 🚀 **Instant Home Streaming:** Skeleton placeholders and progressive section rendering stream content in without layout shifts.
+            - 🎙️ **Podcast Audio Playback:** Restored full podcast stream resolution and playback across all feeds.
+            - 🔒 **Security & Stability Hardening:** Fixed login screen double-pop navigation and strengthened TLS verification.
+            - 🎵 **Ad-Free Streaming Engine:** Blazing-fast JioSaavn 320kbps + YouTube audio streams with native background playback.
 
             #### 📲 How to Install:
             1. Download **`music-app-release.apk`** below
