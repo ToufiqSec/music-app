@@ -191,6 +191,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
 
   final List<String> _filters = [
     'All',
+    'Sunday Suspense',
     AppStrings.freshPicksFilterLabel,
     'Podcast',
     'Trending',
@@ -257,9 +258,17 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
     String carousel6Query;
 
     switch (_activeFilter) {
+      case 'Sunday Suspense':
+        quickQuery = 'Sunday Suspense Feluda Satyajit Ray audio story';
+        carousel1Query = 'Sunday Suspense Mirchi Bangla audio stories';
+        carousel2Query = 'Sunday Suspense Professor Shonku Satyajit Ray';
+        carousel3Query = 'Sunday Suspense Taranath Tantrik Mirchi';
+        carousel4Query = 'Sunday Suspense Byomkesh Bakshi audio drama';
+        carousel5Query = 'Sunday Suspense Sherlock Holmes Bengali';
+        carousel6Query = 'Sunday Suspense horror mystery thrillers';
+        break;
       case AppStrings.freshPicksFilterLabel:
       case 'Fresh Picks':
-      case 'YouTube Music':
         quickQuery = 'trending hits 2026';
         carousel1Query = 'top 50 billboard hits';
         carousel2Query = 'bollywood chartbusters';
@@ -490,41 +499,24 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
                 ),
                 const SizedBox(width: 8),
 
-                // Top Action Group (Recent history, Search, Profile)
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildHeaderIconButton(
-                      icon: Icons.history_rounded,
-                      tooltip: 'Recent history',
-                      onTap: () => _showHistorySheet(context, audioProvider),
-                    ),
-                    const SizedBox(width: 8),
-                    _buildHeaderIconButton(
-                      icon: Icons.search_rounded,
-                      tooltip: 'Search',
-                      onTap: widget.onNavigateToSearch,
-                    ),
-                    const SizedBox(width: 8),
-                    _buildProfileAvatar(context, authProvider),
-                  ],
-                ),
+                // Top Action Group (Profile icon only - Phase 2)
+                _buildProfileAvatar(context, authProvider),
               ],
             ),
           ),
 
           const SizedBox(height: 12),
 
-          // Explore Search Bar (Directly matching Twilight Mockup)
+          // Explore Search Bar (Wide bar with rounded corners - Phase 2)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: GestureDetector(
               onTap: widget.onNavigateToSearch,
               child: Container(
-                height: 46,
+                height: 48,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
-                  color: AppColors.surface1.withValues(alpha: 0.9),
+                  color: AppColors.surface1.withValues(alpha: 0.95),
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
                     color: AppColors.surface2,
@@ -535,9 +527,10 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
                   children: [
                     Expanded(
                       child: Text(
-                        'Find the key to balance, songs, artists...',
+                        'Search songs, artists, podcasts',
                         style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.textMuted,
+                          fontSize: 14,
                         ),
                       ),
                     ),
@@ -971,13 +964,21 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
                   HapticFeedback.lightImpact();
                   _showSeeAllModal(title, tracks, audioProvider);
                 },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                  child: Text(
-                    actionLabel,
-                    style: AppTextStyles.caption.copyWith(
-                      color: AppColors.primarySoft,
-                      fontWeight: FontWeight.w600,
+                behavior: HitTestBehavior.opaque,
+                child: Semantics(
+                  button: true,
+                  label: 'See all $title',
+                  child: Container(
+                    constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                    child: Text(
+                      actionLabel,
+                      style: AppTextStyles.caption.copyWith(
+                        color: const Color(0xFFDDD6FE), // WCAG AA compliant contrast (>7:1)
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                 ),
@@ -1130,8 +1131,9 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
 
   String _getCarousel1Title() {
     switch (_activeFilter) {
+      case 'Sunday Suspense':
+        return 'Sunday Suspense: Feluda & Shonku';
       case 'Fresh Picks':
-      case 'YouTube Music':
         return 'Top 50 Fresh Picks';
       case 'Podcast':
         return 'Sunday Suspense Audio Stories';
@@ -1160,8 +1162,9 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
 
   String _getCarousel2Title() {
     switch (_activeFilter) {
+      case 'Sunday Suspense':
+        return 'Sunday Suspense: Mirchi Audio Stories';
       case 'Fresh Picks':
-      case 'YouTube Music':
         return 'Trending Fresh Hits';
       case 'Podcast':
         return 'Popular Podcasts & Talk Shows';
@@ -1189,8 +1192,9 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
 
   String _getCarousel3Title() {
     switch (_activeFilter) {
+      case 'Sunday Suspense':
+        return 'Sunday Suspense: Taranath Tantrik';
       case 'Fresh Picks':
-      case 'YouTube Music':
         return 'Regional Chartbusters';
       case 'Podcast':
         return 'Mystery & Detective Dramas';
@@ -1219,8 +1223,9 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
 
   String _getCarousel4Title() {
     switch (_activeFilter) {
+      case 'Sunday Suspense':
+        return 'Sunday Suspense: Satyajit Ray Classics';
       case 'Fresh Picks':
-      case 'YouTube Music':
         return 'Global Fresh Releases';
       case 'Podcast':
         return 'The Ranveer Show & Talks';
@@ -1248,8 +1253,9 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
 
   String _getCarousel5Title() {
     switch (_activeFilter) {
+      case 'Sunday Suspense':
+        return 'Sunday Suspense: Byomkesh Bakshi';
       case 'Fresh Picks':
-      case 'YouTube Music':
         return 'Acoustic & Chill Mix';
       case 'Podcast':
         return 'Bengali Audio Natok & Thrillers';
@@ -1277,8 +1283,9 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
 
   String _getCarousel6Title() {
     switch (_activeFilter) {
+      case 'Sunday Suspense':
+        return 'Sunday Suspense: Horror & Paranormal';
       case 'Fresh Picks':
-      case 'YouTube Music':
         return 'Party & Dance Fresh Hits';
       case 'Podcast':
         return 'Horror & Paranormal Stories';

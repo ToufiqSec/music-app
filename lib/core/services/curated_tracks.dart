@@ -810,6 +810,8 @@ class CuratedTracks {
 
   static List<YoutubeTrack> getTracksForFilter(String filter) {
     switch (filter) {
+      case 'Sunday Suspense':
+        return featuredPodcasts;
       case 'Fresh Picks':
       case 'New and Trending':
       case 'YouTube Music':
