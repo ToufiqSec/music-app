@@ -1,69 +1,129 @@
-# DIAGNOSIS.md: Root Cause Analysis for Song Thumbnail Glitch & Speed Issues
+# DIAGNOSIS.md: Reproduction & Root Cause Analysis
 
-Date: Nov 21, 2026  
-Application: Flutter Music Streaming App (`ToufiqSec/music-app`)
-
----
-
-## 1. Root Cause Analysis (Phase 0)
-
-### 1.1 Shared Playlist/Compilation Album Banners on Individual Songs
-* **Files**: [lib/screens/home_screen.dart:372, 1030-1096](file:///c:/Users/lutfa/OneDrive/Desktop/Project%201/lib/screens/home_screen.dart#L1030-L1096), [lib/core/services/youtube_music_service.dart:258-290](file:///c:/Users/lutfa/OneDrive/Desktop/Project%201/lib/core/services/youtube_music_service.dart#L258-L290), [lib/core/services/taste_engine.dart:430-463](file:///c:/Users/lutfa/OneDrive/Desktop/Project%201/lib/core/services/taste_engine.dart#L430-L463)
-* **Actual Cause**:
-  1. In `home_screen.dart:372`, `carousel4Query` queried `'$thirdArtist chartbusters songs'` and `carousel2Query` queried `'top trending viral songs 2026'`. JioSaavn indexes popular songs under compilation albums (e.g., *Friday Chartbusters*, *Latest Tollywood Chartbusters*, *1 Min Insta Viral Mix*, *Trending Viral Hits*, *Lovin*). JioSaavn's API returns the compilation album cover as `item['image']` for every single track in that compilation.
-  2. While `TasteEngine.deduplicateArtwork` existed, `home_screen.dart:_buildHomeSection` (lines 1030–1096) rendered `tracks` directly without calling `TasteEngine.deduplicateArtwork(tracks)`. As a result, 3 to 4 songs in the same carousel displayed the exact same compilation cover.
-  3. Furthermore, previous builds persisted these compilation tracks into `home_sections_cache.json` on user devices, causing old shared banners to persist upon app relaunch.
-* **Resolution**:
-  - Sanitized search queries to search for individual artist hit songs rather than compilation albums (`$thirdArtist best songs`, `top trending hit songs 2026`).
-  - Added mandatory `TasteEngine.deduplicateArtwork(tracks)` inside `_buildHomeSection`, guaranteeing that no two cards in any horizontal carousel can share the same artwork URL.
-  - Upgraded `TasteEngine.deduplicateArtwork` to normalize URLs across resolution variants (`150x150` vs `500x500`) and replace duplicate tracks with unique YouTube thumbnails (`https://i.ytimg.com/vi/${track.id}/hqdefault.jpg`) when available.
-  - Added `await HomeSectionCacheStore.clear()` during app bootstrap in `main.dart:122` to wipe stale caches on app launch.
+**Project**: ToufiqSec/music-app (Flutter Mobile Music App)  
+**Backend**: Supabase (`pxyyzwxvqrbedvlbtltq`, Region: `ap-northeast-1`)  
+**Audit Date**: Nov 21, 2026  
+**Auditor**: Antigravity Core Agent
 
 ---
 
-### 1.2 Letter Tile Glitch ("I", "Z", etc.)
-* **Files**: [lib/widgets/generated_cover_art.dart:106-265](file:///c:/Users/lutfa/OneDrive/Desktop/Project%201/lib/widgets/generated_cover_art.dart#L106-L265), [lib/screens/home_screen.dart:1265, 1409](file:///c:/Users/lutfa/OneDrive/Desktop/Project%201/lib/screens/home_screen.dart#L1265), [lib/screens/search_screen.dart:525, 748](file:///c:/Users/lutfa/OneDrive/Desktop/Project%201/lib/screens/search_screen.dart#L748), [lib/screens/library_screen.dart:183, 524, 677](file:///c:/Users/lutfa/OneDrive/Desktop/Project%201/lib/screens/library_screen.dart#L183)
-* **Actual Cause**:
-  `GeneratedCoverArt` rendered a purple gradient container with a badge and the track title. When `CachedNetworkImage` threw a 404 error (due to dead YouTube video IDs or `maxresdefault.jpg` missing on older videos), widgets throughout the app fell back to `GeneratedCoverArt`. This resulted in the user seeing a purple tile with a music-note icon and the first letter of the song's title ("I" for Ilahi / Ishq Bulaava, "Z" for Zehnaseeb).
-* **Resolution**:
-  - Replaced all raw `CachedNetworkImage` + `GeneratedCoverArt` widgets across `home_screen.dart`, `search_screen.dart`, `library_screen.dart`, `downloads_screen.dart`, `mood_hub_screen.dart`, `room_screen.dart`, `mini_player.dart`, and `now_playing_screen.dart` with `CascadingArtwork`.
-  - In `CascadingArtwork`, the letter tile has been removed. It follows the strict fallback specification:
-    1. Own thumbnail at best size (`hqdefault.jpg` or `500x500`)
-    2. Own thumbnail at smaller size (`mqdefault.jpg` or `150x150`)
-    3. Own track ID fallback
-    4. Flat accent placeholder in app accent color (`AppColors.primarySoft` and `AppColors.surface2` with music note icon, zero text/initials).
+## 1. Phase 0: Captured Real Errors & Log Entries
+
+### 1.1 Problem 1: Email Sign-In & Sign-Up Failure
+* **User Symptom**: User enters email and password, taps Sign In / Sign Up, but the app does not advance past the login screen or session is lost.
+* **Reproduction Steps**:
+  1. Submit email sign-up/sign-in via `login_screen.dart` to Supabase backend `https://pxyyzwxvqrbedvlbtltq.supabase.co`.
+  2. Inspect ClickHouse unified logs (`auth_logs` where `source = 'auth_logs'`).
+* **Captured Supabase Auth Log Entries**:
+  - **Log Entry A (Sign-In Failure - HTTP 400)**:
+    ```json
+    {
+      "component": "api",
+      "method": "POST",
+      "path": "/token",
+      "grant_type": "password",
+      "referer": "http://localhost:3000",
+      "status": 400,
+      "error": "400: Invalid login credentials",
+      "error_code": "invalid_credentials",
+      "remote_addr": "122.183.39.102",
+      "time": "2026-11-20T20:03:02Z"
+    }
+    ```
+  - **Log Entry B (Sign-Up Rate Limit - HTTP 429)**:
+    ```json
+    {
+      "component": "api",
+      "method": "POST",
+      "path": "/signup",
+      "status": 429,
+      "error": "429: email rate limit exceeded",
+      "error_code": "over_email_send_rate_limit",
+      "actor_username": "testmusictoufiq999@gmail.com",
+      "referer": "http://localhost:3000",
+      "remote_addr": "122.183.39.102",
+      "time": "2026-11-20T20:05:46Z"
+    }
+    ```
+  - **Log Entry C (Sign-Up Confirmation Redirect Misconfiguration - HTTP 200 with localhost referer)**:
+    ```json
+    {
+      "event": "mail.send",
+      "mail_to": "asif999busy@gmail.com",
+      "mail_type": "confirmation",
+      "referer": "http://localhost:3000",
+      "time": "2026-11-20T16:40:57Z"
+    }
+    ```
+* **Exact Root Causes**:
+  1. **Site URL Misconfiguration (`localhost:3000`)**: In Supabase Dashboard (`Authentication > URL Configuration`), the Site URL is still set to `http://localhost:3000`. When a confirmation email is dispatched to the user's inbox, the embedded verification link points to `http://localhost:3000/#access_token=...`. On an Android mobile device, `localhost:3000` does not exist, so tapping the email confirmation link produces a `Connection Refused` browser error and never redirects into the mobile app.
+  2. **Unconfirmed Email Blocking Login**: When users try to log into an account whose email confirmation link failed, Supabase rejects the password grant with HTTP 400 `invalid_credentials` or `email_not_confirmed`.
+  3. **SMTP Rate Limit Exhaustion (`over_email_send_rate_limit`)**: Supabase's default shared SMTP server allows only 3 confirmation emails per hour. Repeated signup tests quickly hit HTTP 429, which was previously shown as generic "Registration failed" without explaining the SMTP cooldown.
+  4. **Deep Link Scheme Missing for Email Confirmation**: The app's `AndroidManifest.xml` lacked intent filters for `myapp://auth-callback` or `musicapp://auth-callback`, and Supabase Email Templates redirect was not set to the mobile deep link scheme.
 
 ---
 
-### 1.3 Song Cards Showing Text Only with No Image
-* **Files**: [lib/core/services/curated_tracks.dart:40-790](file:///c:/Users/lutfa/OneDrive/Desktop/Project%201/lib/core/services/curated_tracks.dart#L40-L790), [lib/widgets/cascading_artwork.dart:73-84, 175, 205-212](file:///c:/Users/lutfa/OneDrive/Desktop/Project%201/lib/widgets/cascading_artwork.dart#L73-L84)
-* **Actual Cause**:
-  1. 22 curated tracks in `CuratedTracks` pointed to dead YouTube video IDs returning HTTP 404 on `hqdefault.jpg`.
-  2. In `CascadingArtwork`, candidate tiers previously started with `maxresdefault.jpg` (which returns HTTP 404 for 90% of non-1080p music video uploads).
-  3. When an image failed, `errorWidget` returned `_buildShimmer()`, while `cacheKey` lacked the fallback index (`track:$cacheId:$targetSize`). This caused CachedNetworkImage to stay stuck on the failed disk cache entry, rendering a dark blank box with text only below it.
-* **Resolution**:
-  - Replaced all 22 dead tracks in `curated_tracks.dart` with verified 500x500 JioSaavn CDN artwork and working stream IDs.
-  - Corrected *Samjhawan* to official JioSaavn track ID `DMoLdwJ7` and dedicated high-res cover art.
-  - Updated `CascadingArtwork` candidate list to prioritize `hqdefault.jpg` (guaranteed 200 OK) before `mqdefault.jpg` and `maxresdefault.jpg`.
-  - Enhanced cache key to `'track:${cacheId}_${_fallbackIndex}:$targetSize'`, eliminating cache collision across retry attempts.
+### 1.2 Problem 2: Google Sign-In Failure
+* **User Symptom**: User taps "Continue with Google", a browser window opens, but after authentication the app does not advance or throws an error.
+* **Reproduction Steps**:
+  1. Tap "Continue with Google" on `LoginScreen`.
+  2. Supabase initiates OAuth flow to `/authorize?provider=google`.
+  3. Inspect Supabase Auth logs.
+* **Captured Supabase Auth Log Entries**:
+  - **Log Entry A (Google OAuth Initiation - HTTP 302 to external provider)**:
+    ```json
+    {
+      "component": "api",
+      "method": "GET",
+      "path": "/authorize",
+      "provider": "google",
+      "referer": "http://localhost:3000",
+      "status": 302,
+      "msg": "Redirecting to external provider",
+      "remote_addr": "115.96.129.151",
+      "time": "2026-11-21T10:07:20Z"
+    }
+    ```
+* **Exact Root Causes**:
+  1. **Missing Deep Link Redirect URL in Supabase Allowlist**: In Supabase Dashboard (`Authentication > URL Configuration > Redirect URLs`), the app deep link scheme (`io.supabase.musicapp://login-callback`, `myapp://auth-callback`, `musicapp://auth-callback`) has not been added to the redirect allowlist. Because the scheme is not allowlisted, Supabase falls back to redirecting to the Site URL (`http://localhost:3000`), abandoning the session in the web browser.
+  2. **Google Cloud Console Authorized Redirect URI Misalignment**: In `lib/screens/login_screen.dart:145`, the setup dialog was displaying an outdated Supabase project ref (`wcztbsbcfjoxlypghjil` instead of the active `pxyyzwxvqrbedvlbtltq`). If the user configured Google Cloud with the old ref, Google Cloud Console rejects the OAuth request with `Error 400: redirect_uri_mismatch`. The authorized redirect URI in Google Cloud Console must be:
+     `https://pxyyzwxvqrbedvlbtltq.supabase.co/auth/v1/callback`
+  3. **Incomplete Android Intent Filters**: `android/app/src/main/AndroidManifest.xml` only registered `io.supabase.musicapp://login-callback`. It did not register standard schemes like `myapp://auth-callback` or `musicapp://auth-callback`.
+  4. **Missing PKCE Session Code Exchange Handler**: When returning from an external custom tab via deep link callback, the app must explicitly capture `AuthState` changes or parse `Uri` parameters, exchange the PKCE `code` for an active auth session, persist tokens securely, and pop/advance to `HomeScreen`.
 
 ---
 
-### 1.4 List Recycling & Image Bleed Prevention
-* **Files**: [lib/widgets/cascading_artwork.dart:48, 194-197](file:///c:/Users/lutfa/OneDrive/Desktop/Project%201/lib/widgets/cascading_artwork.dart#L194-L197), [lib/widgets/content_card.dart:69](file:///c:/Users/lutfa/OneDrive/Desktop/Project%201/lib/widgets/content_card.dart#L69), [lib/screens/home_screen.dart:1098](file:///c:/Users/lutfa/OneDrive/Desktop/Project%201/lib/screens/home_screen.dart#L1098)
-* **Actual Cause**:
-  In horizontal and vertical scroll views, recycled card widgets could receive an asynchronous image callback from a previous track if not strictly bound to the current track ID.
-* **Resolution**:
-  - Bound `_boundTrackId` inside `CascadingArtwork`. In `imageBuilder`, if `_boundTrackId != activeTrackId`, the image is rejected and discarded.
-  - Used stable keys (`ValueKey('card_${track.id}')` and `ValueKey('art_${widget.trackId}')`) in all list item builders to prevent widget confusion during scrolling.
+### 1.3 Problem 3: Podcast Audio Playback Failure
+* **User Symptom**: Podcast cards (e.g. *Sunday Suspense: Feluda*, *Byomkesh*, *Professor Shonku*) display their artwork and titles, but audio does not play, stalls at 0:00, or immediately skips.
+* **Reproduction Steps**:
+  1. Request playback for a podcast track (e.g. `ss_feluda_kathmandu`).
+  2. Inspect the requested audio URL and network response.
+* **Captured Audio URL & Network Response**:
+  - **Requested URL**:
+    `https://dts.podtrac.com/redirect.mp3/api.spreaker.com/download/episode/58582188/joto_kando_kathmandu_te.mp3`
+  - **Network Multi-Hop Redirect Trace**:
+    1. `https://dts.podtrac.com/...` -> HTTP 302 Found (Location: `https://api.spreaker.com/...`)
+    2. `https://api.spreaker.com/...` -> HTTP 302 Found (Location: `https://d1bxy2pveef3fq.cloudfront.net/v1/...`)
+    3. `https://d1bxy2pveef3fq.cloudfront.net/v1/...` -> HTTP 302 Found (Location: `https://d1bxy2pveef3fq.cloudfront.net/episodes/original/44544229?...`)
+    4. `https://d1bxy2pveef3fq.cloudfront.net/episodes/...` -> HTTP 200 OK (`Content-Type: audio/mpeg`, Length: 157,178,534 bytes)
+* **Exact Root Causes**:
+  1. **Direct In-App RSS Scraping without Server-Side Caching**:
+     The app was directly fetching Spreaker API/RSS on the client device inside `podcast_rss_service.dart`. When Spreaker rate-limits or the client has slow mobile connectivity, the client HTTP call times out (`Duration(seconds: 6)`). When that fails, it falls back to hardcoded items.
+  2. **Missing Supabase Edge Function & Postgres Cache Table**:
+     Per Phase 3 specifications, RSS feeds should not be parsed on device; they must be fetched and parsed by a Supabase Edge Function, cached in a Postgres table with a 6-hour refresh interval, and served with verified direct enclosure URLs (`audio/mpeg`). No Edge Function or Postgres table currently exists in the project.
+  3. **Headless Player Error Logging & Error Skipping**:
+     When audio resolution or ExoPlayer failed on mobile network hops, `audio_provider.dart:459` immediately advanced to the next track after 600ms without surfacing the exact player error code and URL.
+  4. **Absence of "Audio not available for this episode" Graceful UI**:
+     When an RSS episode lacked a playable enclosure URL, the app attempted to stream an invalid or null URL rather than showing the explicit prompt message `"Audio not available for this episode"`.
 
 ---
 
-### 1.5 Scrolling Slowness & Stutter
-* **Files**: [lib/widgets/cascading_artwork.dart:171-172, 188-191](file:///c:/Users/lutfa/OneDrive/Desktop/Project%201/lib/widgets/cascading_artwork.dart#L188-L191), [lib/screens/home_screen.dart:381-450, 1091](file:///c:/Users/lutfa/OneDrive/Desktop/Project%201/lib/screens/home_screen.dart#L1091)
-* **Actual Cause**:
-  Full-size 1080p and 500x500 images were being decoded into RAM unconstrained, causing memory spikes and GPU thrashing on mid-range devices.
-* **Resolution**:
-  - Added bounded memory decoding constraints: `memCacheWidth: 234` and `memCacheHeight: 168` (1.5x of display size).
-  - Configured `cacheExtent: 600.0` for horizontal carousels to prefetch textures off-screen.
-  - Implemented parallel section stream loading (`.then()`) so sections render progressively as data arrives, with skeleton placeholders while loading.
+## 2. Remediation Strategy & Plan
+
+| Phase | Target | Key Actions |
+| :--- | :--- | :--- |
+| **Phase 1: Email Login** | `lib/core/services/supabase_service.dart`<br>`lib/providers/auth_provider.dart`<br>`lib/screens/login_screen.dart`<br>`android/app/src/main/AndroidManifest.xml` | 1. Enable PKCE auth options in `Supabase.initialize()`.<br>2. Register intent filters for `io.supabase.musicapp://login-callback`, `myapp://auth-callback`, and `musicapp://auth-callback`.<br>3. Provide clear user-facing messages for `invalid_credentials`, `email_not_confirmed`, `over_email_send_rate_limit`, and token expiration.<br>4. Ensure auth state listener reliably saves session and advances to `HomeScreen`.<br>5. Document exact Supabase dashboard URL settings. |
+| **Phase 2: Google Login** | `lib/core/services/supabase_service.dart`<br>`lib/screens/login_screen.dart` | 1. Ensure `signInWithGoogle` uses deep link redirection.<br>2. Fix outdated project ref in setup dialog to `https://pxyyzwxvqrbedvlbtltq.supabase.co/auth/v1/callback`.<br>3. Document required settings for Supabase Providers and Google Cloud Console OAuth Client (Package name `com.toufiqsec.music_app`, SHA-1). |
+| **Phase 3: Podcast Audio** | Supabase Edge Function<br>Postgres table `podcast_episodes`<br>`lib/core/services/podcast_rss_service.dart`<br>`lib/core/services/playback_resolver.dart`<br>`lib/providers/audio_provider.dart`<br>`lib/services/audio_handler.dart` | 1. Propose and deploy `podcast_episodes` Postgres table with RLS and 6-hour TTL.<br>2. Create Supabase Edge Function `fetch-podcasts` to parse public RSS feeds, extract `audio/mpeg` enclosures, and update database.<br>3. Update `PodcastRssService` to read cached episodes from Supabase with resilient direct enclosure streaming.<br>4. Surface `"Audio not available for this episode"` when enclosure is absent.<br>5. Log player error code and URL upon playback failure. |
+
+---
