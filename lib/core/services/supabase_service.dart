@@ -207,13 +207,13 @@ class SupabaseService {
       if (kDebugMode) {
         debugPrint('====================================================');
         debugPrint('[Google OAuth Diagnostic]');
-        debugPrint('App Redirect URI: io.supabase.musicapp://login-callback');
+        debugPrint('App Redirect URI: myapp://auth-callback');
         debugPrint('Supabase Callback URI: $supabaseUrl/auth/v1/callback');
         debugPrint('====================================================');
       }
       return await client.auth.signInWithOAuth(
         OAuthProvider.google,
-        redirectTo: kIsWeb ? null : 'io.supabase.musicapp://login-callback',
+        redirectTo: kIsWeb ? null : 'myapp://auth-callback',
         authScreenLaunchMode: LaunchMode.externalApplication,
       );
     } catch (e) {
