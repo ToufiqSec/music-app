@@ -512,7 +512,6 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
       }
     });
   }
-  }
 
   String _getTimeGreeting() {
     return GreetingService.getGreeting();
