@@ -109,9 +109,7 @@ class SupabaseService {
       await Supabase.initialize(
         url: supabaseUrl,
         anonKey: supabaseAnonKey,
-        authOptions: const FlutterAuthOptions(
-          authFlowType: AuthFlowType.pkce,
-        ),
+        authFlowType: AuthFlowType.pkce,
         debug: kDebugMode,
       );
       debugPrint('[Supabase] Initialized successfully. Auth user: ${currentUser?.email}');
@@ -121,12 +119,12 @@ class SupabaseService {
   }
 
   /// Exchanges a PKCE auth code or recovery token from an incoming deep link URL
-  static Future<AuthResponse?> handleDeepLink(Uri uri) async {
+  static Future<AuthSessionUrlResponse?> handleDeepLink(Uri uri) async {
     try {
       debugPrint('[Supabase] Handling deep link callback: $uri');
       final response = await client.auth.getSessionFromUrl(uri);
-      if (response.user != null) {
-        debugPrint('[Supabase] Deep link auth successful for: ${response.user?.email}');
+      if (response.session.user.id.isNotEmpty) {
+        debugPrint('[Supabase] Deep link auth successful for: ${response.session.user.email}');
         await syncDownAllUserData();
       }
       return response;

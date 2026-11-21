@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
 import '../core/services/playback_resolver.dart';
@@ -116,9 +117,9 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
       await _player.stop();
     } catch (_) {}
 
-    try {
-      var safeUrl = PlaybackResolver.upgradeToHttps(resolvedUrl.trim());
+    String safeUrl = PlaybackResolver.upgradeToHttps(resolvedUrl.trim());
 
+    try {
       final isRemote = safeUrl.startsWith('http://') || safeUrl.startsWith('https://');
       if (!isRemote && File(safeUrl).existsSync()) {
         await _player.setFilePath(safeUrl);
