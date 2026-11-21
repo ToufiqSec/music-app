@@ -103,10 +103,10 @@ void main() {
       expect(ishq.thumbnailUrl, isNot(equals(samjhawan.thumbnailUrl)));
       expect(zehnaseeb.thumbnailUrl, isNot(equals(samjhawan.thumbnailUrl)));
 
-      // Verify specific live video IDs
+      // Verify specific live video / CDN IDs
       expect(ishq.id, 'c2gSzYLJ8sY');
       expect(zehnaseeb.id, 'qug-H-sLd04');
-      expect(samjhawan.id, '1TO48Cnl66w');
+      expect(samjhawan.id, 'DMoLdwJ7');
     });
 
     test('Popular Albums and Singles contains zero duplicate artwork URLs', () {
@@ -139,7 +139,7 @@ void main() {
       final tracks = [
         const YoutubeTrack(id: 'c2gSzYLJ8sY', title: 'Ishq Bulaava', artist: 'Sanam', durationSeconds: 300, thumbnailUrl: 'https://i.ytimg.com/vi/c2gSzYLJ8sY/hqdefault.jpg'),
         const YoutubeTrack(id: 'qug-H-sLd04', title: 'Zehnaseeb', artist: 'Chinmayi', durationSeconds: 215, thumbnailUrl: 'https://i.ytimg.com/vi/qug-H-sLd04/hqdefault.jpg'),
-        const YoutubeTrack(id: '1TO48Cnl66w', title: 'Samjhawan', artist: 'Arijit', durationSeconds: 269, thumbnailUrl: 'https://i.ytimg.com/vi/1TO48Cnl66w/hqdefault.jpg'),
+        const YoutubeTrack(id: 'DMoLdwJ7', title: 'Samjhawan', artist: 'Arijit', durationSeconds: 269, thumbnailUrl: 'https://c.saavncdn.com/540/Humpty-Sharma-Ki-Dulhania-Hindi-2014-20190618095042-500x500.jpg'),
       ];
 
       for (final t in tracks) {

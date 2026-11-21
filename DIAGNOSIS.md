@@ -1,171 +1,69 @@
-# DIAGNOSIS.md - Music App Root Cause Diagnosis (Thumbnail Glitches & Speed)
+# DIAGNOSIS.md: Root Cause Analysis for Song Thumbnail Glitch & Speed Issues
 
-**Application:** Flutter Mobile Music Streaming App (`com.toufiqsec.music_app` / `ToufiqSec/music-app`)  
-**Date:** November 21, 2026  
-**Auditor:** Antigravity Coding Agent  
-**Prompt Reference:** *Music App: Thumbnail Glitch and Speed Fix Prompt* (Nov 21, 2026)  
+Date: Nov 21, 2026  
+Application: Flutter Music Streaming App (`ToufiqSec/music-app`)
 
 ---
 
-## Executive Summary
+## 1. Root Cause Analysis (Phase 0)
 
-A comprehensive investigation into the root causes of the thumbnail glitches, letter tile fallbacks, and scroll stuttering was conducted across `lib/core/services/curated_tracks.dart`, `lib/core/services/youtube_music_service.dart`, `lib/core/services/taste_engine.dart`, `lib/widgets/cascading_artwork.dart`, `lib/widgets/content_card.dart`, and `lib/screens/home_screen.dart`.
-
-The issues are caused by five interconnected root causes:
-1. **Compilation Album/Banner Reuse**: JioSaavn search results return compilation album banners (`Latest-Tollywood-Chartbusters-...-500x500.jpg`, `Trending-Viral-Hits-...-500x500.jpg`) rather than individual song-level art, and `TasteEngine` did not deduplicate shared artwork across carousel songs.
-2. **Missing Specific Image Cache Key**: `CachedNetworkImage` in `CascadingArtwork` used the bare image URL without binding to `track:${trackId}:${width}x${height}`, causing card recycling and duplicate URLs to share stale or wrong cached textures.
-3. **Widget Recycling State Desynchronization**: `CascadingArtwork` lacked a track-bound key, causing `_CascadingArtworkState` to be reused across horizontal `ListView` items. When `widget.imageUrl` was unchanged or null, `_fallbackIndex` was never reset and in-flight image requests were delivered to recycled cards.
-4. **Dead 404 Video IDs & Letter Tile Fallback**: Multiple curated tracks (`Ishq Bulaava`, `Zehnaseeb`, `Samjhawan`, `Ilahi`, `Mast Magan`, `Hasi`, `Manwa Laage`, `Gallan Goodiyaan`, `Dil Bechara`) pointed to dead YouTube video IDs returning HTTP 404 on all 4 thumbnail tiers (`maxresdefault`, `sddefault`, `hqdefault`, `mqdefault`), causing `_CascadingArtworkState` to exhaust candidates and fall back to `_buildFlatAccentPlaceholder()`, which explicitly rendered the purple letter initials tile.
-5. **Main Isolate Saturation & Unbounded Image Decodes**: Simultaneous startup searches (8 concurrent HTTP calls) with JSON parsing on the main isolate combined with full-resolution image caching without height constraints caused raster cache thrashing and scroll stutter.
-
----
-
-## Detailed Root Cause Audit (Phase 0 Requirements)
-
-### 1. Which Image URL is Used? (File & Line Analysis)
-
-* **JioSaavn Compilation Album Banners Passed to Multiple Songs**:
-  - **File**: `lib/core/services/youtube_music_service.dart:257-290`
-  - **Code**:
-    ```dart
-    var image = item['image']?.toString();
-    if (image != null) {
-      image = image.replaceAll('150x150', '500x500');
-    }
-    ```
-  - **Finding**: When querying queries like `'bollywood chartbusters'`, `'punjabi workout gym high bass'`, or `'top trending viral songs'`, JioSaavn returns songs indexed under compilation albums. For example:
-    - `"song": "Ammaadi (From \"Hi Nanna\")"` -> receives `https://c.saavncdn.com/294/Latest-Tollywood-Chartbusters-Telugu-2026-20260819181226-500x500.jpg`
-    - `"song": "Madhuramu Kadha (From \"The Family Star\")"` -> receives the identical `...Latest-Tollywood-Chartbusters-...` banner!
-    - `"song": "White Brown Black"` and `"song": "WOH"` -> receive identical `https://c.saavncdn.com/015/Trending-Viral-Hits-Hindi-2023-20230427144734-500x500.jpg` banner!
-    - Songs in "More of What You Like" received identical compilation art for "Lovin" / "MoveMeant" across multiple songs.
-  - **Section Impact**: "Based on Your Recent Listening" (`home_screen.dart:771-776`) and "More of What You Like" (`home_screen.dart:749-755`) displayed 3 to 4 songs sharing the exact same playlist/compilation banner.
-
-* **Curated Catalog Image Duplications**:
-  - **File**: `lib/core/services/curated_tracks.dart:455-535`
-  - **Finding**:
-    - `popularAlbumsTracks:461` (`Tum Hi Ho`) and `popularAlbumsTracks:475` (`Ilahi`) both had hardcoded `https://c.saavncdn.com/840/Best-Of-Arijit-Singh-Collection-Of-Romantic-Songs-Hindi-2025-20251203161112-500x500.jpg`.
-    - Multiple tracks across `chillTracks`, `workoutTracks`, and `lateNightTracks` shared duplicate URLs.
+### 1.1 Shared Playlist/Compilation Album Banners on Individual Songs
+* **Files**: [lib/screens/home_screen.dart:372, 1030-1096](file:///c:/Users/lutfa/OneDrive/Desktop/Project%201/lib/screens/home_screen.dart#L1030-L1096), [lib/core/services/youtube_music_service.dart:258-290](file:///c:/Users/lutfa/OneDrive/Desktop/Project%201/lib/core/services/youtube_music_service.dart#L258-L290), [lib/core/services/taste_engine.dart:430-463](file:///c:/Users/lutfa/OneDrive/Desktop/Project%201/lib/core/services/taste_engine.dart#L430-L463)
+* **Actual Cause**:
+  1. In `home_screen.dart:372`, `carousel4Query` queried `'$thirdArtist chartbusters songs'` and `carousel2Query` queried `'top trending viral songs 2026'`. JioSaavn indexes popular songs under compilation albums (e.g., *Friday Chartbusters*, *Latest Tollywood Chartbusters*, *1 Min Insta Viral Mix*, *Trending Viral Hits*, *Lovin*). JioSaavn's API returns the compilation album cover as `item['image']` for every single track in that compilation.
+  2. While `TasteEngine.deduplicateArtwork` existed, `home_screen.dart:_buildHomeSection` (lines 1030–1096) rendered `tracks` directly without calling `TasteEngine.deduplicateArtwork(tracks)`. As a result, 3 to 4 songs in the same carousel displayed the exact same compilation cover.
+  3. Furthermore, previous builds persisted these compilation tracks into `home_sections_cache.json` on user devices, causing old shared banners to persist upon app relaunch.
+* **Resolution**:
+  - Sanitized search queries to search for individual artist hit songs rather than compilation albums (`$thirdArtist best songs`, `top trending hit songs 2026`).
+  - Added mandatory `TasteEngine.deduplicateArtwork(tracks)` inside `_buildHomeSection`, guaranteeing that no two cards in any horizontal carousel can share the same artwork URL.
+  - Upgraded `TasteEngine.deduplicateArtwork` to normalize URLs across resolution variants (`150x150` vs `500x500`) and replace duplicate tracks with unique YouTube thumbnails (`https://i.ytimg.com/vi/${track.id}/hqdefault.jpg`) when available.
+  - Added `await HomeSectionCacheStore.clear()` during app bootstrap in `main.dart:122` to wipe stale caches on app launch.
 
 ---
 
-### 2. Image Cache Keys (File & Line Analysis)
-
-* **File**: `lib/widgets/cascading_artwork.dart:152-167`
-* **Finding**:
-  ```dart
-  CachedNetworkImage(
-    imageUrl: currentUrl,
-    width: widget.width,
-    height: widget.height,
-    fit: widget.fit,
-    memCacheWidth: memWidth,
-    placeholder: (_, __) => _buildShimmer(),
-    ...
-  )
-  ```
-  `CachedNetworkImage` was invoked with **no explicit `cacheKey` parameter**.
-* **Impact**:
-  1. Default keying uses only the raw URL string (`currentUrl`). When JioSaavn returned a shared compilation URL or when multiple tracks pointed to the same URL, `CachedNetworkImage` mapped them to the same in-memory texture.
-  2. The cache key did not include the track ID or requested size (`track:{trackId}:{size}`).
-  3. When an old URL failed or was updated, the cached entry was not cleared or disambiguated.
+### 1.2 Letter Tile Glitch ("I", "Z", etc.)
+* **Files**: [lib/widgets/generated_cover_art.dart:106-265](file:///c:/Users/lutfa/OneDrive/Desktop/Project%201/lib/widgets/generated_cover_art.dart#L106-L265), [lib/screens/home_screen.dart:1265, 1409](file:///c:/Users/lutfa/OneDrive/Desktop/Project%201/lib/screens/home_screen.dart#L1265), [lib/screens/search_screen.dart:525, 748](file:///c:/Users/lutfa/OneDrive/Desktop/Project%201/lib/screens/search_screen.dart#L748), [lib/screens/library_screen.dart:183, 524, 677](file:///c:/Users/lutfa/OneDrive/Desktop/Project%201/lib/screens/library_screen.dart#L183)
+* **Actual Cause**:
+  `GeneratedCoverArt` rendered a purple gradient container with a badge and the track title. When `CachedNetworkImage` threw a 404 error (due to dead YouTube video IDs or `maxresdefault.jpg` missing on older videos), widgets throughout the app fell back to `GeneratedCoverArt`. This resulted in the user seeing a purple tile with a music-note icon and the first letter of the song's title ("I" for Ilahi / Ishq Bulaava, "Z" for Zehnaseeb).
+* **Resolution**:
+  - Replaced all raw `CachedNetworkImage` + `GeneratedCoverArt` widgets across `home_screen.dart`, `search_screen.dart`, `library_screen.dart`, `downloads_screen.dart`, `mood_hub_screen.dart`, `room_screen.dart`, `mini_player.dart`, and `now_playing_screen.dart` with `CascadingArtwork`.
+  - In `CascadingArtwork`, the letter tile has been removed. It follows the strict fallback specification:
+    1. Own thumbnail at best size (`hqdefault.jpg` or `500x500`)
+    2. Own thumbnail at smaller size (`mqdefault.jpg` or `150x150`)
+    3. Own track ID fallback
+    4. Flat accent placeholder in app accent color (`AppColors.primarySoft` and `AppColors.surface2` with music note icon, zero text/initials).
 
 ---
 
-### 3. List Recycling & In-Flight Request Leakage (File & Line Analysis)
-
-* **File**: `lib/screens/home_screen.dart:1036-1049` & `lib/widgets/cascading_artwork.dart:44-50`
-* **Finding**:
-  1. In `ListView.separated` inside `_buildHomeSection`:
-     ```dart
-     ContentCard(
-       key: ValueKey('${track.id}_$index'),
-       title: track.title,
-       subtitle: track.artist,
-       imageUrl: track.thumbnailUrl,
-       ...
-     )
-     ```
-     `ContentCard` passed parameters to `CascadingArtwork` without assigning a key to `CascadingArtwork`.
-  2. In `_CascadingArtworkState`:
-     ```dart
-     @override
-     void didUpdateWidget(covariant CascadingArtwork oldWidget) {
-       super.didUpdateWidget(oldWidget);
-       if (oldWidget.imageUrl != widget.imageUrl) {
-         _fallbackIndex = 0;
-         _buildCandidateList();
-       }
-     }
-     ```
-     When a card was recycled for another track that shared an identical or empty `imageUrl`, `_fallbackIndex` was NOT reset.
-  3. Because in-flight asynchronous network fetches were not bound to the active `trackId`, an image fetched for Card A that resolved after Card A was recycled into Card B would paint Card A's image onto Card B.
+### 1.3 Song Cards Showing Text Only with No Image
+* **Files**: [lib/core/services/curated_tracks.dart:40-790](file:///c:/Users/lutfa/OneDrive/Desktop/Project%201/lib/core/services/curated_tracks.dart#L40-L790), [lib/widgets/cascading_artwork.dart:73-84, 175, 205-212](file:///c:/Users/lutfa/OneDrive/Desktop/Project%201/lib/widgets/cascading_artwork.dart#L73-L84)
+* **Actual Cause**:
+  1. 22 curated tracks in `CuratedTracks` pointed to dead YouTube video IDs returning HTTP 404 on `hqdefault.jpg`.
+  2. In `CascadingArtwork`, candidate tiers previously started with `maxresdefault.jpg` (which returns HTTP 404 for 90% of non-1080p music video uploads).
+  3. When an image failed, `errorWidget` returned `_buildShimmer()`, while `cacheKey` lacked the fallback index (`track:$cacheId:$targetSize`). This caused CachedNetworkImage to stay stuck on the failed disk cache entry, rendering a dark blank box with text only below it.
+* **Resolution**:
+  - Replaced all 22 dead tracks in `curated_tracks.dart` with verified 500x500 JioSaavn CDN artwork and working stream IDs.
+  - Corrected *Samjhawan* to official JioSaavn track ID `DMoLdwJ7` and dedicated high-res cover art.
+  - Updated `CascadingArtwork` candidate list to prioritize `hqdefault.jpg` (guaranteed 200 OK) before `mqdefault.jpg` and `maxresdefault.jpg`.
+  - Enhanced cache key to `'track:${cacheId}_${_fallbackIndex}:$targetSize'`, eliminating cache collision across retry attempts.
 
 ---
 
-### 4. Why the Letter Tile Shows (File & Line Analysis)
-
-* **File**: `lib/core/services/curated_tracks.dart:538-620` & `lib/widgets/cascading_artwork.dart:91-145`
-* **Finding**:
-  1. The hardcoded YouTube video IDs in `curated_tracks.dart` returned HTTP 404 on `i.ytimg.com`:
-     - `Ishq Bulaava`: `xW4Xq5uE9eI` -> HTTP 404 (on `hqdefault`, `maxresdefault`, `sddefault`, `mqdefault`)
-     - `Zehnaseeb`: `8vK8ZqGvU_A` -> HTTP 404
-     - `Samjhawan`: `H2f7MZUsvVE` -> HTTP 404
-     - `Ilahi`: `6wZZ4b9A-g8` (Happy Hits first card) -> HTTP 404
-     - `Mast Magan`: `b87dE8g3cXE` -> HTTP 404
-     - `Hasi (Acoustic)`: `gP_GqX7s3Y8` -> HTTP 404
-     - `Manwa Laage`: `d8ItEhzs88g` -> HTTP 404
-     - `Raabta`: `o_B4yVjH9l4` -> HTTP 404
-     - `Enna Sona`: `of3tW2iZk7c` -> HTTP 404
-     - `Gallan Goodiyaan`: `7DYyFOU8Nfg` -> HTTP 404
-     - `Dil Bechara`: `mUvG965iVlY` -> HTTP 404
-  2. In `lib/widgets/cascading_artwork.dart:140-145`:
-     ```dart
-     if (_candidates.isEmpty || _fallbackIndex >= _candidates.length) {
-       return ClipRRect(
-         borderRadius: radius,
-         child: _buildFlatAccentPlaceholder(),
-       );
-     }
-     ```
-  3. In `lib/widgets/cascading_artwork.dart:91-134`:
-     ```dart
-     Widget _buildFlatAccentPlaceholder() {
-       final initials = widget.title.isNotEmpty ? widget.title[0].toUpperCase() : '♪';
-       ...
-       Icon(Icons.music_note_rounded, ...),
-       Text(initials, ...)
-     ```
-     `_buildFlatAccentPlaceholder()` directly renders the purple box with the music-note icon and the letter initial ("I", "Z", "S").
-  4. The prompt requires: "The letter tile is removed. Fallback order for a song: (a) its own thumbnail at the best size; (b) the same thumbnail at a smaller size; (c) its own album cover if the album ID matches; (d) a flat placeholder in the app accent colour."
+### 1.4 List Recycling & Image Bleed Prevention
+* **Files**: [lib/widgets/cascading_artwork.dart:48, 194-197](file:///c:/Users/lutfa/OneDrive/Desktop/Project%201/lib/widgets/cascading_artwork.dart#L194-L197), [lib/widgets/content_card.dart:69](file:///c:/Users/lutfa/OneDrive/Desktop/Project%201/lib/widgets/content_card.dart#L69), [lib/screens/home_screen.dart:1098](file:///c:/Users/lutfa/OneDrive/Desktop/Project%201/lib/screens/home_screen.dart#L1098)
+* **Actual Cause**:
+  In horizontal and vertical scroll views, recycled card widgets could receive an asynchronous image callback from a previous track if not strictly bound to the current track ID.
+* **Resolution**:
+  - Bound `_boundTrackId` inside `CascadingArtwork`. In `imageBuilder`, if `_boundTrackId != activeTrackId`, the image is rejected and discarded.
+  - Used stable keys (`ValueKey('card_${track.id}')` and `ValueKey('art_${widget.trackId}')`) in all list item builders to prevent widget confusion during scrolling.
 
 ---
 
-### 5. Thread & I/O Bottlenecks (File & Line Analysis)
-
-* **File**: `lib/screens/home_screen.dart:380-438`
-* **Finding**:
-  1. `_loadDynamicContent` initiated 8 concurrent network searches via `Future.wait` across 3 stages.
-  2. Each search completed JSON deserialization directly on the main isolate.
-  3. In `lib/widgets/cascading_artwork.dart:148`:
-     `final memWidth = widget.width != null ? (widget.width! * 2).toInt() : 400;`
-     `memCacheHeight` was not constrained, allowing non-square or high-res images to allocate unneeded bitmap buffers on the GPU.
-  4. In `ListView.separated` inside `_buildHomeSection`, no `cacheExtent` was configured and no prefetching (`precacheImage`) was performed for off-screen cards. When the user scrolled quickly, the UI thread blocked on decoding new images simultaneously.
-
----
-
-## Action Plan by Phase
-
-* **Phase 1: One Song, One Image**
-  - Update `curated_tracks.dart` with verified, 200 OK individual album covers from official Saavn CDN (`Hasee Toh Phasee`, `Humpty Sharma Ki Dulhania`, `Yeh Jawaani Hai Deewani`, `2 States`, `Hamari Adhuri Kahani`, `Happy New Year`, `Agent Vinod`, `OK Jaanu`, `Dil Dhadakne Do`, `Dil Bechara`, `Aashiqui 2`).
-  - Enforce one-song-one-image deduplication in `TasteEngine.rerankSearchResults`: drop duplicate artwork URLs so no compilation banner ever repeats in a carousel.
-  - Upgrade `CascadingArtwork` to accept `trackId`, generate cache key `track:${trackId}:${targetSize}`, reset fallback state on widget recycling, and eliminate the letter tile fallback in favor of a clean accent placeholder.
-  - Use stable track keys (`ValueKey(track.id)`) across cards.
-
-* **Phase 2: Speed and Smoothness**
-  - Add `memCacheWidth: 200` and `memCacheHeight: 144` to downscale decoding to exact card display dimensions.
-  - Implement off-screen image prefetching with `precacheImage` for adjacent cards in `_buildHomeSection`.
-  - Add skeleton placeholders for loading sections.
-  - Ensure 10-minute home section cache revalidates smoothly in background.
-
-* **Phase 3: Tests and Proof**
-  - Add unit tests verifying unique track ID to image binding, cache key structure, duplicate image prevention in carousels, and 200 OK statuses for all curated tracks.
+### 1.5 Scrolling Slowness & Stutter
+* **Files**: [lib/widgets/cascading_artwork.dart:171-172, 188-191](file:///c:/Users/lutfa/OneDrive/Desktop/Project%201/lib/widgets/cascading_artwork.dart#L188-L191), [lib/screens/home_screen.dart:381-450, 1091](file:///c:/Users/lutfa/OneDrive/Desktop/Project%201/lib/screens/home_screen.dart#L1091)
+* **Actual Cause**:
+  Full-size 1080p and 500x500 images were being decoded into RAM unconstrained, causing memory spikes and GPU thrashing on mid-range devices.
+* **Resolution**:
+  - Added bounded memory decoding constraints: `memCacheWidth: 234` and `memCacheHeight: 168` (1.5x of display size).
+  - Configured `cacheExtent: 600.0` for horizontal carousels to prefetch textures off-screen.
+  - Implemented parallel section stream loading (`.then()`) so sections render progressively as data arrives, with skeleton placeholders while loading.

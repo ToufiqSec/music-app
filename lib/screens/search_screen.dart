@@ -8,6 +8,7 @@ import '../providers/auth_provider.dart';
 import '../features/music/models/music_models.dart';
 import '../widgets/app_search_field.dart';
 import '../widgets/generated_cover_art.dart';
+import '../widgets/cascading_artwork.dart';
 import '../features/audiobooks/data/sample_audiobooks.dart';
 import '../features/audiobooks/models/audiobook_model.dart';
 import 'audiobook_details_screen.dart';
@@ -518,29 +519,16 @@ class _SearchScreenState extends State<SearchScreen> {
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 leading: ClipRRect(
                   borderRadius: AppRadii.borderSmall,
-                  child: track.thumbnailUrl.isNotEmpty
-                      ? CachedNetworkImage(
-                          imageUrl: track.thumbnailUrl,
-                          width: 48,
-                          height: 48,
-                          fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) => GeneratedCoverArt(
-                            title: track.title,
-                            artist: track.artist,
-                            thumbnailUrl: track.thumbnailUrl,
-                            durationSeconds: track.durationSeconds,
-                            size: 48,
-                            borderRadius: AppRadii.borderSmall,
-                          ),
-                        )
-                      : GeneratedCoverArt(
-                          title: track.title,
-                          artist: track.artist,
-                          thumbnailUrl: track.thumbnailUrl,
-                          durationSeconds: track.durationSeconds,
-                          size: 48,
-                          borderRadius: AppRadii.borderSmall,
-                        ),
+                  child: CascadingArtwork(
+                    key: ValueKey('search_art_${track.id}'),
+                    trackId: track.id,
+                    imageUrl: track.thumbnailUrl,
+                    title: track.title,
+                    artist: track.artist,
+                    width: 48,
+                    height: 48,
+                    borderRadius: AppRadii.borderSmall,
+                  ),
                 ),
                 title: Text(
                   track.title,
@@ -751,29 +739,16 @@ class _SearchScreenState extends State<SearchScreen> {
                 dense: true,
                 leading: ClipRRect(
                   borderRadius: AppRadii.borderSmall,
-                  child: track.thumbnailUrl.isNotEmpty
-                      ? CachedNetworkImage(
-                          imageUrl: track.thumbnailUrl,
-                          width: 40,
-                          height: 40,
-                          fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) => GeneratedCoverArt(
-                            title: track.title,
-                            artist: track.artist,
-                            thumbnailUrl: track.thumbnailUrl,
-                            durationSeconds: track.durationSeconds,
-                            size: 40,
-                            borderRadius: AppRadii.borderSmall,
-                          ),
-                        )
-                      : GeneratedCoverArt(
-                          title: track.title,
-                          artist: track.artist,
-                          thumbnailUrl: track.thumbnailUrl,
-                          durationSeconds: track.durationSeconds,
-                          size: 40,
-                          borderRadius: AppRadii.borderSmall,
-                        ),
+                  child: CascadingArtwork(
+                    key: ValueKey('recent_search_art_${track.id}'),
+                    trackId: track.id,
+                    imageUrl: track.thumbnailUrl,
+                    title: track.title,
+                    artist: track.artist,
+                    width: 40,
+                    height: 40,
+                    borderRadius: AppRadii.borderSmall,
+                  ),
                 ),
                 title: Text(
                   track.title,

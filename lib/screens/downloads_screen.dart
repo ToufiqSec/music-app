@@ -11,6 +11,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_radii.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/generated_cover_art.dart';
+import '../widgets/cascading_artwork.dart';
 import '../widgets/twilight_scene_background.dart';
 
 class DownloadsScreen extends StatefulWidget {
@@ -212,29 +213,16 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                                       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                                       leading: ClipRRect(
                                         borderRadius: AppRadii.borderSmall,
-                                        child: track.thumbnailUrl.isNotEmpty
-                                            ? CachedNetworkImage(
-                                                imageUrl: track.thumbnailUrl,
-                                                width: 48,
-                                                height: 48,
-                                                fit: BoxFit.cover,
-                                                errorWidget: (_, __, ___) => GeneratedCoverArt(
-                                                  title: track.title,
-                                                  artist: track.artist,
-                                                  thumbnailUrl: track.thumbnailUrl,
-                                                  durationSeconds: track.durationSeconds,
-                                                  size: 48,
-                                                  borderRadius: AppRadii.borderSmall,
-                                                ),
-                                              )
-                                            : GeneratedCoverArt(
-                                                title: track.title,
-                                                artist: track.artist,
-                                                thumbnailUrl: track.thumbnailUrl,
-                                                durationSeconds: track.durationSeconds,
-                                                size: 48,
-                                                borderRadius: AppRadii.borderSmall,
-                                              ),
+                                        child: CascadingArtwork(
+                                          key: ValueKey('down_art_${track.id}'),
+                                          trackId: track.id,
+                                          imageUrl: track.thumbnailUrl,
+                                          title: track.title,
+                                          artist: track.artist,
+                                          width: 48,
+                                          height: 48,
+                                          borderRadius: AppRadii.borderSmall,
+                                        ),
                                       ),
                                       title: Text(
                                         track.title,

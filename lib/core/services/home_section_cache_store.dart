@@ -111,4 +111,14 @@ class HomeSectionCacheStore {
       debugPrint('[HomeSectionCacheStore] Persist error: $e');
     }
   }
+
+  static Future<void> clear() async {
+    _memoryCache.clear();
+    try {
+      final file = await _getCacheFile();
+      if (await file.exists()) {
+        await file.delete();
+      }
+    } catch (_) {}
+  }
 }

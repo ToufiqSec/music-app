@@ -9,6 +9,7 @@ import '../../../theme/app_text_styles.dart';
 import '../../../providers/audio_provider.dart';
 import '../../../features/music/models/music_models.dart';
 import '../../../widgets/generated_cover_art.dart';
+import '../../../widgets/cascading_artwork.dart';
 import '../models/room_models.dart';
 import '../providers/room_provider.dart';
 import '../widgets/room_share_sheet.dart';
@@ -419,19 +420,14 @@ class _RoomScreenState extends State<RoomScreen> with SingleTickerProviderStateM
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(AppRadii.lg),
-                    child: currentTrack != null && currentTrack.thumbnail.isNotEmpty
-                        ? CachedNetworkImage(
-                            imageUrl: currentTrack.thumbnail,
-                            fit: BoxFit.cover,
-                            errorWidget: (_, __, ___) => GeneratedCoverArt(
-                              title: currentTrack.title,
-                              artist: currentTrack.artist,
-                            ),
-                          )
-                        : GeneratedCoverArt(
-                            title: currentTrack?.title ?? 'No Track Playing',
-                            artist: currentTrack?.artist ?? 'Room Waiting',
-                          ),
+                    child: CascadingArtwork(
+                      key: ValueKey('room_art_${currentTrack?.id}'),
+                      trackId: currentTrack?.id,
+                      imageUrl: currentTrack?.thumbnail ?? currentTrack?.thumbnailUrl,
+                      title: currentTrack?.title ?? 'No Track Playing',
+                      artist: currentTrack?.artist ?? 'Room Waiting',
+                      borderRadius: BorderRadius.circular(AppRadii.lg),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -725,13 +721,16 @@ class _RoomScreenState extends State<RoomScreen> with SingleTickerProviderStateM
                 child: SizedBox(
                   width: 44,
                   height: 44,
-                  child: track.thumbnail.isNotEmpty
-                      ? CachedNetworkImage(
-                          imageUrl: track.thumbnail,
-                          fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) => GeneratedCoverArt(title: track.title, artist: track.artist),
-                        )
-                      : GeneratedCoverArt(title: track.title, artist: track.artist),
+                  child: CascadingArtwork(
+                    key: ValueKey('room_queue_art_${track.id}'),
+                    trackId: track.id,
+                    imageUrl: track.thumbnail.isNotEmpty ? track.thumbnail : track.thumbnailUrl,
+                    title: track.title,
+                    artist: track.artist,
+                    width: 44,
+                    height: 44,
+                    borderRadius: BorderRadius.circular(AppRadii.sm),
+                  ),
                 ),
               ),
               title: Text(track.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
@@ -768,9 +767,16 @@ class _RoomScreenState extends State<RoomScreen> with SingleTickerProviderStateM
             child: SizedBox(
               width: 44,
               height: 44,
-              child: track.thumbnail.isNotEmpty
-                  ? CachedNetworkImage(imageUrl: track.thumbnail, fit: BoxFit.cover)
-                  : GeneratedCoverArt(title: track.title, artist: track.artist),
+              child: CascadingArtwork(
+                key: ValueKey('room_hist_art_${track.id}'),
+                trackId: track.id,
+                imageUrl: track.thumbnail.isNotEmpty ? track.thumbnail : track.thumbnailUrl,
+                title: track.title,
+                artist: track.artist,
+                width: 44,
+                height: 44,
+                borderRadius: BorderRadius.circular(AppRadii.sm),
+              ),
             ),
           ),
           title: Text(track.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
@@ -993,13 +999,16 @@ class _RoomScreenState extends State<RoomScreen> with SingleTickerProviderStateM
                             child: SizedBox(
                               width: 44,
                               height: 44,
-                              child: track.thumbnail.isNotEmpty
-                                  ? CachedNetworkImage(
-                                      imageUrl: track.thumbnail,
-                                      fit: BoxFit.cover,
-                                      errorWidget: (_, __, ___) => GeneratedCoverArt(title: track.title, artist: track.artist),
-                                    )
-                                  : GeneratedCoverArt(title: track.title, artist: track.artist),
+                              child: CascadingArtwork(
+                                key: ValueKey('room_search_art_${track.id}'),
+                                trackId: track.id,
+                                imageUrl: track.thumbnail.isNotEmpty ? track.thumbnail : track.thumbnailUrl,
+                                title: track.title,
+                                artist: track.artist,
+                                width: 44,
+                                height: 44,
+                                borderRadius: BorderRadius.circular(AppRadii.sm),
+                              ),
                             ),
                           ),
                           title: Text(track.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),

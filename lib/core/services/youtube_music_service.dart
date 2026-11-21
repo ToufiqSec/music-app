@@ -301,12 +301,13 @@ class YoutubeMusicService {
       final id = video.id.value;
       final duration = video.duration?.inSeconds ?? 0;
 
+      final thumbUrl = 'https://i.ytimg.com/vi/$id/hqdefault.jpg';
       tracks.add(YoutubeTrack(
         id: id,
         title: video.title,
         artist: video.author,
         durationSeconds: duration,
-        thumbnailUrl: video.thumbnails.highResUrl,
+        thumbnailUrl: thumbUrl,
         audioStreamUrl: null, // Resolved on-demand via getAudioStreamUrl
       ));
     }

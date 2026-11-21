@@ -295,7 +295,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
       case 'Fresh Picks':
         quickQuery = 'trending hits 2026';
         carousel1Query = 'top 50 billboard hits';
-        carousel2Query = 'bollywood chartbusters';
+        carousel2Query = 'bollywood top hits';
         carousel3Query = 'new viral songs global';
         carousel4Query = 'punjabi pop hits';
         carousel5Query = 'acoustic relaxing sessions';
@@ -312,7 +312,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
         break;
       case 'Trending':
         quickQuery = 'top trending songs hits 2026';
-        carousel1Query = 'latest trending songs chartbusters';
+        carousel1Query = 'latest trending top hits';
         carousel2Query = 'viral hits billboard 2026';
         carousel3Query = 'top bollywood punjabi trending';
         carousel4Query = 'global top 50 viral hits';
@@ -367,9 +367,9 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
 
         quickQuery = '$topArtist $secondArtist best hits official';
         carousel1Query = '$topArtist top hit songs';
-        carousel2Query = 'top trending viral songs 2026';
+        carousel2Query = 'top trending hit songs 2026';
         carousel3Query = '$secondArtist iconic hit songs';
-        carousel4Query = '$thirdArtist chartbusters songs';
+        carousel4Query = '$thirdArtist best songs';
         carousel5Query = 'chill acoustic lofi midnight songs';
         carousel6Query = 'chill aesthetic night vibes acoustic lofi';
         break;
@@ -1032,7 +1032,8 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
     required AudioProvider audioProvider,
     String actionLabel = 'See all',
   }) {
-    if (tracks.isEmpty) {
+    final displayTracks = TasteEngine.deduplicateArtwork(tracks);
+    if (displayTracks.isEmpty) {
       return _isLoadingContent ? _buildSkeletonHomeSection(title: title) : const SizedBox.shrink();
     }
 
@@ -1058,7 +1059,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
               GestureDetector(
                 onTap: () {
                   HapticFeedback.lightImpact();
-                  _showSeeAllModal(title, tracks, audioProvider);
+                  _showSeeAllModal(title, displayTracks, audioProvider);
                 },
                 behavior: HitTestBehavior.opaque,
                 child: Semantics(
@@ -1090,10 +1091,10 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
             scrollDirection: Axis.horizontal,
             cacheExtent: 600.0,
             physics: const BouncingScrollPhysics(),
-            itemCount: tracks.length,
+            itemCount: displayTracks.length,
             separatorBuilder: (_, __) => const SizedBox(width: 12),
             itemBuilder: (context, index) {
-              final track = tracks[index];
+              final track = displayTracks[index];
               return ContentCard(
                 key: ValueKey('card_${track.id}'),
                 trackId: track.id,
@@ -1102,7 +1103,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
                 imageUrl: track.thumbnailUrl,
                 onTap: () {
                   HapticFeedback.lightImpact();
-                  audioProvider.playTrack(track, tracks);
+                  audioProvider.playTrack(track, displayTracks);
                 },
               );
             },
@@ -1258,11 +1259,15 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
                             child: SizedBox(
                               width: 48,
                               height: 48,
-                              child: CachedNetworkImage(
+                              child: CascadingArtwork(
+                                key: ValueKey('see_all_art_${t.id}'),
+                                trackId: t.id,
                                 imageUrl: t.thumbnailUrl,
-                                fit: BoxFit.cover,
-                                placeholder: (_, __) => Container(color: AppColors.surface2),
-                                errorWidget: (_, __, ___) => GeneratedCoverArt(title: t.title, artist: t.artist, size: 48),
+                                title: t.title,
+                                artist: t.artist,
+                                width: 48,
+                                height: 48,
+                                borderRadius: BorderRadius.circular(AppRadii.small),
                               ),
                             ),
                           ),
@@ -1535,18 +1540,15 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
                   child: SizedBox(
                     width: 56,
                     height: 56,
-                    child: CachedNetworkImage(
+                    child: CascadingArtwork(
+                      key: ValueKey('quick_art_${track.id}'),
+                      trackId: track.id,
                       imageUrl: track.thumbnailUrl,
-                      cacheKey: 'track:${track.id}:56x56',
-                      fit: BoxFit.cover,
-                      memCacheWidth: 120,
-                      memCacheHeight: 120,
-                      placeholder: (_, __) => Container(color: AppColors.surface2),
-                      errorWidget: (_, __, ___) => GeneratedCoverArt(
-                        title: track.title,
-                        artist: track.artist,
-                        size: 56,
-                      ),
+                      title: track.title,
+                      artist: track.artist,
+                      width: 56,
+                      height: 56,
+                      borderRadius: BorderRadius.zero,
                     ),
                   ),
                 ),
@@ -1955,25 +1957,20 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
                       contentPadding: EdgeInsets.zero,
                       leading: ClipRRect(
                         borderRadius: AppRadii.borderSmall,
-                        child: t.thumbnailUrl.isNotEmpty
-                            ? CachedNetworkImage(
-                                imageUrl: t.thumbnailUrl,
-                                width: 44,
-                                height: 44,
-                                fit: BoxFit.cover,
-                                errorWidget: (_, __, ___) => Container(
-                                  width: 44,
-                                  height: 44,
-                                  color: AppColors.surface2,
-                                  child: const Icon(Icons.music_note, color: AppColors.primarySoft),
-                                ),
-                              )
-                            : Container(
-                                width: 44,
-                                height: 44,
-                                color: AppColors.surface2,
-                                child: const Icon(Icons.music_note, color: AppColors.primarySoft),
-                              ),
+                        child: SizedBox(
+                          width: 44,
+                          height: 44,
+                          child: CascadingArtwork(
+                            key: ValueKey('hist_art_${t.id}'),
+                            trackId: t.id,
+                            imageUrl: t.thumbnailUrl,
+                            title: t.title,
+                            artist: t.artist,
+                            width: 44,
+                            height: 44,
+                            borderRadius: AppRadii.borderSmall,
+                          ),
+                        ),
                       ),
                       title: Text(t.title, style: AppTextStyles.bodyMedium),
                       subtitle: Text(t.artist, style: AppTextStyles.caption),

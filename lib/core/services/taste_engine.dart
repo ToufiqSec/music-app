@@ -439,13 +439,21 @@ class TasteEngine {
       if (seenIds.contains(track.id)) continue;
       seenIds.add(track.id);
 
-      final cleanUrl = track.thumbnailUrl.trim().toLowerCase();
-      if (cleanUrl.isNotEmpty && seenUrls.contains(cleanUrl)) {
+      final rawUrl = track.thumbnailUrl.trim().toLowerCase();
+      // Normalize sizes and query params so 150x150 and 500x500 of the same compilation are caught
+      final normalizedUrl = rawUrl
+          .replaceAll('150x150', 'size')
+          .replaceAll('500x500', 'size')
+          .split('?')
+          .first;
+
+      if (normalizedUrl.isNotEmpty && seenUrls.contains(normalizedUrl)) {
         // Shared banner detected! Check if track has a 11-char YouTube ID that can provide its own unique thumbnail
         if (RegExp(r'^[a-zA-Z0-9_-]{11}$').hasMatch(track.id)) {
           final uniqueYtThumb = 'https://i.ytimg.com/vi/${track.id}/hqdefault.jpg';
-          if (!seenUrls.contains(uniqueYtThumb.toLowerCase())) {
-            seenUrls.add(uniqueYtThumb.toLowerCase());
+          final normalizedYt = uniqueYtThumb.toLowerCase();
+          if (!seenUrls.contains(normalizedYt)) {
+            seenUrls.add(normalizedYt);
             result.add(track.copyWith(thumbnailUrl: uniqueYtThumb));
             continue;
           }
@@ -454,8 +462,8 @@ class TasteEngine {
         continue;
       }
 
-      if (cleanUrl.isNotEmpty) {
-        seenUrls.add(cleanUrl);
+      if (normalizedUrl.isNotEmpty) {
+        seenUrls.add(normalizedUrl);
       }
       result.add(track);
     }

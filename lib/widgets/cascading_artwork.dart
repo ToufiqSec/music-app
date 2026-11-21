@@ -71,11 +71,12 @@ class _CascadingArtworkState extends State<CascadingArtwork> {
       if (ytMatch != null) {
         final videoId = ytMatch.group(1)!;
         final tiers = [
-          'https://i.ytimg.com/vi/$videoId/maxresdefault.jpg',
-          'https://i.ytimg.com/vi/$videoId/sddefault.jpg',
           'https://i.ytimg.com/vi/$videoId/hqdefault.jpg',
           'https://i.ytimg.com/vi/$videoId/mqdefault.jpg',
+          'https://i.ytimg.com/vi/$videoId/sddefault.jpg',
+          'https://i.ytimg.com/vi/$videoId/maxresdefault.jpg',
         ];
+        list.clear();
         for (final tier in tiers) {
           if (!list.contains(tier)) {
             list.add(tier);
@@ -171,7 +172,7 @@ class _CascadingArtworkState extends State<CascadingArtwork> {
     final memHeight = (widget.height != null ? (widget.height! * 1.5).toInt() : 150).clamp(100, 500);
     final targetSize = '${(widget.width ?? 156).toInt()}x${(widget.height ?? 112).toInt()}';
     final cacheId = widget.trackId ?? widget.title.hashCode.abs().toString();
-    final cacheKey = 'track:$cacheId:$targetSize';
+    final cacheKey = 'track:${cacheId}_${_fallbackIndex}:$targetSize';
 
     final activeTrackId = widget.trackId;
 

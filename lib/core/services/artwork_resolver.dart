@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../features/music/models/music_models.dart';
-import '../../widgets/generated_cover_art.dart';
+import '../../widgets/cascading_artwork.dart';
 import '../../theme/app_radii.dart';
 
 /// Central Artwork Resolver & Thumbnail Widget (Issue 5).
@@ -89,34 +89,14 @@ class AppArtworkImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final effectiveRadius = borderRadius ?? BorderRadius.circular(AppRadii.sm);
-    final resolvedUrl = ArtworkResolver.resolveArtwork(imageUrl);
-
-    Widget fallback = GeneratedCoverArt(
+    return CascadingArtwork(
+      imageUrl: imageUrl,
       title: title,
       artist: artist,
-    );
-
-    Widget imageContent;
-    if (resolvedUrl.isEmpty) {
-      imageContent = fallback;
-    } else {
-      imageContent = CachedNetworkImage(
-        imageUrl: resolvedUrl,
-        fit: fit,
-        width: width,
-        height: height,
-        placeholder: (_, __) => fallback,
-        errorWidget: (_, __, ___) => fallback,
-      );
-    }
-
-    return ClipRRect(
+      width: width,
+      height: height,
+      fit: fit,
       borderRadius: effectiveRadius,
-      child: SizedBox(
-        width: width,
-        height: height,
-        child: imageContent,
-      ),
     );
   }
 }

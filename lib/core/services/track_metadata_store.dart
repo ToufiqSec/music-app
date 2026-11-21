@@ -89,6 +89,7 @@ class TrackMetadataStore {
     if (existing != null &&
         existing.title == track.title &&
         existing.artist == track.artist &&
+        existing.thumbnailUrl == track.thumbnailUrl &&
         existing.durationSeconds == track.durationSeconds &&
         existing.audioStreamUrl == track.audioStreamUrl) {
       return; // Skip redundant serialization when metadata is identical

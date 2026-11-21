@@ -10,6 +10,7 @@ import '../theme/app_radii.dart';
 import '../theme/app_text_styles.dart';
 import '../theme/app_shadows.dart';
 import '../widgets/generated_cover_art.dart';
+import '../widgets/cascading_artwork.dart';
 import '../widgets/twilight_scene_background.dart';
 
 /// Full-Screen AI Mood & Vibe Recommendation Hub (Issue 7 - Step 1 & 2)
@@ -503,29 +504,16 @@ class _MoodHubScreenState extends State<MoodHubScreen> {
               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               leading: ClipRRect(
                 borderRadius: AppRadii.borderSmall,
-                child: track.thumbnailUrl.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: track.thumbnailUrl,
-                        width: 44,
-                        height: 44,
-                        fit: BoxFit.cover,
-                        errorWidget: (_, __, ___) => GeneratedCoverArt(
-                          title: track.title,
-                          artist: track.artist,
-                          thumbnailUrl: track.thumbnailUrl,
-                          durationSeconds: track.durationSeconds,
-                          size: 44,
-                          borderRadius: AppRadii.borderSmall,
-                        ),
-                      )
-                    : GeneratedCoverArt(
-                        title: track.title,
-                        artist: track.artist,
-                        thumbnailUrl: track.thumbnailUrl,
-                        durationSeconds: track.durationSeconds,
-                        size: 44,
-                        borderRadius: AppRadii.borderSmall,
-                      ),
+                child: CascadingArtwork(
+                  key: ValueKey('mood_art_${track.id}'),
+                  trackId: track.id,
+                  imageUrl: track.thumbnailUrl,
+                  title: track.title,
+                  artist: track.artist,
+                  width: 44,
+                  height: 44,
+                  borderRadius: AppRadii.borderSmall,
+                ),
               ),
               title: Text(
                 track.title,

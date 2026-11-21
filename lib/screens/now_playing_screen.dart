@@ -741,30 +741,16 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                     return ListTile(
                       leading: ClipRRect(
                         borderRadius: AppRadii.borderSmall,
-                        child: qTrack.thumbnailUrl.isNotEmpty
-                            ? CachedNetworkImage(
-                                imageUrl: qTrack.thumbnailUrl,
-                                width: 44,
-                                height: 44,
-                                fit: BoxFit.cover,
-                                memCacheWidth: 120,
-                                errorWidget: (_, __, ___) => GeneratedCoverArt(
-                                  title: qTrack.title,
-                                  artist: qTrack.artist,
-                                  thumbnailUrl: qTrack.thumbnailUrl,
-                                  durationSeconds: qTrack.durationSeconds,
-                                  size: 44,
-                                  borderRadius: AppRadii.borderSmall,
-                                ),
-                              )
-                            : GeneratedCoverArt(
-                                title: qTrack.title,
-                                artist: qTrack.artist,
-                                thumbnailUrl: qTrack.thumbnailUrl,
-                                durationSeconds: qTrack.durationSeconds,
-                                size: 44,
-                                borderRadius: AppRadii.borderSmall,
-                              ),
+                        child: CascadingArtwork(
+                          key: ValueKey('queue_art_${qTrack.id}'),
+                          trackId: qTrack.id,
+                          imageUrl: qTrack.thumbnailUrl,
+                          title: qTrack.title,
+                          artist: qTrack.artist,
+                          width: 44,
+                          height: 44,
+                          borderRadius: AppRadii.borderSmall,
+                        ),
                       ),
                       title: Text(
                         qTrack.title,
@@ -1046,15 +1032,14 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                 child: SizedBox(
                                   width: 48,
                                   height: 48,
-                                  child: CachedNetworkImage(
+                                  child: CascadingArtwork(
+                                    key: ValueKey('rec_art_${t.id}'),
+                                    trackId: t.id,
                                     imageUrl: t.thumbnailUrl,
-                                    fit: BoxFit.cover,
-                                    placeholder: (_, __) => Container(color: AppColors.surface2),
-                                    errorWidget: (_, __, ___) => GeneratedCoverArt(
-                                      title: t.title,
-                                      artist: t.artist,
-                                      size: 48,
-                                    ),
+                                    title: t.title,
+                                    artist: t.artist,
+                                    width: 48,
+                                    height: 48,
                                   ),
                                 ),
                               ),
