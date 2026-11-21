@@ -103,13 +103,12 @@ class SupabaseService {
 
   static Stream<AuthState> get authStateChanges => client.auth.onAuthStateChange;
 
-  /// Initializes Supabase in main.dart with PKCE flow
+  /// Initializes Supabase in main.dart (PKCE flow is enabled by default in supabase_flutter 2.x)
   static Future<void> initialize() async {
     try {
       await Supabase.initialize(
         url: supabaseUrl,
         anonKey: supabaseAnonKey,
-        authFlowType: AuthFlowType.pkce,
         debug: kDebugMode,
       );
       debugPrint('[Supabase] Initialized successfully. Auth user: ${currentUser?.email}');
