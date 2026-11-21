@@ -8,6 +8,7 @@ import '../theme/app_text_styles.dart';
 import 'cascading_artwork.dart';
 
 class ContentCard extends StatefulWidget {
+  final String? trackId;
   final String title;
   final String subtitle;
   final String? imageUrl;
@@ -15,6 +16,7 @@ class ContentCard extends StatefulWidget {
 
   const ContentCard({
     super.key,
+    this.trackId,
     required this.title,
     required this.subtitle,
     this.imageUrl,
@@ -64,6 +66,8 @@ class _ContentCardState extends State<ContentCard> {
                     fit: StackFit.expand,
                     children: [
                       CascadingArtwork(
+                        key: ValueKey('art_${widget.trackId ?? widget.title}'),
+                        trackId: widget.trackId,
                         imageUrl: widget.imageUrl,
                         title: widget.title,
                         artist: widget.subtitle,

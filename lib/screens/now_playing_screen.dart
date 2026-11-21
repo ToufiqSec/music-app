@@ -218,6 +218,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                             ),
                             child: CascadingArtwork(
                               key: ValueKey('art_cascading_${track.id}'),
+                              trackId: track.id,
                               imageUrl: track.thumbnailUrl,
                               title: track.title,
                               artist: track.artist,

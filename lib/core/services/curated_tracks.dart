@@ -44,7 +44,7 @@ class CuratedTracks {
       title: 'Amake Amar Moto Thakte Dao',
       artist: 'Anupam Roy',
       durationSeconds: 288,
-      thumbnailUrl: 'https://i.ytimg.com/vi/aRzL69OqK5U/hqdefault.jpg',
+      thumbnailUrl: 'https://c.saavncdn.com/570/Autograph-Bengali-2010-20210211010044-500x500.jpg',
     ),
     const YoutubeTrack(
       id: 'IJq0ydz4628',
@@ -284,7 +284,7 @@ class CuratedTracks {
       title: 'Amake Amar Moto Thakte Dao',
       artist: 'Anupam Roy',
       durationSeconds: 288,
-      thumbnailUrl: 'https://i.ytimg.com/vi/aRzL69OqK5U/hqdefault.jpg',
+      thumbnailUrl: 'https://c.saavncdn.com/570/Autograph-Bengali-2010-20210211010044-500x500.jpg',
     ),
     const YoutubeTrack(
       id: 'gkCKTuR-ECI',
@@ -454,11 +454,11 @@ class CuratedTracks {
 
   static final List<YoutubeTrack> popularAlbumsTracks = [
     const YoutubeTrack(
-      id: 'IJq0ydz4628',
+      id: 'aRZbUYD7',
       title: 'Tum Hi Ho (Aashiqui 2)',
       artist: 'Arijit Singh, Mithoon',
       durationSeconds: 262,
-      thumbnailUrl: 'https://c.saavncdn.com/840/Best-Of-Arijit-Singh-Collection-Of-Romantic-Songs-Hindi-2025-20251203161112-500x500.jpg',
+      thumbnailUrl: 'https://c.saavncdn.com/430/Aashiqui-2-Hindi-2013-500x500.jpg',
     ),
     const YoutubeTrack(
       id: 'T94PHkuydcw',
@@ -468,32 +468,32 @@ class CuratedTracks {
       thumbnailUrl: 'https://c.saavncdn.com/408/Rockstar-Hindi-2011-20221212023139-500x500.jpg',
     ),
     const YoutubeTrack(
-      id: '6wZZ4b9A-g8',
+      id: '4CI_0bzt',
       title: 'Ilahi (Yeh Jawaani Hai Deewani)',
       artist: 'Arijit Singh, Pritam',
       durationSeconds: 228,
-      thumbnailUrl: 'https://c.saavncdn.com/840/Best-Of-Arijit-Singh-Collection-Of-Romantic-Songs-Hindi-2025-20251203161112-500x500.jpg',
+      thumbnailUrl: 'https://c.saavncdn.com/440/Yeh-Jawaani-Hai-Deewani-2013-500x500.jpg',
     ),
     const YoutubeTrack(
-      id: 'BddP6PYo2gs',
+      id: 'rjkrTnma',
       title: 'Kesariya (Brahmāstra)',
       artist: 'Arijit Singh, Pritam',
       durationSeconds: 268,
-      thumbnailUrl: 'https://i.ytimg.com/vi/BddP6PYo2gs/hqdefault.jpg',
+      thumbnailUrl: 'https://c.saavncdn.com/871/Brahmastra-Original-Motion-Picture-Soundtrack-Hindi-2022-20221006155213-500x500.jpg',
     ),
     const YoutubeTrack(
-      id: 'VOLKJJvfAbg',
+      id: 'OtKh5C06',
       title: 'Bekhayali (Kabir Singh)',
       artist: 'Sachet Tandon, Sachet-Parampara',
       durationSeconds: 371,
-      thumbnailUrl: 'https://i.ytimg.com/vi/VOLKJJvfAbg/hqdefault.jpg',
+      thumbnailUrl: 'https://c.saavncdn.com/807/Kabir-Singh-Hindi-2019-20240131131003-500x500.jpg',
     ),
     const YoutubeTrack(
-      id: 'mUvG965iVlY',
+      id: 'ohUsQ-U0',
       title: 'Dil Bechara (Dil Bechara)',
       artist: 'A.R. Rahman',
       durationSeconds: 242,
-      thumbnailUrl: 'https://i.ytimg.com/vi/mUvG965iVlY/hqdefault.jpg',
+      thumbnailUrl: 'https://c.saavncdn.com/870/Dil-Bechara-Hindi-2020-20200709070438-500x500.jpg',
     ),
   ];
 
@@ -520,49 +520,49 @@ class CuratedTracks {
       thumbnailUrl: 'https://c.saavncdn.com/608/Ae-Dil-Hai-Mushkil-Deluxe-Edition-Hindi-2016-500x500.jpg',
     ),
     const YoutubeTrack(
-      id: 'pELk1MYhpPk',
+      id: 'AWoCK3DV',
       title: 'Tum Tak (Raanjhanaa)',
       artist: 'Javed Ali, Keerthi Sagathia, A.R. Rahman',
       durationSeconds: 304,
-      thumbnailUrl: 'https://i.ytimg.com/vi/pELk1MYhpPk/hqdefault.jpg',
+      thumbnailUrl: 'https://c.saavncdn.com/508/Raanjhanaa-Hindi-2013-20260120201336-500x500.jpg',
     ),
     const YoutubeTrack(
-      id: 'M_6Z0y7e7gM',
+      id: '8xbMUMai',
       title: 'Patakha Guddi (Highway)',
       artist: 'Nooran Sisters, A.R. Rahman',
       durationSeconds: 284,
-      thumbnailUrl: 'https://i.ytimg.com/vi/M_6Z0y7e7gM/hqdefault.jpg',
+      thumbnailUrl: 'https://c.saavncdn.com/685/Highway-2014-500x500.jpg',
     ),
   ];
 
   static final List<YoutubeTrack> ishqBulaavaRadioTracks = [
     const YoutubeTrack(
-      id: 'xW4Xq5uE9eI',
+      id: 'c2gSzYLJ8sY',
       title: 'Ishq Bulaava',
       artist: 'Sanam Puri, Shipra Goyal, Vishal-Shekhar',
       durationSeconds: 303,
-      thumbnailUrl: 'https://i.ytimg.com/vi/xW4Xq5uE9eI/hqdefault.jpg',
+      thumbnailUrl: 'https://i.ytimg.com/vi/c2gSzYLJ8sY/hqdefault.jpg',
     ),
     const YoutubeTrack(
-      id: '8vK8ZqGvU_A',
+      id: 'qug-H-sLd04',
       title: 'Zehnaseeb',
       artist: 'Chinmayi Sripaada, Shekhar Ravjiani',
       durationSeconds: 215,
-      thumbnailUrl: 'https://i.ytimg.com/vi/8vK8ZqGvU_A/hqdefault.jpg',
+      thumbnailUrl: 'https://i.ytimg.com/vi/qug-H-sLd04/hqdefault.jpg',
     ),
     const YoutubeTrack(
-      id: 'H2f7MZUsvVE',
+      id: '1TO48Cnl66w',
       title: 'Samjhawan',
       artist: 'Arijit Singh, Shreya Ghoshal',
       durationSeconds: 269,
-      thumbnailUrl: 'https://i.ytimg.com/vi/H2f7MZUsvVE/hqdefault.jpg',
+      thumbnailUrl: 'https://i.ytimg.com/vi/1TO48Cnl66w/hqdefault.jpg',
     ),
     const YoutubeTrack(
-      id: 'b87dE8g3cXE',
+      id: 'xitd9mEZIHk',
       title: 'Mast Magan',
       artist: 'Arijit Singh, Chinmayi Sripaada',
       durationSeconds: 280,
-      thumbnailUrl: 'https://i.ytimg.com/vi/b87dE8g3cXE/hqdefault.jpg',
+      thumbnailUrl: 'https://i.ytimg.com/vi/xitd9mEZIHk/hqdefault.jpg',
     ),
     const YoutubeTrack(
       id: 'jHNNMj5bNQw',
@@ -572,21 +572,21 @@ class CuratedTracks {
       thumbnailUrl: 'https://i.ytimg.com/vi/jHNNMj5bNQw/hqdefault.jpg',
     ),
     const YoutubeTrack(
-      id: 'gP_GqX7s3Y8',
+      id: 'qOVmDCCQ',
       title: 'Hasi (Acoustic)',
       artist: 'Ami Mishra, Shreya Ghoshal',
       durationSeconds: 212,
-      thumbnailUrl: 'https://i.ytimg.com/vi/gP_GqX7s3Y8/hqdefault.jpg',
+      thumbnailUrl: 'https://c.saavncdn.com/577/Hamari-Adhuri-Kahani-Hindi-2015-500x500.jpg',
     ),
   ];
 
   static final List<YoutubeTrack> happyHitsTracks = [
     const YoutubeTrack(
-      id: '6wZZ4b9A-g8',
+      id: '4CI_0bzt',
       title: 'Ilahi',
       artist: 'Arijit Singh, Pritam',
       durationSeconds: 228,
-      thumbnailUrl: 'https://i.ytimg.com/vi/6wZZ4b9A-g8/hqdefault.jpg',
+      thumbnailUrl: 'https://c.saavncdn.com/440/Yeh-Jawaani-Hai-Deewani-2013-500x500.jpg',
     ),
     const YoutubeTrack(
       id: 'II2EO3Nw4m0',
@@ -603,11 +603,11 @@ class CuratedTracks {
       thumbnailUrl: 'https://i.ytimg.com/vi/6vKucgAeF_Q/hqdefault.jpg',
     ),
     const YoutubeTrack(
-      id: '7DYyFOU8Nfg',
+      id: 'JQK6ye5t',
       title: 'Gallan Goodiyaan',
       artist: 'Yashita Sharma, Manish Kumar Tipu, Shankar Mahadevan',
       durationSeconds: 297,
-      thumbnailUrl: 'https://i.ytimg.com/vi/7DYyFOU8Nfg/hqdefault.jpg',
+      thumbnailUrl: 'https://c.saavncdn.com/240/Dil-Dhadakne-Do-Hindi-2015-500x500.jpg',
     ),
     const YoutubeTrack(
       id: 'nCg3ufihKyU',
@@ -624,7 +624,7 @@ class CuratedTracks {
       title: 'Kun Faya Kun',
       artist: 'A.R. Rahman, Mohit Chauhan, Javed Ali',
       durationSeconds: 473,
-      thumbnailUrl: 'https://i.ytimg.com/vi/T94PHkuydcw/hqdefault.jpg',
+      thumbnailUrl: 'https://c.saavncdn.com/408/Rockstar-Hindi-2011-20221212023139-500x500.jpg',
     ),
     const YoutubeTrack(
       id: 'xwwAVRyNmgQ',
@@ -634,18 +634,18 @@ class CuratedTracks {
       thumbnailUrl: 'https://i.ytimg.com/vi/xwwAVRyNmgQ/hqdefault.jpg',
     ),
     const YoutubeTrack(
-      id: 'r_g7pE9fXbQ',
+      id: 'uitzykz8',
       title: 'Tere Bina',
       artist: 'A.R. Rahman, Chinmayi, Murtuza Khan',
       durationSeconds: 309,
-      thumbnailUrl: 'https://i.ytimg.com/vi/r_g7pE9fXbQ/hqdefault.jpg',
+      thumbnailUrl: 'https://c.saavncdn.com/020/Guru-Hindi-2006-20190516131307-500x500.jpg',
     ),
     const YoutubeTrack(
-      id: 'pELk1MYhpPk',
+      id: 'AWoCK3DV',
       title: 'Tum Tak',
       artist: 'Javed Ali, Keerthi Sagathia, A.R. Rahman',
       durationSeconds: 304,
-      thumbnailUrl: 'https://i.ytimg.com/vi/pELk1MYhpPk/hqdefault.jpg',
+      thumbnailUrl: 'https://c.saavncdn.com/508/Raanjhanaa-Hindi-2013-20260120201336-500x500.jpg',
     ),
     const YoutubeTrack(
       id: 'sK7riqg2mr4',
@@ -655,21 +655,21 @@ class CuratedTracks {
       thumbnailUrl: 'https://i.ytimg.com/vi/sK7riqg2mr4/hqdefault.jpg',
     ),
     const YoutubeTrack(
-      id: 'PQmrmVs10X8',
+      id: 'GjidOM3A',
       title: 'Chaiyya Chaiyya',
       artist: 'Sukhwinder Singh, Sapna Awasthi, A.R. Rahman',
       durationSeconds: 399,
-      thumbnailUrl: 'https://i.ytimg.com/vi/PQmrmVs10X8/hqdefault.jpg',
+      thumbnailUrl: 'https://c.saavncdn.com/430/Dil-Se-Hindi-1998-20210226142402-500x500.jpg',
     ),
   ];
 
   static final List<YoutubeTrack> manwaLaageRadioTracks = [
     const YoutubeTrack(
-      id: 'd8ItEhzs88g',
+      id: '3vbteb-P',
       title: 'Manwa Laage',
       artist: 'Arijit Singh, Shreya Ghoshal, Vishal-Shekhar',
       durationSeconds: 271,
-      thumbnailUrl: 'https://i.ytimg.com/vi/d8ItEhzs88g/hqdefault.jpg',
+      thumbnailUrl: 'https://c.saavncdn.com/127/Happy-New-Year-Hindi-2014-500x500.jpg',
     ),
     const YoutubeTrack(
       id: 'AEIVhBS6baE',
@@ -679,11 +679,11 @@ class CuratedTracks {
       thumbnailUrl: 'https://i.ytimg.com/vi/AEIVhBS6baE/hqdefault.jpg',
     ),
     const YoutubeTrack(
-      id: 'o_B4yVjH9l4',
+      id: 'Wn_eONzu',
       title: 'Raabta (Kehte Hain Khuda)',
       artist: 'Arijit Singh, Hamsika Iyer, Pritam',
       durationSeconds: 244,
-      thumbnailUrl: 'https://i.ytimg.com/vi/o_B4yVjH9l4/hqdefault.jpg',
+      thumbnailUrl: 'https://c.saavncdn.com/603/Agent-Vinod-2012-500x500.jpg',
     ),
     const YoutubeTrack(
       id: 'TGpG56pg3UU',
@@ -693,11 +693,11 @@ class CuratedTracks {
       thumbnailUrl: 'https://i.ytimg.com/vi/TGpG56pg3UU/hqdefault.jpg',
     ),
     const YoutubeTrack(
-      id: 'of3tW2iZk7c',
+      id: 'm6DcVXHw',
       title: 'Enna Sona',
       artist: 'Arijit Singh, A.R. Rahman',
       durationSeconds: 213,
-      thumbnailUrl: 'https://i.ytimg.com/vi/of3tW2iZk7c/hqdefault.jpg',
+      thumbnailUrl: 'https://c.saavncdn.com/835/OK-Jaanu-Original-Motion-Picture-Soundtrack-Hindi-2017-20230203133341-500x500.jpg',
     ),
     const YoutubeTrack(
       id: 'DS-raAyMxl4',

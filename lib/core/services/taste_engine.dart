@@ -425,7 +425,42 @@ class TasteEngine {
   ];
 
   static List<YoutubeTrack> rerankSearchResults(List<YoutubeTrack> tracks) =>
-      avoidConsecutiveArtists(rerankWithTaste(tracks));
+      deduplicateArtwork(avoidConsecutiveArtists(rerankWithTaste(tracks)));
+
+  /// Enforces ONE SONG, ONE IMAGE:
+  /// Prevents playlist/compilation banners from repeating across multiple songs in the same carousel.
+  static List<YoutubeTrack> deduplicateArtwork(List<YoutubeTrack> tracks) {
+    if (tracks.isEmpty) return tracks;
+    final seenUrls = <String>{};
+    final seenIds = <String>{};
+    final result = <YoutubeTrack>[];
+
+    for (final track in tracks) {
+      if (seenIds.contains(track.id)) continue;
+      seenIds.add(track.id);
+
+      final cleanUrl = track.thumbnailUrl.trim().toLowerCase();
+      if (cleanUrl.isNotEmpty && seenUrls.contains(cleanUrl)) {
+        // Shared banner detected! Check if track has a 11-char YouTube ID that can provide its own unique thumbnail
+        if (RegExp(r'^[a-zA-Z0-9_-]{11}$').hasMatch(track.id)) {
+          final uniqueYtThumb = 'https://i.ytimg.com/vi/${track.id}/hqdefault.jpg';
+          if (!seenUrls.contains(uniqueYtThumb.toLowerCase())) {
+            seenUrls.add(uniqueYtThumb.toLowerCase());
+            result.add(track.copyWith(thumbnailUrl: uniqueYtThumb));
+            continue;
+          }
+        }
+        // Otherwise skip duplicate compilation/album banner so no banner repeats across songs
+        continue;
+      }
+
+      if (cleanUrl.isNotEmpty) {
+        seenUrls.add(cleanUrl);
+      }
+      result.add(track);
+    }
+    return result;
+  }
 
   static Future<File> _getLocalFile() async {
     final dir = await getApplicationDocumentsDirectory();

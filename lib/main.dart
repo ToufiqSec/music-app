@@ -116,7 +116,13 @@ class _MusicAppBootstrapState extends State<MusicAppBootstrap> {
       await MoodRecommendationEngine.initApiKey();
     } catch (_) {}
 
-    // 4. Initialize native AudioService
+    // 4. Invalidate legacy un-keyed image cache on upgrade
+    try {
+      PaintingBinding.instance.imageCache.clear();
+      PaintingBinding.instance.imageCache.clearLiveImages();
+    } catch (_) {}
+
+    // 5. Initialize native AudioService
     MyAudioHandler handler;
     try {
       debugPrint('[Startup] Initializing native AudioService...');

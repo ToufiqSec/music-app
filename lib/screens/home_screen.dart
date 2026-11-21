@@ -1036,7 +1036,8 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
             itemBuilder: (context, index) {
               final track = tracks[index];
               return ContentCard(
-                key: ValueKey('${track.id}_$index'),
+                key: ValueKey('card_${track.id}'),
+                trackId: track.id,
                 title: track.title,
                 subtitle: track.artist,
                 imageUrl: track.thumbnailUrl,
