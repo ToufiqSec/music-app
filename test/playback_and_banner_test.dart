@@ -119,5 +119,13 @@ void main() {
       final dieWithASmile = CuratedTracks.freshPicksTracks.firstWhere((t) => t.title == 'Die With A Smile');
       expect(dieWithASmile.id, 'bESGLojNYSo');
     });
+
+    test('Featured Podcasts contains direct playable RSS enclosures', () {
+      expect(CuratedTracks.featuredPodcasts.isNotEmpty, isTrue);
+      final feluda = CuratedTracks.featuredPodcasts.firstWhere((t) => t.id == 'ss_feluda_kathmandu');
+      expect(feluda.audioStreamUrl, isNotNull);
+      expect(feluda.audioStreamUrl!.startsWith('https://'), isTrue);
+      expect(feluda.audioStreamUrl!.contains('.mp3'), isTrue);
+    });
   });
 }

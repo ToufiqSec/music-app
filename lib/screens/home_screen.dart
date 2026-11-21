@@ -27,6 +27,7 @@ import 'albums_screen.dart';
 import 'artist_onboarding_screen.dart';
 import 'mood_hub_screen.dart';
 import '../core/services/taste_engine.dart';
+import '../core/services/podcast_rss_service.dart';
 import '../providers/auth_provider.dart';
 import '../features/listen_together/widgets/listen_together_button.dart';
 import '../core/constants/app_strings.dart';
@@ -354,24 +355,24 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
     final epoch = ++_contentLoadEpoch;
 
     try {
-      // Stage 1: Fast above-the-fold content first (Quick picks, Carousel 1, Featured Podcast)
+      // Stage 1: Fast above-the-fold content first (Quick picks, Carousel 1, verified RSS Podcast)
       final stage1Results = await Future.wait([
         audioProvider.musicService.searchTracks(quickQuery).catchError((_) => <YoutubeTrack>[]),
         audioProvider.musicService.searchTracks(carousel1Query).catchError((_) => <YoutubeTrack>[]),
-        audioProvider.musicService.searchTracks('Sunday Suspense Feluda Mirchi Bangla audio stories official').catchError((_) => <YoutubeTrack>[]),
+        PodcastRssService.fetchSundaySuspenseEpisodes(limit: 5).catchError((_) => CuratedTracks.featuredPodcasts),
       ]);
 
       if (!mounted || epoch != _contentLoadEpoch) return;
 
       setState(() {
         if (stage1Results[0].isNotEmpty) {
-          _quickPickTracks = TasteEngine.rerankSearchResults(stage1Results[0]).take(10).toList();
+          _quickPickTracks = TasteEngine.rerankSearchResults(stage1Results[0] as List<YoutubeTrack>).take(10).toList();
         }
         if (stage1Results[1].isNotEmpty) {
-          _carousel1Tracks = TasteEngine.rerankSearchResults(stage1Results[1]).take(20).toList();
+          _carousel1Tracks = TasteEngine.rerankSearchResults(stage1Results[1] as List<YoutubeTrack>).take(20).toList();
         }
         if (stage1Results[2].isNotEmpty) {
-          _featuredPodcast = stage1Results[2].first;
+          _featuredPodcast = (stage1Results[2] as List<YoutubeTrack>).first;
         }
         _isLoadingContent = false;
       });

@@ -435,7 +435,11 @@ class AudioProvider extends ChangeNotifier {
       }
 
       if (!resolution.isPlayable || resolution.url == null) {
-        const msg = 'Skipped a track that is unavailable';
+        final isPodcast = track.durationSeconds > 1200 ||
+            track.title.toLowerCase().contains('podcast') ||
+            track.title.toLowerCase().contains('suspense') ||
+            track.title.toLowerCase().contains('episode');
+        final msg = isPodcast ? 'Audio not available for this episode' : 'Audio stream currently unavailable';
         _playbackErrorMessage = msg;
         debugPrint('[AudioProvider] Playback failure for "${track.title}" (ID: ${track.id}): ${resolution.failureReason}');
         _isBuffering = false;

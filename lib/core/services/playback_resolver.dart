@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import '../../features/music/models/music_models.dart';
 import 'audio_cache_service.dart';
+import 'podcast_rss_service.dart';
 import 'youtube_music_service.dart';
 
 class PlaybackResolutionResult {
@@ -266,9 +267,29 @@ class PlaybackResolver {
       }
     }
 
-    // 3. Dynamic Service Stream (YouTube Explode / Fallback Search)
+    // 3. Dynamic Service Stream (RSS Podcast Enclosure / YouTube Explode)
     try {
       final fallbackQuery = '${track.title} ${track.artist}'.trim();
+      final isPodcast = track.durationSeconds > 1200 ||
+          track.title.toLowerCase().contains('podcast') ||
+          track.title.toLowerCase().contains('suspense') ||
+          track.title.toLowerCase().contains('feluda');
+
+      if (isPodcast) {
+        final rssUrl = await PodcastRssService.resolvePodcastEnclosure(track.title);
+        if (rssUrl != null && rssUrl.isNotEmpty) {
+          var secureUrl = upgradeToHttps(rssUrl);
+          final preResolved = await resolveFinalAudioUrl(secureUrl);
+          if (preResolved != null) {
+            debugPrint('[PlaybackResolver] Resolved podcast RSS audio enclosure: $preResolved');
+            return PlaybackResolutionResult.success(
+              url: preResolved,
+              sourceType: 'rss_enclosure',
+            );
+          }
+        }
+      }
+
       final streamUrl = await musicService.getAudioStreamUrl(
         track.id,
         fallbackQuery: fallbackQuery,
@@ -292,14 +313,14 @@ class PlaybackResolver {
     } catch (e) {
       debugPrint('[PlaybackResolver] Music service resolution failed for ${track.id}: $e');
       return PlaybackResolutionResult.failure(
-        'Resolution exception: $e',
+        'Audio not available for this episode',
         sourceType: 'error',
       );
     }
 
     debugPrint('[PlaybackResolver] No playable source found for "${track.title}" (ID: ${track.id})');
     return PlaybackResolutionResult.failure(
-      'No playable stream found for this item',
+      'Audio not available for this episode',
       sourceType: 'missing_source',
     );
   }
