@@ -719,31 +719,6 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
               ),
             ),
           ),
-                    color: AppColors.surface2,
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Search songs, artists, podcasts',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.textMuted,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                    const Icon(
-                      Icons.search_rounded,
-                      color: AppColors.iconIdle,
-                      size: 20,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
 
           const SizedBox(height: 14),
 

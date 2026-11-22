@@ -14,11 +14,14 @@ class AppColors {
   static const Color surface2 = Color(0xFF232032); // Elevated Glass Surface
   static const Color surface3 = Color(0xFF2E2A42);
   static const Color surfaceGlow = Color(0xFF382F56);
+  static const Color cardBg = surface1; // Card Background #191724
 
   // Brand, Purples & Pinks
   static const Color primary = Color(0xFF7955D9); // Deep Purple #7955D9
   static const Color primarySoft = Color(0xFFA78BFA); // Soft Purple #A78BFA
   static const Color pinkAccent = Color(0xFFE8A1D1); // Pink Accent #E8A1D1
+  static const Color deepPurple = primary;
+  static const Color softPurple = primarySoft;
   static const Color sunsetPink = Color(0xFFE8A1D1);
   static const Color sunsetCoral = Color(0xFFE8A1D1);
   static const Color sunsetViolet = Color(0xFF7955D9);
@@ -33,6 +36,8 @@ class AppColors {
   // Text
   static const Color textPrimary = Color(0xFFFFFFFF); // Primary Text #FFFFFF
   static const Color textSecondary = Color(0xFFAAA5B8); // Secondary Text #AAA5B8
+  static const Color primaryText = textPrimary;
+  static const Color secondaryText = textSecondary;
   static const Color textTertiary = Color(0xFF837D94);
   static const Color textMuted = Color(0xFF6E6880);
   static const Color textOnLight = Color(0xFF1E1B24);

@@ -672,6 +672,8 @@ class AudioProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void toggleRepeat() => toggleRepeatMode();
+
   /// Persistent Favorite toggle
   Future<bool> toggleFavorite(YoutubeTrack track) async {
     final result = await TrackMetadataStore.toggleFavorite(track);
