@@ -1,9 +1,18 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:music_app/core/services/lyrics_service.dart';
 import 'package:music_app/core/services/lyrics_transliteration_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUpAll(() {
+    const MethodChannel channel = MethodChannel('plugins.flutter.io/path_provider');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
+      return '.';
+    });
+  });
 
   group('Lyrics Transliteration & Hindi Meaning Tests (Issue 4)', () {
     test('Devanagari-lyric song (Kun Faya Kun) shows Roman on Line 1 and Hindi meaning on Line 2', () async {
