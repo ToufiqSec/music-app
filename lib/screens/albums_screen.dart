@@ -369,6 +369,92 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
     );
   }
 
+  Widget _buildAlbumCard(BuildContext context, AlbumData album, double cardWidth) {
+    final audio = context.read<AudioProvider>();
+    final effectiveCover = album.coverUrl.trim().isNotEmpty
+        ? album.coverUrl
+        : (album.tracks.isNotEmpty ? album.tracks.first.thumbnailUrl : '');
+    final trackCountText = album.id.startsWith('saavn_album_')
+        ? 'Lossless CD • Tap to play'
+        : (album.trackCount > 0 ? '${album.trackCount} tracks' : '');
+
+    return GestureDetector(
+      key: ValueKey('album_card_${album.id}'),
+      onTap: () => _openAlbumDetails(album, audio),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface1,
+          borderRadius: BorderRadius.circular(AppRadii.md),
+          border: Border.all(color: AppColors.cardBorder),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: cardWidth,
+              height: cardWidth,
+              child: AppArtworkImage(
+                key: ValueKey('album_cover_${album.id}'),
+                trackId: album.id,
+                imageUrl: effectiveCover,
+                title: album.title,
+                artist: album.artist,
+                width: cardWidth,
+                height: cardWidth,
+                fit: BoxFit.cover,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadii.md)),
+              ),
+            ),
+            SizedBox(
+              height: 76,
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      album.title.isNotEmpty ? album.title : 'Unknown Album',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      album.artist.isNotEmpty ? album.artist : 'Various Artists',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 11,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      trackCountText,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.accentTeal,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final audio = context.watch<AudioProvider>();
@@ -380,134 +466,90 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
       body: SafeArea(
         bottom: false,
         child: ListView(
-          padding: EdgeInsets.fromLTRB(16, 16, 16, bottomInset),
+          padding: EdgeInsets.fromLTRB(0, 16, 0, bottomInset),
           children: [
-            Row(
-              children: [
-                const Icon(Icons.album_rounded, color: AppColors.accentTeal, size: 28),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text('Albums & Collections', style: AppTextStyles.h1.copyWith(fontSize: 22)),
-                ),
-                const AppProfileAvatar(),
-              ],
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  const Icon(Icons.album_rounded, color: AppColors.accentTeal, size: 28),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text('Albums & Collections', style: AppTextStyles.h1.copyWith(fontSize: 22)),
+                  ),
+                  const AppProfileAvatar(),
+                ],
+              ),
             ),
             const SizedBox(height: 6),
-            Text(
-              'Browse live album charts, compilations, and personal records',
-              style: AppTextStyles.bodySecondary.copyWith(fontSize: 13),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'Browse live album charts, compilations, and personal records',
+                style: AppTextStyles.bodySecondary.copyWith(fontSize: 13),
+              ),
             ),
             const SizedBox(height: 18),
 
             // Search Bar
-            TextField(
-              controller: _searchController,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: 'Search live albums and artists...',
-                hintStyle: const TextStyle(color: AppColors.textTertiary, fontSize: 13),
-                prefixIcon: const Icon(Icons.search_rounded, color: AppColors.iconIdle),
-                suffixIcon: _isLoadingDynamicAlbums
-                    ? const Padding(
-                        padding: EdgeInsets.all(12),
-                        child: SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primarySoft),
-                        ),
-                      )
-                    : null,
-                filled: true,
-                fillColor: AppColors.surface1,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppRadii.md),
-                  borderSide: const BorderSide(color: AppColors.cardBorder),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: TextField(
+                controller: _searchController,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Search live albums and artists...',
+                  hintStyle: const TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                  prefixIcon: const Icon(Icons.search_rounded, color: AppColors.iconIdle),
+                  suffixIcon: _isLoadingDynamicAlbums
+                      ? const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primarySoft),
+                          ),
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: AppColors.surface1,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppRadii.md),
+                    borderSide: const BorderSide(color: AppColors.cardBorder),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppRadii.md),
+                    borderSide: const BorderSide(color: AppColors.cardBorder),
+                  ),
                 ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppRadii.md),
-                  borderSide: const BorderSide(color: AppColors.cardBorder),
-                ),
+                onChanged: _onSearchChanged,
               ),
-              onChanged: _onSearchChanged,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 8),
 
             // Grid of Albums
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 14,
-                mainAxisSpacing: 14,
-                childAspectRatio: 0.78,
-              ),
-              itemCount: albums.length,
-              itemBuilder: (ctx, i) {
-                final album = albums[i];
-                final effectiveCover = album.coverUrl.trim().isNotEmpty
-                    ? album.coverUrl
-                    : (album.tracks.isNotEmpty ? album.tracks.first.thumbnailUrl : '');
-                final trackCountText = album.id.startsWith('saavn_album_')
-                    ? 'Lossless CD • Tap to play'
-                    : (album.trackCount > 0 ? '${album.trackCount} tracks' : '');
-                return GestureDetector(
-                  key: ValueKey('album_card_${album.id}'),
-                  onTap: () => _openAlbumDetails(album, audio),
-                  child: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface1,
-                      borderRadius: BorderRadius.circular(AppRadii.md),
-                      border: Border.all(color: AppColors.cardBorder),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: AppArtworkImage(
-                            key: ValueKey('album_cover_${album.id}'),
-                            trackId: album.id,
-                            imageUrl: effectiveCover,
-                            title: album.title,
-                            artist: album.artist,
-                            width: double.infinity,
-                            borderRadius: BorderRadius.circular(AppRadii.sm),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          album.title.isNotEmpty ? album.title : 'Unknown Album',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          album.artist.isNotEmpty ? album.artist : 'Various Artists',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 11,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          trackCountText,
-                          style: const TextStyle(
-                            color: AppColors.accentTeal,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final double screenWidth = MediaQuery.of(context).size.width;
+                final double safeWidth = constraints.maxWidth.isFinite ? constraints.maxWidth : screenWidth;
+                // 2-column grid with 16px outer padding and 16px cross-axis spacing
+                final double cardWidth = ((safeWidth - 48) / 2).clamp(120.0, 260.0);
+
+                return GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 20,
+                    childAspectRatio: cardWidth / (cardWidth + 76), // 1:1 artwork + 76px metadata
                   ),
+                  itemCount: albums.length,
+                  itemBuilder: (context, index) {
+                    final album = albums[index];
+                    return _buildAlbumCard(context, album, cardWidth);
+                  },
                 );
               },
             ),

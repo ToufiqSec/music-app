@@ -113,6 +113,14 @@ class _SearchScreenState extends State<SearchScreen> {
     super.dispose();
   }
 
+  void _commitRecentSearch(String query) {
+    final clean = query.trim();
+    if (clean.isNotEmpty) {
+      SearchCacheStore.addRecentSearch(clean);
+      if (mounted) setState(() {});
+    }
+  }
+
   void _onQueryChanged(String query) {
     if (query == _lastQuery) return;
     _debounceTimer?.cancel();
@@ -217,10 +225,6 @@ class _SearchScreenState extends State<SearchScreen> {
           _isShowingCached = false;
           _isOfflineNotice = false;
         });
-
-        if (!isMood && results.isNotEmpty) {
-          SearchCacheStore.addRecentSearch(trimmed);
-        }
       }
     } catch (e) {
       if (mounted) {
@@ -267,6 +271,22 @@ class _SearchScreenState extends State<SearchScreen> {
                       onChanged: (q) {
                         setState(() => _selectedCategory = null);
                         _onQueryChanged(q);
+                      },
+                      onSubmitted: (q) {
+                        _debounceTimer?.cancel();
+                        final clean = q.trim();
+                        if (clean.isNotEmpty) {
+                          _commitRecentSearch(clean);
+                          _executeSearch(clean);
+                        }
+                      },
+                      onSearchTap: () {
+                        _debounceTimer?.cancel();
+                        final clean = _searchController.text.trim();
+                        if (clean.isNotEmpty) {
+                          _commitRecentSearch(clean);
+                          _executeSearch(clean);
+                        }
                       },
                     ),
                   ),
@@ -615,7 +635,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 onTap: () {
                   HapticFeedback.lightImpact();
                   if (_searchController.text.trim().isNotEmpty) {
-                    SearchCacheStore.addRecentSearch(_searchController.text.trim());
+                    _commitRecentSearch(_searchController.text);
                   }
 
                   // Audiobooks Navigation (Issue 9 & 10)

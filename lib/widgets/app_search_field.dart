@@ -8,6 +8,7 @@ import '../theme/app_motion.dart';
 class AppSearchField extends StatefulWidget {
   final TextEditingController? controller;
   final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onSubmitted;
   final VoidCallback? onSearchTap;
   final String placeholder;
 
@@ -15,6 +16,7 @@ class AppSearchField extends StatefulWidget {
     super.key,
     this.controller,
     this.onChanged,
+    this.onSubmitted,
     this.onSearchTap,
     this.placeholder = 'Search songs, artists, albums...',
   });
@@ -64,6 +66,8 @@ class _AppSearchFieldState extends State<AppSearchField> {
               controller: widget.controller,
               focusNode: _focusNode,
               onChanged: widget.onChanged,
+              onSubmitted: widget.onSubmitted,
+              textInputAction: TextInputAction.search,
               style: AppTextStyles.body.copyWith(color: AppColors.textPrimary),
               cursorColor: AppColors.primarySoft,
               decoration: InputDecoration(
@@ -76,7 +80,12 @@ class _AppSearchFieldState extends State<AppSearchField> {
             ),
           ),
           GestureDetector(
-            onTap: widget.onSearchTap,
+            onTap: () {
+              if (widget.onSubmitted != null && widget.controller != null) {
+                widget.onSubmitted!(widget.controller!.text);
+              }
+              widget.onSearchTap?.call();
+            },
             child: const Icon(
               Icons.search,
               size: 20,

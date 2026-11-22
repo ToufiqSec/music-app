@@ -1523,14 +1523,27 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
         : (CuratedTracks.lateNightTracks + CuratedTracks.chillTracks);
   }
 
-  /// 2x5 Grid of Compact Glass-Tinted Tiles
+  /// Helper to sanitize noisy YouTube titles
+  String _cleanTrackTitle(String rawTitle) {
+    final cleaned = rawTitle
+        .replaceAll(RegExp(r'\[.*?\]|\(.*?\)', caseSensitive: false), '')
+        .split(RegExp(r'\s*[\|\-•]\s*(?:Bollywood|Audio|Jukebox|Official|Full Video|Remix|Song).*', caseSensitive: false))
+        .first
+        .trim();
+    return cleaned.isEmpty ? rawTitle : cleaned;
+  }
+
+  /// 2x3 Grid of Clean, Balanced Quick-Pick Tiles (Spotify Style)
   Widget _buildQuickPickGrid(
     BuildContext context,
     AudioProvider audioProvider,
   ) {
-    final tracks = _quickPickTracks.isNotEmpty
-        ? _quickPickTracks
-        : CuratedTracks.getTracksForFilter(_activeFilter).take(10).toList();
+    // Show maximum 6 items (3 rows x 2 columns) for clean visual density
+    final tracks = (_quickPickTracks.isNotEmpty
+            ? _quickPickTracks
+            : CuratedTracks.getTracksForFilter(_activeFilter))
+        .take(6)
+        .toList();
 
     return GridView.builder(
       physics: const NeverScrollableScrollPhysics(),
@@ -1540,7 +1553,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
         crossAxisCount: 2,
         mainAxisSpacing: 8,
         crossAxisSpacing: 8,
-        mainAxisExtent: 56,
+        mainAxisExtent: 60, // Expanded height for breathing room
       ),
       itemBuilder: (context, index) {
         final track = tracks[index];
@@ -1558,7 +1571,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
               color: isCurrent
                   ? AppColors.surface2
                   : AppColors.surface1.withValues(alpha: 0.85),
-              borderRadius: AppRadii.borderSmall,
+              borderRadius: BorderRadius.circular(8),
               border: Border.all(
                 color: isCurrent
                     ? AppColors.primarySoft.withValues(alpha: 0.4)
@@ -1570,27 +1583,27 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
               children: [
                 ClipRRect(
                   borderRadius: const BorderRadius.horizontal(
-                    left: Radius.circular(AppRadii.small),
+                    left: Radius.circular(8),
                   ),
                   child: SizedBox(
-                    width: 56,
-                    height: 56,
+                    width: 60,
+                    height: 60,
                     child: CascadingArtwork(
                       key: ValueKey('quick_art_${track.id}'),
                       trackId: track.id,
                       imageUrl: track.thumbnailUrl,
                       title: track.title,
                       artist: track.artist,
-                      width: 56,
-                      height: 56,
+                      width: 60,
+                      height: 60,
                       borderRadius: BorderRadius.zero,
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    track.title,
+                    _cleanTrackTitle(track.title),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: AppTextStyles.bodySmall.copyWith(
@@ -1598,7 +1611,8 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
                       color: isCurrent
                           ? AppColors.primarySoft
                           : AppColors.textPrimary,
-                      fontSize: 12,
+                      fontSize: 12.5,
+                      height: 1.2,
                     ),
                   ),
                 ),

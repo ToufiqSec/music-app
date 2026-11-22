@@ -66,6 +66,7 @@ jobs:
           echo "Running Unit Tests..."
           flutter test test/numeric_utils_test.dart || true
           flutter test test/now_playing_screen_test.dart || true
+          flutter test test/quick_pick_title_cleaner_test.dart || true
 
       - name: Analyze Project Code (Non-Fatal)
         run: flutter analyze --no-fatal-infos --no-fatal-warnings || true
@@ -145,10 +146,10 @@ jobs:
             ### 🎵 Music App v${{ env.APP_VERSION }}
 
             **What's new in this release:**
-            - 🎵 **Spotify-Style Now Playing Screen Rebuild:** Implemented the full 10-section streaming player with large square hero artwork, dynamic artwork color palette adaptation, and smooth 400ms transitions.
-            - 📜 **Synced Lyrics Card with Urdu RTL & Hindi Toggle:** Dynamic accent-colored lyrics card with center-aligned synchronized scrolling, active line highlighting, Urdu RTL script support, and a full-screen lyrics viewer.
-            - 🔝 **Sticky Mini Header:** Seamless sticky player bar appears with fade and slide when the hero scrolls out of view, with instant playback controls and bottom progress line.
-            - 👤 **Artist Profile, Credits & Explore Carousel:** Verified artist cards with follow state, monthly listeners, expandable bio, full contributors credits, and horizontal artist discovery carousels.
+            - ⚡ **Jump Back In Overhaul:** Capped quick-pick grid to 6 tiles (2 columns x 3 rows), saving ~160dp of vertical space so Recommended Artists and feed sections appear comfortably without excessive scrolling.
+            - 🧹 **YouTube Title Sanitization:** Stripped noisy tags (`[Official Video]`, `| Audio Jukebox`, `(Full Video)`) to ensure crisp, readable 2-line titles.
+            - 📐 **Enhanced Tile Proportions:** Expanded tile height to 60dp with 8dp rounded corners and balanced 12.5px typography.
+            - 🎵 **Spotify-Style Now Playing Screen Rebuild:** Full 10-section streaming player with dynamic color palette, synced lyrics card, sticky mini header, and artist exploration.
             - ⏱️ **Integrated Sleep Timer:** Direct sleep timer controls (15, 30, 45, 60 mins) with auto-pause.
             - 🛡️ **Universal Numeric Safety:** Hardened dimensions, progress percentages, and duration calculations against Infinity, NaN, and zero denominators.
             - 🚀 **Instant Home Streaming:** Skeleton placeholders and progressive section rendering stream content in without layout shifts.
