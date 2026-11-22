@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:audio_service/audio_service.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'services/audio_handler.dart';
 import 'providers/audio_provider.dart';
 import 'providers/auth_provider.dart';
@@ -94,7 +95,16 @@ class _MusicAppBootstrapState extends State<MusicAppBootstrap> {
   }
 
   Future<void> _initServices() async {
-    // 1. Initialize Supabase first for backend Auth & Cloud sync
+    // 0. Initialize Firebase Core for Native Auth & Messaging
+    try {
+      debugPrint('[Startup] Initializing Firebase Core...');
+      await Firebase.initializeApp();
+      debugPrint('[Startup] Firebase Core initialized.');
+    } catch (e, stack) {
+      debugPrint('[Startup] Firebase Core initialization: $e\n$stack');
+    }
+
+    // 1. Initialize Supabase for backend Cloud sync
     try {
       debugPrint('[Startup] Initializing Supabase...');
       await SupabaseService.initialize();

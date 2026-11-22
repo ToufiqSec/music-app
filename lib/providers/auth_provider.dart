@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb;
+import '../core/services/firebase_auth_service.dart';
 import '../core/services/supabase_service.dart';
 
 class AuthProvider extends ChangeNotifier {
@@ -8,80 +9,79 @@ class AuthProvider extends ChangeNotifier {
   UserSettingsData _settings = const UserSettingsData();
   bool _isLoading = false;
   String? _errorMessage;
-  StreamSubscription<AuthState>? _authSubscription;
+  StreamSubscription<fb.User?>? _authSubscription;
 
   AuthProvider() {
     _initAuthListener();
   }
 
   // Getters
-  bool get isAuthenticated => SupabaseService.isAuthenticated;
-  User? get currentUser => SupabaseService.currentUser;
+  bool get isAuthenticated => FirebaseAuthService.isAuthenticated;
+  fb.User? get currentUser => FirebaseAuthService.currentUser;
   UserProfileData? get profile => _profile;
   UserSettingsData get settings => _settings;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  String get displayName =>
-      _profile?.displayName.isNotEmpty == true ? _profile!.displayName : 'Music Lover';
-  String get email {
-    if (_profile != null && _profile!.email.trim().isNotEmpty && _profile!.email.trim() != 'Guest') {
-      return _profile!.email.trim();
+  String get displayName {
+    final user = currentUser;
+    if (user != null && user.displayName != null && user.displayName!.trim().isNotEmpty) {
+      return user.displayName!.trim();
     }
+    if (_profile != null && _profile!.displayName.trim().isNotEmpty && _profile!.displayName.trim() != 'Music Lover') {
+      return _profile!.displayName.trim();
+    }
+    final em = email;
+    if (em.isNotEmpty && em != 'Guest') {
+      return em.split('@')[0];
+    }
+    return 'Music Lover';
+  }
+
+  String get email {
     final user = currentUser;
     if (user?.email != null && user!.email!.trim().isNotEmpty) {
       return user.email!.trim();
     }
-    final metaEmail = user?.userMetadata?['email']?.toString();
-    final trimmedMeta = metaEmail?.trim();
-    if (trimmedMeta != null && trimmedMeta.isNotEmpty) {
-      return trimmedMeta;
+    if (_profile != null && _profile!.email.trim().isNotEmpty && _profile!.email.trim() != 'Guest') {
+      return _profile!.email.trim();
     }
     return 'Guest';
   }
+
   String get avatarUrl {
-    final pUrl = _profile?.avatarUrl?.trim();
+    final user = currentUser;
+    if (user?.photoURL != null && user!.photoURL!.trim().isNotEmpty) {
+      return user.photoURL!.trim();
+    }
+    final pUrl = _profile?.avatarUrl.trim();
     if (pUrl != null && pUrl.isNotEmpty) return pUrl;
-    final metaAvatar = currentUser?.userMetadata?['avatar_url']?.toString().trim();
-    if (metaAvatar != null && metaAvatar.isNotEmpty) return metaAvatar;
-    final metaPicture = currentUser?.userMetadata?['picture']?.toString().trim();
-    if (metaPicture != null && metaPicture.isNotEmpty) return metaPicture;
     return '';
   }
 
   void _initAuthListener() {
-    // Read initial state
     if (isAuthenticated) {
       _loadProfileAndSettings();
     }
 
-    _authSubscription = SupabaseService.authStateChanges.listen((data) async {
-      final AuthChangeEvent event = data.event;
-      debugPrint('[Auth State Change] Event: $event');
+    _authSubscription = FirebaseAuthService.authStateChanges.listen((fb.User? user) async {
+      debugPrint('[AuthProvider] Firebase Auth State Change: UID = ${user?.uid}, email = ${user?.email}');
 
-      if (event == AuthChangeEvent.signedIn || event == AuthChangeEvent.tokenRefreshed) {
-        final user = SupabaseService.currentUser;
-        if (user != null) {
-          final metaUserEmail = user.userMetadata?['email']?.toString();
-          final userEmail = user.email?.trim() ?? metaUserEmail?.trim();
-          if (userEmail != null && userEmail.isNotEmpty) {
-            try {
-              await SupabaseService.client.from('profiles').upsert({
-                'id': user.id,
-                'email': userEmail,
-                'display_name': user.userMetadata?['full_name'] ??
-                    user.userMetadata?['name'] ??
-                    userEmail.split('@')[0],
-                'updated_at': DateTime.now().toIso8601String(),
-              });
-            } catch (e) {
-              debugPrint('[AuthProvider] Profile sync on auth change: $e');
-            }
-          }
-        }
-        await _loadProfileAndSettings();
-        await SupabaseService.syncDownAllUserData();
-      } else if (event == AuthChangeEvent.signedOut) {
+      if (user != null) {
+        _profile = UserProfileData(
+          id: user.uid,
+          email: user.email ?? 'Guest',
+          displayName: user.displayName ?? (user.email?.split('@')[0] ?? 'Music Lover'),
+          avatarUrl: user.photoURL ?? '',
+        );
+
+        // Sync with cloud database if available
+        try {
+          await SupabaseService.syncDownAllUserData();
+        } catch (_) {}
+
+        notifyListeners();
+      } else {
         _profile = null;
         _settings = const UserSettingsData();
         notifyListeners();
@@ -90,36 +90,22 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> _loadProfileAndSettings() async {
-    _profile = await SupabaseService.fetchProfile();
-    _settings = await SupabaseService.fetchUserSettings();
+    final user = currentUser;
+    if (user != null) {
+      _profile = UserProfileData(
+        id: user.uid,
+        email: user.email ?? 'Guest',
+        displayName: user.displayName ?? (user.email?.split('@')[0] ?? 'Music Lover'),
+        avatarUrl: user.photoURL ?? '',
+      );
+    }
+    try {
+      _settings = await SupabaseService.fetchUserSettings();
+    } catch (_) {}
     notifyListeners();
   }
 
-  static String _formatAuthErrorMessage(AuthException e) {
-    final msg = e.message.toLowerCase();
-    final code = e.statusCode?.toString() ?? '';
-    if (msg.contains('invalid login credentials') || msg.contains('invalid credentials')) {
-      return 'Incorrect email or password. Please check your credentials and try again.';
-    }
-    if (msg.contains('user already registered') || msg.contains('already exists')) {
-      return 'An account with this email already exists. Please choose "Sign In".';
-    }
-    if (msg.contains('email not confirmed')) {
-      return 'Your email is not confirmed yet. Please check your inbox for the confirmation email, or request a new link.';
-    }
-    if (msg.contains('rate limit') || msg.contains('over_email_send_rate_limit') || code == '429') {
-      return 'Email rate limit reached (max 3/hour on free tier). Please wait a few minutes before trying again.';
-    }
-    if (msg.contains('link expired') || msg.contains('token has expired') || msg.contains('otp_expired')) {
-      return 'This verification link has expired. Please sign in again or request a new reset link.';
-    }
-    if (msg.contains('password should be at least')) {
-      return 'Password must be at least 6 characters.';
-    }
-    return e.message;
-  }
-
-  /// Sign In with Email & Password
+  /// Sign In with Email & Password via Firebase Auth
   Future<bool> signInWithEmail({
     required String email,
     required String password,
@@ -127,29 +113,26 @@ class AuthProvider extends ChangeNotifier {
     _setLoading(true);
     _clearError();
     try {
-      final response = await SupabaseService.signInWithEmail(
+      final cred = await FirebaseAuthService.signInWithEmail(
         email: email,
         password: password,
       );
-      if (response.user != null) {
+      if (cred.user != null) {
         await _loadProfileAndSettings();
         _setLoading(false);
         return true;
       }
       _setError('Login failed. Please check your credentials.');
       return false;
-    } on AuthException catch (e) {
-      _setError(_formatAuthErrorMessage(e));
-      return false;
     } catch (e) {
-      _setError('An unexpected error occurred during login. Please try again.');
+      _setError(FirebaseAuthService.formatErrorMessage(e));
       return false;
     } finally {
       _setLoading(false);
     }
   }
 
-  /// Sign Up with Email & Password
+  /// Sign Up with Email & Password via Firebase Auth
   Future<bool> signUpWithEmail({
     required String email,
     required String password,
@@ -158,74 +141,68 @@ class AuthProvider extends ChangeNotifier {
     _setLoading(true);
     _clearError();
     try {
-      final response = await SupabaseService.signUpWithEmail(
+      final cred = await FirebaseAuthService.signUpWithEmail(
         email: email,
         password: password,
         displayName: displayName,
       );
-      if (response.user != null) {
-        if (response.session != null) {
-          await _loadProfileAndSettings();
-        } else {
-          debugPrint('[AuthProvider] User signed up. Confirmation email pending for $email.');
-        }
+      if (cred.user != null) {
+        await _loadProfileAndSettings();
         _setLoading(false);
         return true;
       }
       _setError('Registration failed. Please try again.');
       return false;
-    } on AuthException catch (e) {
-      _setError(_formatAuthErrorMessage(e));
-      return false;
     } catch (e) {
-      _setError('An unexpected error occurred during registration.');
+      _setError(FirebaseAuthService.formatErrorMessage(e));
       return false;
     } finally {
       _setLoading(false);
     }
   }
 
-  /// Send password reset email
+  /// Send password reset email via Firebase Auth
   Future<bool> resetPassword(String email) async {
     _setLoading(true);
     _clearError();
     try {
-      await SupabaseService.resetPassword(email);
+      await FirebaseAuthService.resetPassword(email);
       return true;
-    } on AuthException catch (e) {
-      _setError(_formatAuthErrorMessage(e));
-      return false;
     } catch (e) {
-      _setError('Could not send password reset email. Please try again.');
+      _setError(FirebaseAuthService.formatErrorMessage(e));
       return false;
     } finally {
       _setLoading(false);
     }
   }
 
-  /// Continue with Google OAuth
+  /// Native 1-Tap Google Sign-In via Firebase Auth (Google Play Services)
   Future<bool> signInWithGoogle() async {
     _setLoading(true);
     _clearError();
     try {
-      final started = await SupabaseService.signInWithGoogle();
-      return started;
-    } on AuthException catch (e) {
-      _setError(_formatAuthErrorMessage(e));
+      final cred = await FirebaseAuthService.signInWithGoogle();
+      if (cred != null && cred.user != null) {
+        await _loadProfileAndSettings();
+        _setLoading(false);
+        return true;
+      }
+      // User canceled account picker dialog
+      _setLoading(false);
       return false;
     } catch (e) {
-      _setError('Google sign-in could not be completed.');
+      _setError(FirebaseAuthService.formatErrorMessage(e));
       return false;
     } finally {
       _setLoading(false);
     }
   }
 
-  /// Sign Out
+  /// Sign Out via Firebase Auth
   Future<void> signOut() async {
     _setLoading(true);
     try {
-      await SupabaseService.signOut();
+      await FirebaseAuthService.signOut();
       _profile = null;
       _settings = const UserSettingsData();
     } catch (e) {
@@ -235,18 +212,18 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  /// Update Profile (Display Name & Avatar)
+  /// Update Profile (Display Name & Avatar) via Firebase Auth
   Future<bool> updateProfile({
     required String displayName,
     String? avatarUrl,
   }) async {
     _setLoading(true);
     try {
-      await SupabaseService.updateProfile(
+      await FirebaseAuthService.updateProfile(
         displayName: displayName,
-        avatarUrl: avatarUrl,
+        photoUrl: avatarUrl,
       );
-      _profile = await SupabaseService.fetchProfile();
+      await _loadProfileAndSettings();
       notifyListeners();
       return true;
     } catch (e) {
@@ -275,13 +252,17 @@ class AuthProvider extends ChangeNotifier {
           preferredLyricsScript: lyricsScript,
         );
     notifyListeners();
-    await SupabaseService.updateUserSettings(_settings);
+    try {
+      await SupabaseService.updateUserSettings(_settings);
+    } catch (_) {}
   }
 
   /// Force a full cloud re-sync
   Future<void> syncNow() async {
     _setLoading(true);
-    await SupabaseService.syncDownAllUserData();
+    try {
+      await SupabaseService.syncDownAllUserData();
+    } catch (_) {}
     await _loadProfileAndSettings();
     _setLoading(false);
   }

@@ -1,14 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb;
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../theme/app_radii.dart';
 import '../theme/app_spacing.dart';
 import '../providers/auth_provider.dart';
 import '../providers/audio_provider.dart';
-import '../core/services/supabase_service.dart';
+import '../core/services/firebase_auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -26,14 +26,14 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   bool _isSignUp = false;
   bool _obscurePassword = true;
   String? _localError;
-  StreamSubscription<AuthState>? _authSubscription;
+  StreamSubscription<fb.User?>? _authSubscription;
   bool _isDismissed = false;
 
   @override
   void initState() {
     super.initState();
-    _authSubscription = SupabaseService.authStateChanges.listen((data) {
-      if (data.event == AuthChangeEvent.signedIn && mounted) {
+    _authSubscription = FirebaseAuthService.authStateChanges.listen((user) {
+      if (user != null && mounted) {
         _safeDismiss('Signed in successfully!');
       }
     });
@@ -87,22 +87,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     if (!mounted) return;
 
     if (success) {
-      if (_isSignUp && SupabaseService.currentUser?.emailConfirmedAt == null && SupabaseService.client.auth.currentSession == null) {
-        setState(() {
-          _localError = null;
-          _isSignUp = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Account created! Verification link sent to your email. Please click it to verify your account, then sign in.'),
-            backgroundColor: AppColors.surface2,
-            duration: Duration(seconds: 8),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      } else {
-        _safeDismiss(_isSignUp ? 'Account created! Welcome.' : 'Signed in successfully!');
-      }
+      _safeDismiss(_isSignUp ? 'Account created! Welcome.' : 'Signed in successfully!');
     } else {
       setState(() {
         _localError = authProvider.errorMessage ?? 'Authentication failed. Please check your credentials.';
@@ -114,20 +99,13 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     setState(() => _localError = null);
     final authProvider = context.read<AuthProvider>();
     try {
-      final launched = await authProvider.signInWithGoogle();
+      final success = await authProvider.signInWithGoogle();
       if (!mounted) return;
 
-      if (!launched && authProvider.errorMessage != null) {
+      if (success) {
+        _safeDismiss('Signed in with Google!');
+      } else if (authProvider.errorMessage != null) {
         setState(() => _localError = authProvider.errorMessage);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Opening Google sign-in in your browser...'),
-            backgroundColor: AppColors.surface2,
-            behavior: SnackBarBehavior.floating,
-            duration: Duration(seconds: 4),
-          ),
-        );
       }
     } catch (e) {
       if (mounted) {
@@ -142,25 +120,25 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface1,
         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(AppRadii.lg))),
-        title: Text('Google Sign-In Setup Info', style: AppTextStyles.h3.copyWith(fontSize: 18)),
+        title: Text('Firebase Authentication', style: AppTextStyles.h3.copyWith(fontSize: 18)),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'To prevent "Error 400: redirect_uri_mismatch", configure your Google Cloud Console OAuth 2.0 Web Client with these exact values:',
+                'Sign-in is powered natively by Google Play Services and Firebase Authentication. No browser redirects are needed.',
                 style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary, height: 1.4),
               ),
               const SizedBox(height: 14),
+              const Text('Project ID:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+              const SelectableText('music-app-a5168', style: TextStyle(color: AppColors.primarySoft, fontFamily: 'monospace', fontSize: 12)),
+              const SizedBox(height: 10),
               const Text('Package Name:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
               const SelectableText('com.toufiqsec.music_app', style: TextStyle(color: AppColors.primarySoft, fontFamily: 'monospace', fontSize: 12)),
               const SizedBox(height: 10),
-              const Text('Authorized Redirect URI (Google Cloud):', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
-              const SelectableText('https://pxyyzwxvqrbedvlbtltq.supabase.co/auth/v1/callback', style: TextStyle(color: AppColors.primarySoft, fontFamily: 'monospace', fontSize: 11)),
-              const SizedBox(height: 10),
-              const Text('App Deep Link Scheme (Supabase URL config):', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
-              const SelectableText('myapp://auth-callback', style: TextStyle(color: AppColors.primarySoft, fontFamily: 'monospace', fontSize: 12)),
+              const Text('SHA-1 Fingerprint:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+              const SelectableText('88:E6:E6:70:DB:6C:12:42:9B:B2:0F:45:A9:1A:0C:60:88:BF:53:07', style: TextStyle(color: AppColors.primarySoft, fontFamily: 'monospace', fontSize: 11)),
             ],
           ),
         ),

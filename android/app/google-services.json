@@ -12,7 +12,20 @@
           "package_name": "com.toufiqsec.music_app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "286608319896-f8ha6l5hiojcg6euip7l6o3m3pb9vcj7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.toufiqsec.music_app",
+            "certificate_hash": "88e6e670db6c12429bb20f45a91a0c6088bf5307"
+          }
+        },
+        {
+          "client_id": "286608319896-p37flo65r2q85lvl63rr2p3f18qa42cs.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDZMtrAGjjzpoYZpgNRYFgDtOeBkBb5Ev4"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "286608319896-p37flo65r2q85lvl63rr2p3f18qa42cs.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

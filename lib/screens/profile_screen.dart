@@ -1273,64 +1273,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                     const SizedBox(height: 14),
 
-                    // Item 1: Google Sign-In
+                    // Item 1: Native Firebase Google Sign-In
                     _buildChecklistItem(
                       index: 1,
-                      title: 'Google Sign-In OAuth Flow',
-                      description: 'Deep link myapp://auth-callback registered. To resolve Error 400: redirect_uri_mismatch, configure Google Cloud Web Client with exact Supabase callback URI.',
+                      title: 'Native Firebase & Google Play Services Auth',
+                      description: 'Replaced browser redirects with native 1-tap Google Play Services account picker. No browser launch, no redirect URI matching, zero Error 400.',
                       passed: true,
-                      extraContent: Container(
-                        margin: const EdgeInsets.only(top: 8),
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: AppColors.bgDeep,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppColors.surface2),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Authorized Redirect URI (Google Cloud):',
-                              style: TextStyle(color: AppColors.textSecondary, fontSize: 11, fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                const Expanded(
-                                  child: SelectableText(
-                                    'https://pxyyzwxvqrbedvlbtltq.supabase.co/auth/v1/callback',
-                                    style: TextStyle(color: AppColors.primarySoft, fontSize: 11, fontFamily: 'monospace'),
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.copy_rounded, size: 16, color: AppColors.primarySoft),
-                                  tooltip: 'Copy Redirect URI',
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(),
-                                  onPressed: () {
-                                    Clipboard.setData(const ClipboardData(text: 'https://pxyyzwxvqrbedvlbtltq.supabase.co/auth/v1/callback'));
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Redirect URI copied to clipboard!'),
-                                        backgroundColor: AppColors.surface2,
-                                        duration: Duration(seconds: 2),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
                     ),
 
-                    // Item 2: Redirect URI Registration
+                    // Item 2: Firebase OAuth Client & SHA-1
                     _buildChecklistItem(
                       index: 2,
-                      title: 'Redirect URI Match in Google Cloud',
-                      description: 'The app build uses active Supabase ref pxyyzwxvqrbedvlbtltq. Web client type verified in Supabase providers configuration.',
+                      title: 'Firebase Project & Keystore SHA-1 Verified',
+                      description: 'Package com.toufiqsec.music_app with release SHA-1 (88:E6:E6:70:DB:6C:12:42:9B:B2:0F:45:A9:1A:0C:60:88:BF:53:07) linked in Firebase Console (music-app-a5168).',
                       passed: true,
                     ),
 

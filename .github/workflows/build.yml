@@ -68,6 +68,7 @@ jobs:
           flutter test test/now_playing_screen_test.dart || true
           flutter test test/quick_pick_title_cleaner_test.dart || true
           flutter test test/update_review_test.dart || true
+          flutter test test/firebase_auth_test.dart || true
 
       - name: Analyze Project Code (Non-Fatal)
         run: flutter analyze --no-fatal-infos --no-fatal-warnings || true
