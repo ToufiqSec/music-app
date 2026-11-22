@@ -520,31 +520,6 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
       ],
     );
   }
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E1E1E),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.queue_music_rounded, size: 18, color: Colors.white),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${audio.playlistQueue.length}',
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ],
-    );
-  }
 
   // ===========================================================================
   // SECTION 5: SYNCED LYRICS CARD
