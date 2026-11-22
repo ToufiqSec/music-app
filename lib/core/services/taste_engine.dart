@@ -592,6 +592,32 @@ class TasteEngine {
     return _favoriteArtists.any((a) => a.name.toLowerCase() == name.trim().toLowerCase());
   }
 
+  static ArtistProfile getArtistProfile(String artistName, {String? fallbackImage}) {
+    final cleanName = artistName.trim();
+    if (cleanName.isEmpty) {
+      return const ArtistProfile(id: 'unknown', name: 'Unknown Artist', imageUrl: '', language: 'All');
+    }
+    final lower = cleanName.toLowerCase();
+
+    // Check user favorites
+    for (final a in _favoriteArtists) {
+      if (a.name.toLowerCase() == lower) return a;
+    }
+    // Check default catalog
+    for (final a in defaultArtistCatalog) {
+      if (a.name.toLowerCase() == lower || lower.contains(a.name.toLowerCase())) {
+        return a;
+      }
+    }
+    // Return dynamically generated profile
+    return ArtistProfile(
+      id: 'dynamic_${cleanName.hashCode.abs()}',
+      name: cleanName,
+      imageUrl: fallbackImage ?? '',
+      language: 'All',
+    );
+  }
+
   static Future<void> recordPlaySignal(String artistName) async {
     final clean = artistName.trim().toLowerCase();
     if (clean.isEmpty) return;

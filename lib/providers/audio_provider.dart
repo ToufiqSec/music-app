@@ -87,6 +87,40 @@ class AudioProvider extends ChangeNotifier {
   RepeatMode get repeatMode => _repeatMode;
   bool get autoplayEnabled => _autoplayEnabled;
   double get crossfadeSeconds => _crossfadeSeconds;
+
+  // Sleep Timer
+  Timer? _sleepTimer;
+  DateTime? _sleepTimerEndTime;
+
+  bool get hasActiveSleepTimer => _sleepTimer != null && _sleepTimer!.isActive;
+  int get sleepTimerRemainingMinutes {
+    if (_sleepTimerEndTime == null) return 0;
+    final diff = _sleepTimerEndTime!.difference(DateTime.now()).inMinutes;
+    return diff > 0 ? diff + 1 : 0;
+  }
+
+  void setSleepTimer(int minutes) {
+    _sleepTimer?.cancel();
+    if (minutes <= 0) {
+      _sleepTimer = null;
+      _sleepTimerEndTime = null;
+      notifyListeners();
+      return;
+    }
+
+    _sleepTimerEndTime = DateTime.now().add(Duration(minutes: minutes));
+    _sleepTimer = Timer(Duration(minutes: minutes), () async {
+      await _audioHandler.pause();
+      _sleepTimer = null;
+      _sleepTimerEndTime = null;
+      notifyListeners();
+    });
+    notifyListeners();
+  }
+
+  void cancelSleepTimer() {
+    setSleepTimer(0);
+  }
   Duration get position => _position;
   Duration get duration => _duration;
   Duration get bufferedPosition => _bufferedPosition;
