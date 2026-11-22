@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radii.dart';
+import '../core/utils/numeric_utils.dart';
 
 /// Reliable Artwork Component with multi-tier image fallback:
 /// (a) its own thumbnail at the best size (maxresdefault or 500x500)
@@ -52,7 +53,9 @@ class _CascadingArtworkState extends State<CascadingArtwork> {
   @override
   void didUpdateWidget(covariant CascadingArtwork oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.trackId != widget.trackId || oldWidget.imageUrl != widget.imageUrl) {
+    if (oldWidget.trackId != widget.trackId ||
+        oldWidget.imageUrl != widget.imageUrl ||
+        oldWidget.title != widget.title) {
       _boundTrackId = widget.trackId;
       _fallbackIndex = 0;
       _buildCandidateList();
@@ -124,10 +127,28 @@ class _CascadingArtworkState extends State<CascadingArtwork> {
     );
   }
 
-  /// Flat accent placeholder without letter tile as required by prompt specification:
-  /// (d) a flat placeholder in the app accent colour. The letter tile is removed.
-  Widget _buildFlatAccentPlaceholder() {
-    final iconSize = (widget.height != null ? widget.height! * 0.35 : 32.0).clamp(20.0, 48.0).toDouble();
+  /// Deterministic letter tile fallback shown when no valid artwork URL exists or network loading fails.
+  /// Uses the initial letter of the title mapped to a themed gradient.
+  Widget _buildLetterTileFallback() {
+    final titleTrimmed = widget.title.trim();
+    final letter = titleTrimmed.isNotEmpty ? titleTrimmed.substring(0, 1).toUpperCase() : 'M';
+    final hash = widget.title.hashCode.abs();
+    final gradients = [
+      [const Color(0xFF6366F1), const Color(0xFF4338CA)],
+      [const Color(0xFFEC4899), const Color(0xFFBE185D)],
+      [const Color(0xFF8B5CF6), const Color(0xFF6D28D9)],
+      [const Color(0xFF10B981), const Color(0xFF047857)],
+      [const Color(0xFFF59E0B), const Color(0xFFD97706)],
+      [const Color(0xFF3B82F6), const Color(0xFF1D4ED8)],
+      [const Color(0xFF14B8A6), const Color(0xFF0F766E)],
+    ];
+    final selectedColors = gradients[hash % gradients.length];
+    final fontSize = ((widget.height != null && widget.height!.isFinite)
+            ? widget.height! * 0.4
+            : 32.0)
+        .clamp(18.0, 48.0)
+        .toDouble();
+
     return GestureDetector(
       onTap: () {
         if (_candidates.isNotEmpty) {
@@ -141,26 +162,21 @@ class _CascadingArtworkState extends State<CascadingArtwork> {
         width: widget.width,
         height: widget.height,
         decoration: BoxDecoration(
-          color: AppColors.surface1,
           borderRadius: widget.borderRadius ?? AppRadii.borderMedium,
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              AppColors.primarySoft.withValues(alpha: 0.30),
-              AppColors.surface2,
-            ],
-          ),
-          border: Border.all(
-            color: AppColors.primarySoft.withValues(alpha: 0.20),
-            width: 1,
+            colors: selectedColors,
           ),
         ),
-        child: Center(
-          child: Icon(
-            Icons.music_note_rounded,
-            color: AppColors.primarySoft.withValues(alpha: 0.8),
-            size: iconSize,
+        alignment: Alignment.center,
+        child: Text(
+          letter,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: fontSize,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
           ),
         ),
       ),
@@ -174,14 +190,23 @@ class _CascadingArtworkState extends State<CascadingArtwork> {
     if (_candidates.isEmpty || _fallbackIndex >= _candidates.length) {
       return ClipRRect(
         borderRadius: radius,
-        child: _buildFlatAccentPlaceholder(),
+        child: _buildLetterTileFallback(),
       );
     }
 
     final currentUrl = _candidates[_fallbackIndex];
-    final memWidth = (widget.width != null ? (widget.width! * 1.5).toInt() : 180).clamp(60, 360);
-    final memHeight = (widget.height != null ? (widget.height! * 1.5).toInt() : 180).clamp(60, 360);
-    final targetSize = '${(widget.width ?? 156).toInt()}x${(widget.height ?? 112).toInt()}';
+
+    // Safely calculate dimensions using safeInt and checking isFinite to prevent 'Infinity or NaN toInt'
+    final safeW = (widget.width != null && widget.width!.isFinite)
+        ? safeInt(widget.width, fallback: 156)
+        : 156;
+    final safeH = (widget.height != null && widget.height!.isFinite)
+        ? safeInt(widget.height, fallback: 112)
+        : 112;
+    final memWidth = safeInt(safeW * 1.5, fallback: 180).clamp(60, 360);
+    final memHeight = safeInt(safeH * 1.5, fallback: 180).clamp(60, 360);
+    final targetSize = '${safeW}x$safeH';
+
     final cacheId = widget.trackId ?? widget.title.hashCode.abs().toString();
     final cacheKey = 'track:${cacheId}_${_fallbackIndex}:$targetSize';
 
@@ -213,13 +238,14 @@ class _CascadingArtworkState extends State<CascadingArtwork> {
             fit: widget.fit,
           );
         },
-        errorWidget: (_, __, ___) {
+        errorWidget: (context, url, error) {
+          debugPrint('[CascadingArtwork] Image failed to load ($url): $error');
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted && _boundTrackId == activeTrackId && _fallbackIndex < _candidates.length) {
               setState(() => _fallbackIndex++);
             }
           });
-          return _buildShimmer();
+          return _buildLetterTileFallback();
         },
       ),
     );

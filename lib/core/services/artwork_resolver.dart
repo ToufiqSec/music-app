@@ -47,6 +47,7 @@ class ArtworkResolver {
 
 /// Unified App Image Thumbnail Widget with error and loading fallbacks (Issue 5).
 class AppArtworkImage extends StatelessWidget {
+  final String? trackId;
   final String? imageUrl;
   final String title;
   final String artist;
@@ -57,6 +58,7 @@ class AppArtworkImage extends StatelessWidget {
 
   const AppArtworkImage({
     super.key,
+    this.trackId,
     required this.imageUrl,
     required this.title,
     required this.artist,
@@ -75,7 +77,8 @@ class AppArtworkImage extends StatelessWidget {
     BorderRadius? borderRadius,
   }) {
     return AppArtworkImage(
-      key: key,
+      key: key ?? ValueKey('track_art_${track.id}'),
+      trackId: track.id,
       imageUrl: track.thumbnailUrl,
       title: track.title,
       artist: track.artist,
@@ -90,6 +93,8 @@ class AppArtworkImage extends StatelessWidget {
   Widget build(BuildContext context) {
     final effectiveRadius = borderRadius ?? BorderRadius.circular(AppRadii.sm);
     return CascadingArtwork(
+      key: key ?? ValueKey('cascading_art_${trackId ?? title}_${imageUrl ?? ""}'),
+      trackId: trackId,
       imageUrl: imageUrl,
       title: title,
       artist: artist,

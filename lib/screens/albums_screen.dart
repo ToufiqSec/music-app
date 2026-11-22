@@ -293,7 +293,11 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
                   child: Row(
                     children: [
                       AppArtworkImage(
-                        imageUrl: album.coverUrl,
+                        key: ValueKey('album_detail_cover_${album.id}'),
+                        trackId: album.id,
+                        imageUrl: album.coverUrl.trim().isNotEmpty
+                            ? album.coverUrl
+                            : (album.tracks.isNotEmpty ? album.tracks.first.thumbnailUrl : ''),
                         title: album.title,
                         artist: album.artist,
                         width: 72,
@@ -441,7 +445,14 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
               itemCount: albums.length,
               itemBuilder: (ctx, i) {
                 final album = albums[i];
+                final effectiveCover = album.coverUrl.trim().isNotEmpty
+                    ? album.coverUrl
+                    : (album.tracks.isNotEmpty ? album.tracks.first.thumbnailUrl : '');
+                final trackCountText = album.id.startsWith('saavn_album_')
+                    ? 'Lossless CD • Tap to play'
+                    : (album.trackCount > 0 ? '${album.trackCount} tracks' : '');
                 return GestureDetector(
+                  key: ValueKey('album_card_${album.id}'),
                   onTap: () => _openAlbumDetails(album, audio),
                   child: Container(
                     padding: const EdgeInsets.all(10),
@@ -455,7 +466,9 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
                       children: [
                         Expanded(
                           child: AppArtworkImage(
-                            imageUrl: album.coverUrl,
+                            key: ValueKey('album_cover_${album.id}'),
+                            trackId: album.id,
+                            imageUrl: effectiveCover,
                             title: album.title,
                             artist: album.artist,
                             width: double.infinity,
@@ -464,7 +477,7 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
                         ),
                         const SizedBox(height: 10),
                         Text(
-                          album.title,
+                          album.title.isNotEmpty ? album.title : 'Unknown Album',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -475,7 +488,7 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          album.artist,
+                          album.artist.isNotEmpty ? album.artist : 'Various Artists',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -485,9 +498,7 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          album.id.startsWith('saavn_album_')
-                              ? 'Lossless CD • Tap to play'
-                              : '${album.trackCount} tracks',
+                          trackCountText,
                           style: const TextStyle(
                             color: AppColors.accentTeal,
                             fontSize: 10,

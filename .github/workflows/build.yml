@@ -61,6 +61,9 @@ jobs:
       - name: Install Project Dependencies
         run: flutter pub get
 
+      - name: Run Unit Tests
+        run: flutter test
+
       - name: Analyze Project Code (Non-Fatal)
         run: flutter analyze --no-fatal-infos --no-fatal-warnings || true
 
@@ -139,10 +142,10 @@ jobs:
             ### 🎵 Music App v${{ env.APP_VERSION }}
 
             **What's new in this release:**
-            - 🖼️ **One Song, One Image Guarantee:** No more reused compilation banners across songs. Every track gets its own dedicated single/album art.
-            - 🎨 **Crystal-Clear Cover Art:** Replaced broken video IDs with verified high-resolution album covers for curated tracks (*Ishq Bulaava*, *Zehnaseeb*, *Samjhawan*, *Ilahi*, etc.).
-            - 🚫 **Letter Tile Glitch Removed:** Completely eliminated the purple initials box ("I", "Z", "S") in favor of sleek fallback artwork and tap-to-retry actions.
-            - ⚡ **Ultra-Smooth 60 FPS Scrolling:** Bounded memory caching (200x144) and off-screen texture prefetching (`cacheExtent: 600`) eliminate scroll stutter and GPU thrashing.
+            - 🛠️ **Albums & Collections Fixed:** Resolved the "Initialization Issue" crash (`Unsupported operation: Infinity or NaN toInt`) across collection cards (*Trending Love Songs*, *Trending Telugu Vibes*, *Meldi Maa Na Song Trending*, etc.).
+            - 🛡️ **Universal Numeric Safety:** Hardened dimensions, progress percentages, and duration calculations against Infinity, NaN, and zero denominators.
+            - 🖼️ **Thumbnail Isolation & Fallback:** Strict entity-ID cache keying prevents artwork collisions across recycled cards, with multi-tier fallback (collection cover → first track thumbnail → deterministic letter tile).
+            - ⚡ **Ultra-Smooth 60 FPS Scrolling:** Bounded memory caching and off-screen prefetching eliminate scroll stutter and GPU thrashing.
             - 🚀 **Instant Home Streaming:** Skeleton placeholders and progressive section rendering stream content in without layout shifts.
             - 🎙️ **Podcast Audio Playback:** Restored full podcast stream resolution and playback across all feeds.
             - 🔒 **Security & Stability Hardening:** Fixed login screen double-pop navigation and strengthened TLS verification.

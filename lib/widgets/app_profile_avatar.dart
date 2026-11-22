@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../core/utils/numeric_utils.dart';
 import '../providers/auth_provider.dart';
 import '../screens/profile_screen.dart';
 import '../screens/login_screen.dart';
@@ -55,8 +56,8 @@ class AppProfileAvatar extends StatelessWidget {
               width: size,
               height: size,
               fit: BoxFit.cover,
-              memCacheWidth: (size * 2).toInt(),
-              memCacheHeight: (size * 2).toInt(),
+              memCacheWidth: safeInt(size * 2, fallback: 76),
+              memCacheHeight: safeInt(size * 2, fallback: 76),
               placeholder: (_, __) => Center(child: fallbackContent),
               errorWidget: (_, __, ___) => Center(child: fallbackContent),
             ),
