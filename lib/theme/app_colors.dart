@@ -1,107 +1,118 @@
 import 'package:flutter/material.dart';
 
-/// Exact color tokens from Universal UI Design System: Twilight Calm.
+/// Premium Glassmorphism & Liquid UI Color System.
+/// Matches Theme: Dark Purple, Soft Pink & Glossy Effects.
 class AppColors {
-  // Backgrounds and surfaces (Dark mode: Warm charcoal-slate base #121218 to #1A1A22)
-  static const Color bgBase = Color(0xFF121218);
+  // Main Background & Canvas
+  static const Color bgBase = Color(0xFF0B0A12); // Main Background #0B0A12
   static const Color backgroundLayer0 = bgBase;
-  static const Color bgDeep = Color(0xFF0D0D12);
-  static const Color surface1 = Color(0xFF1E1E28);
-  static const Color surface2 = Color(0xFF282836);
-  static const Color surfaceGlow = Color(0xFF38384C);
+  static const Color bgDeep = Color(0xFF0B0A12);
   static const Color canvasLight = Color(0xFFF7F5F8);
 
-  // Brand and accent
-  static const Color primary = Color(0xFF8B6FE8);
-  static const Color primarySoft = Color(0xFFA58CF2);
+  // Surfaces & Glassmorphism Cards
+  static const Color surface1 = Color(0xFF191724); // Card Background #191724
+  static const Color surface2 = Color(0xFF232032); // Elevated Glass Surface
+  static const Color surface3 = Color(0xFF2E2A42);
+  static const Color surfaceGlow = Color(0xFF382F56);
+
+  // Brand, Purples & Pinks
+  static const Color primary = Color(0xFF7955D9); // Deep Purple #7955D9
+  static const Color primarySoft = Color(0xFFA78BFA); // Soft Purple #A78BFA
+  static const Color pinkAccent = Color(0xFFE8A1D1); // Pink Accent #E8A1D1
+  static const Color sunsetPink = Color(0xFFE8A1D1);
+  static const Color sunsetCoral = Color(0xFFE8A1D1);
+  static const Color sunsetViolet = Color(0xFF7955D9);
   static const Color accentTeal = Color(0xFF5EEAD4);
-  static const Color cardBorder = Color(0xFF2E2E3E);
-  static const Color sunsetPink = Color(0xFFE887B8);
-  static const Color sunsetCoral = Color(0xFFF29BC0);
-  static const Color sunsetViolet = Color(0xFF7A4FB8);
+
+  // Glass Borders & Highlights
+  static const Color cardBorder = Color(0x33A78BFA);
+  static const Color glassBorder = Color(0x2EFFFFFF);
+  static const Color glassBorderHighlight = Color(0x59E8A1D1);
+  static const Color glassFill = Color(0x80191724);
 
   // Text
-  static const Color textPrimary = Color(0xFFF2EFF5);
-  static const Color textSecondary = Color(0xFFA39CAD);
-  static const Color textTertiary = Color(0xFF736C7E);
-  static const Color textMuted = Color(0xFF6B6577);
+  static const Color textPrimary = Color(0xFFFFFFFF); // Primary Text #FFFFFF
+  static const Color textSecondary = Color(0xFFAAA5B8); // Secondary Text #AAA5B8
+  static const Color textTertiary = Color(0xFF837D94);
+  static const Color textMuted = Color(0xFF6E6880);
   static const Color textOnLight = Color(0xFF1E1B24);
 
-  // Controls
-  static const Color controlLight = Color(0xFFE8E2FA);
-  static const Color controlLightIcon = Color(0xFF1E1B24);
-  static const Color iconIdle = Color(0xFFA39CAD);
+  // Controls & Icons
+  static const Color controlLight = Color(0xFFF0EBF8);
+  static const Color controlLightIcon = Color(0xFF0B0A12);
+  static const Color iconIdle = Color(0xFFAAA5B8);
   static const Color iconActive = Color(0xFFFFFFFF);
   static const Color iconDisabled = Color(0xFF555060);
-  static const Color scrim = Color(0x73121218); // 45% opacity of bgBase
+  static const Color scrim = Color(0x800B0A12);
 
   // Status
   static const Color success = Color(0xFF7EE0B5);
   static const Color warning = Color(0xFFF5C97A);
   static const Color error = Color(0xFFFF8FA3);
 
-  // Illustration Mountain & Forest Palettes
-  static const Color mountainFarthest = Color(0xFFE070A8);
-  static const Color mountainLayer2 = Color(0xFFA8559E);
-  static const Color mountainLayer3 = Color(0xFF7A4FB8);
-  static const Color mountainLayer4 = Color(0xFF4A3D96);
-  static const Color mountainNearest = Color(0xFF2B2160);
-  static const Color forestForeground = Color(0xFF231A52);
-
-  // Water Palettes
-  static const Color waterTop = Color(0xFF8A6FD6);
-  static const Color waterBottom = Color(0xFF6B55C4);
-
-  // Exact Gradients from Design System
-  static const LinearGradient heroGradient = LinearGradient(
-    begin: Alignment.topCenter,
-    end: Alignment.bottomCenter,
-    stops: [0.0, 0.45, 1.0],
+  // Gradients
+  static const LinearGradient pageGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
     colors: [
-      Color(0xFFF29BC0),
-      Color(0xFFE070A8),
-      Color(0xFF7A4FB8),
+      Color(0xFF140F26),
+      Color(0xFF0B0A12),
+      Color(0xFF0E0B18),
     ],
   );
 
-  static const LinearGradient pageGradient = LinearGradient(
+  static const LinearGradient heroGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF7955D9),
+      Color(0xFFE8A1D1),
+    ],
+  );
+
+  static const LinearGradient heroCardOverlay = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    stops: [0.0, 1.0],
     colors: [
-      Color(0xFF1E1E28),
-      Color(0xFF121218),
+      Colors.transparent,
+      Color(0xCC0B0A12),
+    ],
+  );
+
+  static const LinearGradient glassCardGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0x5928233C),
+      Color(0x40191724),
     ],
   );
 
   static const LinearGradient playerGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    stops: [0.0, 0.55, 1.0],
     colors: [
-      Color(0xFF28243E),
-      Color(0xFF1E1E28),
-      Color(0xFF121218),
+      Color(0xFF261D42),
+      Color(0xFF191724),
+      Color(0xFF0B0A12),
     ],
   );
 
   static const LinearGradient cardImageOverlay = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    stops: [0.0, 1.0],
     colors: [
       Colors.transparent,
-      Color(0xCC121218), // 80% opacity for text readability
+      Color(0xE60B0A12),
     ],
   );
 
   static const LinearGradient scrimGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    stops: [0.0, 1.0],
     colors: [
       Colors.transparent,
-      Color(0xB3121218), // 70% opacity
+      Color(0xB30B0A12),
     ],
   );
 }

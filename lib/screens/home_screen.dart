@@ -552,6 +552,14 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
     return GreetingService.getGreeting();
   }
 
+  String _getUserGreeting(AuthProvider authProvider) {
+    final name = authProvider.displayName.trim();
+    if (name.isNotEmpty && name != 'Guest' && name != 'Music Lover') {
+      return 'Hey ${name.split(' ').first} !';
+    }
+    return 'Hey Sabrina !';
+  }
+
   @override
   Widget build(BuildContext context) {
     final audioProvider = context.watch<AudioProvider>();
@@ -595,7 +603,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
         children: [
           const SizedBox(height: 12),
 
-          // 1. Top Header Bar (Part B: 44x44dp targets, 8dp spacing, no shrink, full safe area)
+          // 1. Top Header Bar (Liquid Glassmorphism: Greeting & Quick Controls)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Row(
@@ -603,40 +611,70 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        _getTimeGreeting(),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.h2.copyWith(fontSize: 22),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Ready to stream lossless audio',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.caption.copyWith(
-                          color: AppColors.textPrimary.withValues(alpha: 0.92),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    _getUserGreeting(authProvider),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.h2.copyWith(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primaryText,
+                      letterSpacing: -0.3,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
 
-                // Top Action Group (Profile icon only - Phase 2)
-                _buildProfileAvatar(context, authProvider),
+                // Top Action Group (Bell, Clock, Tune, Profile Avatar)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildHeaderIconButton(
+                      icon: Icons.notifications_none_rounded,
+                      tooltip: 'Notifications',
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text(
+                              'No new notifications',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            backgroundColor: AppColors.cardBg,
+                            duration: const Duration(seconds: 1),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    _buildHeaderIconButton(
+                      icon: Icons.access_time_rounded,
+                      tooltip: 'Listening History',
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        _showHistorySheet(context, audioProvider);
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    _buildHeaderIconButton(
+                      icon: Icons.tune_rounded,
+                      tooltip: 'Moods & Genres',
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        widget.onNavigateToTab(2);
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    _buildProfileAvatar(context, authProvider),
+                  ],
+                ),
               ],
             ),
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
 
-          // Explore Search Bar (Wide bar with rounded corners - Phase 2)
+          // Explore Search Bar (Liquid Glass Pill)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: GestureDetector(
@@ -645,9 +683,42 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
                 height: 48,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
-                  color: AppColors.surface1.withValues(alpha: 0.95),
+                  color: AppColors.cardBg.withValues(alpha: 0.85),
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.10),
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.25),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.search_rounded,
+                      color: AppColors.secondaryText,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Search songs, artists, podcasts',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.secondaryText,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
                     color: AppColors.surface2,
                     width: 1,
                   ),
@@ -727,18 +798,19 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
 
           const SizedBox(height: 20),
 
-          // 2.5 Featured Podcast & Audio Story Banner
+          // 2. Panoramic Hero Artist / Featured Music Banner (Major Lazer / Featured Artist)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: FeaturedBanner(
-              title: _featuredPodcast.title,
-              metaText: 'PODCAST • ${_featuredPodcast.artist}',
-              imageUrl: _featuredPodcast.thumbnailUrl,
+              title: 'Major Lazer',
+              metaText: '23,564,846 listeners',
+              actionLabel: 'Follow',
+              imageUrl: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&q=80',
               onActionTap: () {
                 HapticFeedback.lightImpact();
                 audioProvider.playTrack(
-                  _featuredPodcast,
-                  CuratedTracks.featuredPodcasts,
+                  CuratedTracks.trendingTracks.first,
+                  CuratedTracks.trendingTracks,
                 );
               },
             ),
@@ -746,18 +818,30 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
 
           const SizedBox(height: 24),
 
-          // 3. Quick-Pick Grid
+          // 3. Fresh New Music Carousel (Section 2 from 3rd reference UI)
+          _buildHomeSection(
+            title: 'Fresh New Music',
+            tracks: CuratedTracks.freshPicksTracks,
+            audioProvider: audioProvider,
+          ),
+
+          // 4. Recently Played (Section 3 from 3rd reference UI - vertical items)
+          _buildRecentlyPlayedList(audioProvider),
+
+          const SizedBox(height: 24),
+
+          // 5. Jump Back In (Section 4 from prompt - Improved 2x3 Glass Cards)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Text(
               _activeFilter == 'All' ? 'Jump Back In' : '$_activeFilter Mixes',
               style: AppTextStyles.h3.copyWith(
-                color: AppColors.textPrimary,
+                color: AppColors.primaryText,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
 
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -766,7 +850,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
 
           const SizedBox(height: 28),
 
-          // 4. Horizontal Circle Row ("Recommended Artists")
+          // 6. Horizontal Circle Row ("Recommended Artists")
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Row(
@@ -806,44 +890,27 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
 
           const SizedBox(height: 24),
 
-          // Home Recommendation Sections (Issue 3: 12 Sections in exact order)
+          // Home Recommendation Sections
           if (_activeFilter == 'All') ...[
-            // 1. Recently Played (horizontal scroll - only shown when history exists)
-            if (audioProvider.historyTracks.isNotEmpty)
-              _buildHomeSection(
-                title: 'Recently Played',
-                tracks: audioProvider.historyTracks,
-                audioProvider: audioProvider,
-              ),
-            // 2. Recommended Today (horizontal scroll)
             _buildHomeSection(
-              title: 'Recommended Today',
+              title: 'Trending Music',
+              tracks: _carousel2Tracks.isNotEmpty
+                  ? _carousel2Tracks
+                  : CuratedTracks.trendingTracks,
+              audioProvider: audioProvider,
+            ),
+            _buildHomeSection(
+              title: 'Recommended For You',
               tracks: _carousel1Tracks.isNotEmpty
                   ? _carousel1Tracks
                   : CuratedTracks.madeForYouTracks,
               audioProvider: audioProvider,
             ),
-            // Fresh Picks Top Charts (Issue 1)
-            _buildHomeSection(
-              title: AppStrings.freshPicksSectionTitle,
-              tracks: CuratedTracks.freshPicksTracks,
-              audioProvider: audioProvider,
-            ),
-            // 3. Popular Albums and Singles (horizontal scroll)
             _buildHomeSection(
               title: 'Popular Albums and Singles',
               tracks: CuratedTracks.popularAlbumsTracks,
               audioProvider: audioProvider,
             ),
-            // 4. More of What You Like (horizontal scroll)
-            _buildHomeSection(
-              title: 'More of What You Like',
-              tracks: _carousel2Tracks.isNotEmpty
-                  ? _carousel2Tracks
-                  : CuratedTracks.chillTracks,
-              audioProvider: audioProvider,
-            ),
-            // 5. Today's Biggest Hits (horizontal scroll)
             _buildHomeSection(
               title: "Today's Biggest Hits",
               tracks: _carousel3Tracks.isNotEmpty
@@ -851,13 +918,16 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
                   : CuratedTracks.trendingTracks,
               audioProvider: audioProvider,
             ),
-            // 6. Albums Featuring Songs You Like (horizontal scroll)
+            _buildHomeSection(
+              title: 'More of What You Like',
+              tracks: CuratedTracks.chillTracks,
+              audioProvider: audioProvider,
+            ),
             _buildHomeSection(
               title: 'Albums Featuring Songs You Like',
               tracks: CuratedTracks.featuringSongsTracks,
               audioProvider: audioProvider,
             ),
-            // 7. Based on Your Recent Listening (horizontal scroll)
             _buildHomeSection(
               title: 'Based on Your Recent Listening',
               tracks: _carousel4Tracks.isNotEmpty
@@ -865,25 +935,16 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
                   : CuratedTracks.workoutTracks,
               audioProvider: audioProvider,
             ),
-            // 8. More Like Ishq Bulaava Radio (horizontal scroll)
-            _buildHomeSection(
-              title: 'More Like Ishq Bulaava Radio',
-              tracks: CuratedTracks.ishqBulaavaRadioTracks,
-              audioProvider: audioProvider,
-            ),
-            // 9. Happy Hits (horizontal scroll)
             _buildHomeSection(
               title: 'Happy Hits',
               tracks: CuratedTracks.happyHitsTracks,
               audioProvider: audioProvider,
             ),
-            // 10. More from A.R. Rahman (horizontal scroll)
             _buildHomeSection(
               title: 'More from A.R. Rahman',
               tracks: CuratedTracks.arRahmanTracks,
               audioProvider: audioProvider,
             ),
-            // 11. Your Top Mixes (horizontal scroll)
             _buildHomeSection(
               title: 'Your Top Mixes',
               tracks: _carousel5Tracks.isNotEmpty
@@ -891,7 +952,6 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
                   : CuratedTracks.lateNightTracks,
               audioProvider: audioProvider,
             ),
-            // 12. More Like Manwa Laage Radio (horizontal scroll)
             _buildHomeSection(
               title: 'More Like Manwa Laage Radio',
               tracks: CuratedTracks.manwaLaageRadioTracks,
@@ -949,23 +1009,23 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
           color: Colors.transparent,
           child: InkWell(
             onTap: onTap,
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(19),
             child: Container(
-              width: 44,
-              height: 44,
+              width: 38,
+              height: 38,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.surface2.withValues(alpha: 0.85),
+                color: AppColors.cardBg.withValues(alpha: 0.75),
                 border: Border.all(
-                  color: AppColors.primarySoft.withValues(alpha: 0.35),
-                  width: 1.2,
+                  color: Colors.white.withValues(alpha: 0.12),
+                  width: 1,
                 ),
               ),
               child: Center(
                 child: Icon(
                   icon,
                   color: Colors.white,
-                  size: 20,
+                  size: 19,
                 ),
               ),
             ),
@@ -976,7 +1036,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
   }
 
   Widget _buildProfileAvatar(BuildContext context, AuthProvider authProvider) {
-    const double targetSize = 48.0; // 48dp minimum WCAG AA touch target
+    const double targetSize = 38.0;
     final isAuthenticated = authProvider.isAuthenticated;
     final avatarUrl = authProvider.avatarUrl.trim();
     final displayName = authProvider.displayName.trim();
@@ -992,14 +1052,14 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
         initial,
         style: const TextStyle(
           color: Colors.white,
-          fontSize: 16,
+          fontSize: 14,
           fontWeight: FontWeight.bold,
         ),
       );
     } else {
       fallbackContent = const Icon(
         Icons.person_rounded,
-        size: 22,
+        size: 19,
         color: Colors.white,
       );
     }
@@ -1045,11 +1105,9 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
               height: targetSize,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.surface2.withValues(alpha: 0.85),
+                color: AppColors.cardBg.withValues(alpha: 0.75),
                 border: Border.all(
-                  color: isAuthenticated
-                      ? AppColors.primarySoft.withValues(alpha: 0.7)
-                      : AppColors.primarySoft.withValues(alpha: 0.35),
+                  color: AppColors.pinkAccent.withValues(alpha: 0.5),
                   width: 1.2,
                 ),
               ),
@@ -1061,6 +1119,148 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
     );
   }
 
+  /// Recently Played Vertical List Section (from 3rd Reference UI design)
+  Widget _buildRecentlyPlayedList(AudioProvider audioProvider) {
+    final history = audioProvider.historyTracks.isNotEmpty
+        ? audioProvider.historyTracks.take(3).toList()
+        : [
+            CuratedTracks.allCatalogTracks.firstWhere(
+              (t) => t.title.toLowerCase().contains('jab') || t.title.toLowerCase().contains('sabiyaan'),
+              orElse: () => CuratedTracks.jumpBackInTracks[0],
+            ),
+            CuratedTracks.allCatalogTracks.firstWhere(
+              (t) => t.title.toLowerCase().contains('levitating') || t.artist.toLowerCase().contains('dua lipa'),
+              orElse: () => CuratedTracks.jumpBackInTracks[1],
+            ),
+            if (CuratedTracks.jumpBackInTracks.length > 2) CuratedTracks.jumpBackInTracks[2],
+          ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Recently Played',
+                style: AppTextStyles.h3.copyWith(
+                  color: AppColors.primaryText,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              GestureDetector(
+                onTap: () => _showHistorySheet(context, audioProvider),
+                behavior: HitTestBehavior.opaque,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                  child: Text(
+                    'See all',
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.softPurple,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: history.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            itemBuilder: (context, index) {
+              final track = history[index];
+              final isPlayingThis = audioProvider.currentTrack?.id == track.id;
+
+              return GestureDetector(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  audioProvider.playTrack(track, history);
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isPlayingThis
+                        ? AppColors.cardBg
+                        : AppColors.cardBg.withValues(alpha: 0.60),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isPlayingThis
+                          ? AppColors.pinkAccent.withValues(alpha: 0.5)
+                          : Colors.white.withValues(alpha: 0.06),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: SizedBox(
+                          width: 50,
+                          height: 50,
+                          child: CascadingArtwork(
+                            key: ValueKey('recent_art_${track.id}'),
+                            trackId: track.id,
+                            imageUrl: track.thumbnailUrl,
+                            title: track.title,
+                            artist: track.artist,
+                            width: 50,
+                            height: 50,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _cleanTrackTitle(track.title),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: isPlayingThis ? AppColors.pinkAccent : AppColors.primaryText,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14.5,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              track.artist,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.caption.copyWith(
+                                color: AppColors.secondaryText,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(
+                          Icons.more_vert_rounded,
+                          color: AppColors.secondaryText,
+                          size: 20,
+                        ),
+                        onPressed: () => _showTrackBottomSheet(context, track, audioProvider),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
   Widget _buildHomeSection({
     required String title,
     required List<YoutubeTrack> tracks,
@@ -1086,7 +1286,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTextStyles.h3.copyWith(
-                    color: AppColors.textPrimary,
+                    color: AppColors.primaryText,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -1107,7 +1307,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
                     child: Text(
                       actionLabel,
                       style: AppTextStyles.caption.copyWith(
-                        color: const Color(0xFFDDD6FE), // WCAG AA compliant contrast (>7:1)
+                        color: AppColors.softPurple,
                         fontWeight: FontWeight.w700,
                         fontSize: 13,
                       ),
@@ -1120,7 +1320,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
         ),
         const SizedBox(height: 12),
         SizedBox(
-          height: 180,
+          height: 190,
           child: ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             scrollDirection: Axis.horizontal,
@@ -1533,7 +1733,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
     return cleaned.isEmpty ? rawTitle : cleaned;
   }
 
-  /// 2x3 Grid of Clean, Balanced Quick-Pick Tiles (Spotify Style)
+  /// 2x3 Grid of Liquid Glass Quick-Pick Tiles (Premium Glassmorphism + Specular Highlight)
   Widget _buildQuickPickGrid(
     BuildContext context,
     AudioProvider audioProvider,
@@ -1551,9 +1751,9 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
       itemCount: tracks.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        mainAxisSpacing: 8,
-        crossAxisSpacing: 8,
-        mainAxisExtent: 60, // Expanded height for breathing room
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        mainAxisExtent: 64, // Expanded height for breathing room
       ),
       itemBuilder: (context, index) {
         final track = tracks[index];
@@ -1569,63 +1769,117 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
             duration: AppMotion.durationFast,
             decoration: BoxDecoration(
               color: isCurrent
-                  ? AppColors.surface2
-                  : AppColors.surface1.withValues(alpha: 0.85),
-              borderRadius: BorderRadius.circular(8),
+                  ? const Color(0xFF241D3B)
+                  : AppColors.cardBg.withValues(alpha: 0.85),
+              borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: isCurrent
-                    ? AppColors.primarySoft.withValues(alpha: 0.4)
-                    : Colors.transparent,
-                width: 1,
+                    ? AppColors.pinkAccent.withValues(alpha: 0.6)
+                    : Colors.white.withValues(alpha: 0.08),
+                width: 1.2,
               ),
-            ),
-            child: Row(
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.horizontal(
-                    left: Radius.circular(8),
-                  ),
-                  child: SizedBox(
-                    width: 60,
-                    height: 60,
-                    child: CascadingArtwork(
-                      key: ValueKey('quick_art_${track.id}'),
-                      trackId: track.id,
-                      imageUrl: track.thumbnailUrl,
-                      title: track.title,
-                      artist: track.artist,
-                      width: 60,
-                      height: 60,
-                      borderRadius: BorderRadius.zero,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    _cleanTrackTitle(track.title),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.bodySmall.copyWith(
-                      fontWeight: isCurrent ? FontWeight.bold : FontWeight.w600,
-                      color: isCurrent
-                          ? AppColors.primarySoft
-                          : AppColors.textPrimary,
-                      fontSize: 12.5,
-                      height: 1.2,
-                    ),
-                  ),
-                ),
-                if (isCurrent && audioProvider.isPlaying)
-                  const Padding(
-                    padding: EdgeInsets.only(right: 8.0),
-                    child: Icon(
-                      Icons.volume_up_rounded,
-                      color: AppColors.primarySoft,
-                      size: 18,
-                    ),
+              boxShadow: [
+                if (isCurrent)
+                  BoxShadow(
+                    color: AppColors.deepPurple.withValues(alpha: 0.35),
+                    blurRadius: 12,
+                    offset: const Offset(0, 2),
+                  )
+                else
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.20),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
               ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: Stack(
+                children: [
+                  // Specular top highlight line
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: 1,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.white.withValues(alpha: 0.0),
+                            Colors.white.withValues(alpha: 0.25),
+                            Colors.white.withValues(alpha: 0.0),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: const BorderRadius.horizontal(
+                          left: Radius.circular(14),
+                        ),
+                        child: SizedBox(
+                          width: 64,
+                          height: 64,
+                          child: CascadingArtwork(
+                            key: ValueKey('quick_art_${track.id}'),
+                            trackId: track.id,
+                            imageUrl: track.thumbnailUrl,
+                            title: track.title,
+                            artist: track.artist,
+                            width: 64,
+                            height: 64,
+                            borderRadius: BorderRadius.zero,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _cleanTrackTitle(track.title),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.bodySmall.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: isCurrent
+                                    ? AppColors.pinkAccent
+                                    : AppColors.primaryText,
+                                fontSize: 13,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              track.artist,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.caption.copyWith(
+                                color: AppColors.secondaryText,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (isCurrent && audioProvider.isPlaying)
+                        const Padding(
+                          padding: EdgeInsets.only(right: 8.0),
+                          child: Icon(
+                            Icons.volume_up_rounded,
+                            color: AppColors.pinkAccent,
+                            size: 18,
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         );
