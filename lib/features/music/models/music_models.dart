@@ -10,6 +10,7 @@ class YoutubeTrack {
   final String? audioStreamUrl;
   final bool isDownloaded;
   final String? localFilePath;
+  final String? album;
 
   String get thumbnail => thumbnailUrl;
 
@@ -22,6 +23,7 @@ class YoutubeTrack {
     this.audioStreamUrl,
     this.isDownloaded = false,
     this.localFilePath,
+    this.album,
   });
 
   YoutubeTrack copyWith({
@@ -33,6 +35,7 @@ class YoutubeTrack {
     String? audioStreamUrl,
     bool? isDownloaded,
     String? localFilePath,
+    String? album,
   }) {
     return YoutubeTrack(
       id: id ?? this.id,
@@ -43,6 +46,7 @@ class YoutubeTrack {
       audioStreamUrl: audioStreamUrl ?? this.audioStreamUrl,
       isDownloaded: isDownloaded ?? this.isDownloaded,
       localFilePath: localFilePath ?? this.localFilePath,
+      album: album ?? this.album,
     );
   }
 
@@ -56,6 +60,7 @@ class YoutubeTrack {
       'audioStreamUrl': audioStreamUrl,
       'isDownloaded': isDownloaded,
       'localFilePath': localFilePath,
+      'album': album,
     };
   }
 
@@ -69,6 +74,7 @@ class YoutubeTrack {
       audioStreamUrl: json['audioStreamUrl']?.toString(),
       isDownloaded: json['isDownloaded'] as bool? ?? false,
       localFilePath: json['localFilePath']?.toString(),
+      album: json['album']?.toString(),
     );
   }
 
