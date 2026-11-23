@@ -19,12 +19,12 @@ class ArtworkResolver {
     }
 
     // 2. YouTube Thumbnail Optimization
-    // Avoid unscaled maxresdefault.jpg (1280x720, memory-heavy & frequent 404s). Standardize on mqdefault (320x180) or hqdefault (480x360)
+    // Avoid unscaled maxresdefault.jpg (1280x720, memory-heavy & frequent 404s). Standardize on crisp hqdefault (480x360)
     if (url.contains('ytimg.com') || url.contains('youtube.com')) {
       if (url.contains('/maxresdefault.jpg')) {
-        url = url.replaceAll('/maxresdefault.jpg', '/mqdefault.jpg');
+        url = url.replaceAll('/maxresdefault.jpg', '/hqdefault.jpg');
       } else if (url.contains('/default.jpg') && !url.contains('/hqdefault.jpg') && !url.contains('/mqdefault.jpg')) {
-        url = url.replaceAll('/default.jpg', '/mqdefault.jpg');
+        url = url.replaceAll('/default.jpg', '/hqdefault.jpg');
       }
     }
 

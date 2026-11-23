@@ -271,7 +271,9 @@ class _CascadingArtworkState extends State<CascadingArtwork> {
               setState(() => _fallbackIndex++);
             }
           });
-          return _buildLetterTileFallback();
+          return (_fallbackIndex < _candidates.length - 1)
+              ? _buildShimmer()
+              : _buildLetterTileFallback();
         },
       ),
     );
