@@ -795,6 +795,16 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                       CachedNetworkImage(
                         imageUrl: artistProfile.imageUrl,
                         fit: BoxFit.cover,
+                        errorWidget: (_, __, ___) => CachedNetworkImage(
+                          imageUrl: track.thumbnailUrl,
+                          fit: BoxFit.cover,
+                          errorWidget: (_, __, ___) => Container(color: _palette.dominant),
+                        ),
+                      )
+                    else if (track.thumbnailUrl.isNotEmpty)
+                      CachedNetworkImage(
+                        imageUrl: track.thumbnailUrl,
+                        fit: BoxFit.cover,
                         errorWidget: (_, __, ___) => Container(color: _palette.dominant),
                       )
                     else

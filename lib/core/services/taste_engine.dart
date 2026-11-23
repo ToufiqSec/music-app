@@ -303,7 +303,7 @@ class TasteEngine {
     ArtistProfile(
       id: 'p_karan',
       name: 'Karan Aujla',
-      imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Karan_Aujla_2021.jpg/500px-Karan_Aujla_2021.jpg',
+      imageUrl: 'https://cdn-images.dzcdn.net/images/artist/a91a1d5ea91e85e4f0966569b50e8d6a/1000x1000-000000-80-0-0.jpg',
       language: 'Punjabi',
     ),
     ArtistProfile(
