@@ -166,32 +166,45 @@ class _MusicAppBootstrapState extends State<MusicAppBootstrap> {
         _authProvider = AuthProvider();
         _roomProvider = room;
       });
-      debugPrint('[Startup] Providers mounted, preparing transition to HomeScreen.');
+      debugPrint('[Startup] Providers mounted, rendering HomeScreen.');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isInitialized = _audioProvider != null;
+    // If not ready yet on frame 1, show official animated Swarva splash
+    if (_audioProvider == null) {
+      return MaterialApp(
+        title: 'Swarva',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.darkTheme,
+        home: const SwarvaSplashScreen(),
+      );
+    }
 
+    // Top-level provider injection guarantees all pushed routes and sheets inherit providers
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: _audioProvider!),
+        ChangeNotifierProvider.value(value: _authProvider ?? AuthProvider()),
+        ChangeNotifierProvider.value(value: _roomProvider ?? RoomProvider()),
+      ],
+      child: const MusicApp(),
+    );
+  }
+}
+
+class MusicApp extends StatelessWidget {
+  const MusicApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Swarva',
       navigatorKey: NotificationService.navigatorKey,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      home: SwarvaSplashScreen(
-        isReady: isInitialized,
-        nextScreen: isInitialized
-            ? MultiProvider(
-                providers: [
-                  ChangeNotifierProvider.value(value: _audioProvider!),
-                  ChangeNotifierProvider.value(value: _authProvider ?? AuthProvider()),
-                  ChangeNotifierProvider.value(value: _roomProvider ?? RoomProvider()),
-                ],
-                child: const HomeScreen(),
-              )
-            : null,
-      ),
+      home: const HomeScreen(),
     );
   }
 }

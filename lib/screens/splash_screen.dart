@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_colors.dart';
 
 /// Swarva Official Splash Screen
@@ -12,14 +11,7 @@ import '../theme/app_colors.dart';
 /// - Respects reduced motion settings
 /// - Zero color jump, zero white/black flash on transition
 class SwarvaSplashScreen extends StatefulWidget {
-  final Widget? nextScreen;
-  final bool isReady;
-
-  const SwarvaSplashScreen({
-    super.key,
-    this.nextScreen,
-    this.isReady = false,
-  });
+  const SwarvaSplashScreen({super.key});
 
   @override
   State<SwarvaSplashScreen> createState() => _SwarvaSplashScreenState();
@@ -32,7 +24,6 @@ class _SwarvaSplashScreenState extends State<SwarvaSplashScreen>
   late final Animation<double> _iconOpacity;
   late final Animation<double> _textOpacity;
   late final Animation<double> _textSlide;
-  bool _minDurationElapsed = false;
 
   @override
   void initState() {
@@ -75,15 +66,6 @@ class _SwarvaSplashScreenState extends State<SwarvaSplashScreen>
 
     // Start entrance animation
     _controller.forward();
-
-    // Guarantee minimum presentation duration (~1100ms) for smooth aesthetic brand moment
-    Future.delayed(const Duration(milliseconds: 1100), () {
-      if (mounted) {
-        setState(() {
-          _minDurationElapsed = true;
-        });
-      }
-    });
   }
 
   @override
@@ -97,9 +79,6 @@ class _SwarvaSplashScreenState extends State<SwarvaSplashScreen>
     // Respect system setting for reduced motion
     final reduceMotion = MediaQuery.of(context).disableAnimations;
 
-    // Check if we can transition to next screen
-    final shouldTransition = (widget.isReady && _minDurationElapsed) && widget.nextScreen != null;
-
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
@@ -108,49 +87,41 @@ class _SwarvaSplashScreenState extends State<SwarvaSplashScreen>
         systemNavigationBarColor: Colors.transparent,
         systemNavigationBarIconBrightness: Brightness.light,
       ),
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 400),
-        switchInCurve: Curves.easeOut,
-        switchOutCurve: Curves.easeIn,
-        child: shouldTransition
-            ? widget.nextScreen!
-            : Scaffold(
-                key: const ValueKey('swarva_splash_scaffold'),
-                backgroundColor: AppColors.swarvaBgDark,
-                body: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    // Subtle background radial glow (soft violet & coral hint on dark)
-                    Positioned.fill(
-                      child: Container(
-                        decoration: const BoxDecoration(
-                          gradient: RadialGradient(
-                            center: Alignment(0.0, -0.1),
-                            radius: 0.85,
-                            colors: [
-                              Color(0xFF1E1728), // Faint violet glow
-                              Color(0xFF121014), // Brand dark background #121014
-                            ],
-                            stops: [0.0, 1.0],
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // Centered Icon & Swarva Typography
-                    Center(
-                      child: reduceMotion
-                          ? _buildStaticContent()
-                          : AnimatedBuilder(
-                              animation: _controller,
-                              builder: (context, child) {
-                                return _buildAnimatedContent();
-                              },
-                            ),
-                    ),
-                  ],
+      child: Scaffold(
+        backgroundColor: AppColors.swarvaBgDark,
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Subtle background radial glow (soft violet & coral hint on dark)
+            Positioned.fill(
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment(0.0, -0.1),
+                    radius: 0.85,
+                    colors: [
+                      Color(0xFF1E1728), // Faint violet glow
+                      Color(0xFF121014), // Brand dark background #121014
+                    ],
+                    stops: [0.0, 1.0],
+                  ),
                 ),
               ),
+            ),
+
+            // Centered Icon & Swarva Typography
+            Center(
+              child: reduceMotion
+                  ? _buildStaticContent()
+                  : AnimatedBuilder(
+                      animation: _controller,
+                      builder: (context, child) {
+                        return _buildAnimatedContent();
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -189,9 +160,10 @@ class _SwarvaSplashScreenState extends State<SwarvaSplashScreen>
           opacity: _textOpacity.value,
           child: Transform.translate(
             offset: Offset(0, _textSlide.value),
-            child: Text(
+            child: const Text(
               'Swarva',
-              style: GoogleFonts.plusJakartaSans(
+              style: TextStyle(
+                fontFamily: 'sans-serif',
                 color: AppColors.swarvaOffWhite,
                 fontSize: 28,
                 fontWeight: FontWeight.w700,
@@ -216,12 +188,18 @@ class _SwarvaSplashScreenState extends State<SwarvaSplashScreen>
             'assets/icon/splash_icon.png',
             fit: BoxFit.contain,
             filterQuality: FilterQuality.high,
+            errorBuilder: (_, __, ___) => const Icon(
+              Icons.music_note_rounded,
+              size: 90,
+              color: AppColors.swarvaCoral,
+            ),
           ),
         ),
         const SizedBox(height: 20),
-        Text(
+        const Text(
           'Swarva',
-          style: GoogleFonts.plusJakartaSans(
+          style: TextStyle(
+            fontFamily: 'sans-serif',
             color: AppColors.swarvaOffWhite,
             fontSize: 28,
             fontWeight: FontWeight.w700,
