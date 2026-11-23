@@ -3,6 +3,15 @@ import 'package:flutter/material.dart';
 /// Premium Glassmorphism & Liquid UI Color System.
 /// Matches Theme: Dark Purple, Soft Pink & Glossy Effects.
 class AppColors {
+  // Swarva Official Brand Colors (from App Icon & Splash Spec)
+  static const Color swarvaBgDark = Color(0xFF121014); // #121014 Background dark
+  static const Color swarvaCoral = Color(0xFFF2566B); // #F2566B Coral
+  static const Color swarvaPeach = Color(0xFFFFB48A); // #FFB48A Peach
+  static const Color swarvaPink = Color(0xFFE070A8); // #E070A8 Pink
+  static const Color swarvaViolet = Color(0xFF9B4FD8); // #9B4FD8 Violet
+  static const Color swarvaDeepPurple = Color(0xFF6A3FC8); // #6A3FC8 Deep purple
+  static const Color swarvaOffWhite = Color(0xFFF3EEF6); // Clean off-white for Swarva text
+
   // Main Background & Canvas
   static const Color bgBase = Color(0xFF0B0A12); // Main Background #0B0A12
   static const Color backgroundLayer0 = bgBase;

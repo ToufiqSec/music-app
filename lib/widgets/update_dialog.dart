@@ -492,7 +492,7 @@ class _UpdateDialogState extends State<UpdateDialog> with WidgetsBindingObserver
           ),
           const SizedBox(height: 8),
           Text(
-            'To install updates inside the app, Android requires you to allow "Install unknown apps" for Music App.\n\nTap "Open Settings" below, enable the switch, then return here to complete installation.',
+            'To install updates inside the app, Android requires you to allow "Install unknown apps" for Swarva.\n\nTap "Open Settings" below, enable the switch, then return here to complete installation.',
             style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary, height: 1.4),
           ),
           const SizedBox(height: 12),

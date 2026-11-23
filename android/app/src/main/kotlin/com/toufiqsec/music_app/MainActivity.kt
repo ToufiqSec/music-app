@@ -85,7 +85,7 @@ class MainActivity : FlutterActivity() {
                 "startDownload" -> {
                     val url = call.argument<String>("url")
                     val fileName = call.argument<String>("fileName") ?: "music-app-update.apk"
-                    val title = call.argument<String>("title") ?: "Music App Update"
+                    val title = call.argument<String>("title") ?: "Swarva Update"
                     val description = call.argument<String>("description") ?: "Downloading latest update..."
 
                     if (url == null) {

@@ -131,7 +131,7 @@ class RoomShareSheet extends StatelessWidget {
                   icon: const Icon(Icons.share_rounded, size: 20),
                   label: const Text('Share Invite', style: TextStyle(fontWeight: FontWeight.w600)),
                   onPressed: () {
-                    final message = 'Join my music room with code $roomCode on Music App!';
+                    final message = 'Join my music room with code $roomCode on Swarva!';
                     Clipboard.setData(ClipboardData(text: message));
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(

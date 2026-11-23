@@ -29,7 +29,7 @@ class NotificationService {
 
   static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
     'music_app_announcements',
-    'Music App Announcements',
+    'Swarva Announcements',
     description: 'Notifications for new releases, playlists, and updates.',
     importance: Importance.high,
     playSound: true,

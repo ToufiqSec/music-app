@@ -12,7 +12,9 @@ import 'core/services/notification_service.dart';
 import 'core/services/mood_recommendation_engine.dart';
 import 'core/services/home_section_cache_store.dart';
 import 'screens/home_screen.dart';
+import 'screens/splash_screen.dart';
 import 'theme/app_theme.dart';
+import 'theme/app_colors.dart';
 
 void main() {
   // 1. Ensure Flutter binding is initialized first
@@ -40,7 +42,7 @@ void main() {
 
   ErrorWidget.builder = (FlutterErrorDetails details) {
     return Material(
-      color: const Color(0xFF182838),
+      color: AppColors.swarvaBgDark,
       child: Center(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
@@ -164,58 +166,32 @@ class _MusicAppBootstrapState extends State<MusicAppBootstrap> {
         _authProvider = AuthProvider();
         _roomProvider = room;
       });
-      debugPrint('[Startup] Providers mounted, rendering HomeScreen.');
+      debugPrint('[Startup] Providers mounted, preparing transition to HomeScreen.');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // If not ready yet on frame 1, show a fast lightweight native-matched splash container
-    if (_audioProvider == null) {
-      return MaterialApp(
-        title: 'Music App',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.darkTheme,
-        home: Scaffold(
-          backgroundColor: const Color(0xFF182838),
-          body: Center(
-            child: Image.asset(
-              'assets/icon/splash_icon.png',
-              width: 140,
-              height: 140,
-              errorBuilder: (_, __, ___) => const Icon(
-                Icons.music_note_rounded,
-                size: 80,
-                color: Colors.white70,
-              ),
-            ),
-          ),
-        ),
-      );
-    }
+    final isInitialized = _audioProvider != null;
 
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider.value(value: _audioProvider!),
-        ChangeNotifierProvider.value(value: _authProvider ?? AuthProvider()),
-        ChangeNotifierProvider.value(value: _roomProvider ?? RoomProvider()),
-      ],
-      child: const MusicApp(),
-    );
-  }
-}
-
-class MusicApp extends StatelessWidget {
-  const MusicApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Music App',
+      title: 'Swarva',
       navigatorKey: NotificationService.navigatorKey,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      home: const HomeScreen(),
+      home: SwarvaSplashScreen(
+        isReady: isInitialized,
+        nextScreen: isInitialized
+            ? MultiProvider(
+                providers: [
+                  ChangeNotifierProvider.value(value: _audioProvider!),
+                  ChangeNotifierProvider.value(value: _authProvider ?? AuthProvider()),
+                  ChangeNotifierProvider.value(value: _roomProvider ?? RoomProvider()),
+                ],
+                child: const HomeScreen(),
+              )
+            : null,
+      ),
     );
   }
 }

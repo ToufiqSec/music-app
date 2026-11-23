@@ -128,6 +128,8 @@ jobs:
             exit 1
           fi
           echo "Found APK at: $APK_PATH"
+          cp "$APK_PATH" release-output/swarva-v${{ env.APP_VERSION }}.apk
+          cp "$APK_PATH" release-output/swarva-release.apk
           cp "$APK_PATH" release-output/music-app-v${{ env.APP_VERSION }}.apk
           cp "$APK_PATH" release-output/music-app-release.apk
           ls -lh release-output/
@@ -135,32 +137,31 @@ jobs:
       - name: Upload APK as GitHub Actions Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: music-app-release-apk
-          path: release-output/music-app-release.apk
+          name: swarva-release-apk
+          path: release-output/swarva-release.apk
           retention-days: 30
 
       - name: Publish or Update GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ env.APP_VERSION }}
-          name: "Music App v${{ env.APP_VERSION }}"
+          name: "Swarva v${{ env.APP_VERSION }}"
           body: |
-            ### 🎵 Music App v${{ env.APP_VERSION }}
+            ### ✨ Swarva v${{ env.APP_VERSION }}
 
             **What's new in this release:**
-            - ⚡ **Jump Back In Overhaul:** Capped quick-pick grid to 6 tiles (2 columns x 3 rows), saving ~160dp of vertical space so Recommended Artists and feed sections appear comfortably without excessive scrolling.
-            - 🧹 **YouTube Title Sanitization:** Stripped noisy tags (`[Official Video]`, `| Audio Jukebox`, `(Full Video)`) to ensure crisp, readable 2-line titles.
-            - 📐 **Enhanced Tile Proportions:** Expanded tile height to 60dp with 8dp rounded corners and balanced 12.5px typography.
-            - 🎵 **Spotify-Style Now Playing Screen Rebuild:** Full 10-section streaming player with dynamic color palette, synced lyrics card, sticky mini header, and artist exploration.
+            - 🎨 **Official Brand & Identity — Swarva:** Rebranded launcher label, Android 13+ monochrome theming, and AndroidX adaptive icons with safe-zone ribbon isolation.
+            - 🌟 **Smooth Swarva Splash Screen:** Custom animated multi-layered S-ribbon entrance (scale 90% → 100%, 500ms) with clean off-white brand typography, zero color jump, and native handoff.
+            - 💎 **Liquid Glassmorphic UI Redesign:** Pure frosted glass effects, subtle reflections, ambient diagonal light beams, and glowing active states.
+            - ⚡ **Jump Back In Overhaul:** Capped quick-pick grid to 6 tiles (2 columns x 3 rows), saving ~160dp of vertical space with YouTube title sanitization.
+            - 🎵 **Spotify-Style Now Playing Screen:** Full 10-section streaming player with dynamic color palette, synced lyrics card, sticky mini header, and artist exploration.
             - ⏱️ **Integrated Sleep Timer:** Direct sleep timer controls (15, 30, 45, 60 mins) with auto-pause.
-            - 🛡️ **Universal Numeric Safety:** Hardened dimensions, progress percentages, and duration calculations against Infinity, NaN, and zero denominators.
             - 🚀 **Instant Home Streaming:** Skeleton placeholders and progressive section rendering stream content in without layout shifts.
             - 🎙️ **Podcast Audio Playback:** Restored full podcast stream resolution and playback across all feeds.
-            - 🔒 **Security & Stability Hardening:** Fixed login screen double-pop navigation and strengthened TLS verification.
-            - 🎵 **Ad-Free Streaming Engine:** Blazing-fast JioSaavn 320kbps + YouTube audio streams with native background playback.
+            - 🎵 **Ad-Free Streaming Engine:** Blazing-fast 320kbps streams with native background playback.
 
             #### 📲 How to Install:
-            1. Download **`music-app-release.apk`** below
+            1. Download **`swarva-release.apk`** below
             2. On your Android phone: **Settings → Security → Unknown Sources → Allow**
             3. Open the downloaded APK and tap **Install**
             4. Future updates will be delivered **inside the app automatically**!
@@ -170,6 +171,8 @@ jobs:
           prerelease: false
           update_existing_release: true
           files: |
+            release-output/swarva-v${{ env.APP_VERSION }}.apk
+            release-output/swarva-release.apk
             release-output/music-app-v${{ env.APP_VERSION }}.apk
             release-output/music-app-release.apk
         env:

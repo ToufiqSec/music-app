@@ -36,7 +36,7 @@ import '../core/constants/app_strings.dart';
 import '../core/services/greeting_service.dart';
 import 'login_screen.dart';
 
-/// Main Discovery Hub and Navigation Shell for Music App.
+/// Main Discovery Hub and Navigation Shell for Swarva.
 /// Universal UI Design System: Twilight Calm.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});

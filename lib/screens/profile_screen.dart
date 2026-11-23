@@ -1026,7 +1026,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           ListTile(
             leading: const Icon(Icons.info_outline_rounded, color: AppColors.primarySoft),
-            title: const Text('Music App Engine', style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
+            title: const Text('Swarva Engine', style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
             subtitle: Text(
               'Version ${AppUpdateService.currentVersion} • Release Channel',
               style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
@@ -1046,7 +1046,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Music App is up to date!'),
+                        content: Text('Swarva is up to date!'),
                         backgroundColor: AppColors.surface1,
                         behavior: SnackBarBehavior.floating,
                       ),
@@ -1374,7 +1374,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Music App is up to date (v1.0.95)!'),
+                                content: Text('Swarva is up to date (v1.0.95)!'),
                                 backgroundColor: AppColors.surface1,
                                 behavior: SnackBarBehavior.floating,
                               ),

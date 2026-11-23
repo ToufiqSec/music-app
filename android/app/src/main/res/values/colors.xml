@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#182838</color>
-    <color name="splash_background">#182838</color>
+    <!-- Swarva Brand Palette -->
+    <color name="swarva_background_dark">#121014</color>
+    <color name="swarva_coral">#F2566B</color>
+    <color name="swarva_peach">#FFB48A</color>
+    <color name="swarva_pink">#E070A8</color>
+    <color name="swarva_violet">#9B4FD8</color>
+    <color name="swarva_deep_purple">#6A3FC8</color>
+
+    <!-- Launcher & Splash Mappings (Unified #121014 to eliminate color jumps) -->
+    <color name="ic_launcher_background">#121014</color>
+    <color name="splash_background">#121014</color>
 </resources>

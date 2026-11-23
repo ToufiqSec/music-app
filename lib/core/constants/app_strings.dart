@@ -2,6 +2,9 @@
 /// Allows product decisions (such as renaming sections or features)
 /// to be updated in one centralized location.
 class AppStrings {
+  /// Official Application Name.
+  static const String appName = 'Swarva';
+
   /// Neutral title for the curated new & trending songs section (Issue 1).
   static const String freshPicksSectionTitle = 'Fresh Picks';
 
