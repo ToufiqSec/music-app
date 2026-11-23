@@ -72,19 +72,38 @@ class _CascadingArtworkState extends State<CascadingArtwork> {
       if (ytMatch != null) {
         final videoId = ytMatch.group(1)!;
         final isSmallThumbnail = widget.width != null && widget.width! <= 120;
-        // YouTube's hqdefault.jpg (480x360) has 45px baked black letterbox bars.
-        // maxresdefault (1280x720) and mqdefault (320x180) are true 16:9 with no letterbox bars.
-        final tiers = isSmallThumbnail
-            ? [
-                'https://i.ytimg.com/vi/$videoId/mqdefault.jpg',
-                'https://i.ytimg.com/vi/$videoId/hqdefault.jpg',
-              ]
-            : [
-                'https://i.ytimg.com/vi/$videoId/maxresdefault.jpg',
-                'https://i.ytimg.com/vi/$videoId/sddefault.jpg',
-                'https://i.ytimg.com/vi/$videoId/mqdefault.jpg',
-                'https://i.ytimg.com/vi/$videoId/hqdefault.jpg',
-              ];
+        
+        // Prioritize guaranteed available tiers to prevent 404 network stalls
+        final List<String> tiers;
+        if (original.contains('hqdefault.jpg')) {
+          tiers = [
+            'https://i.ytimg.com/vi/$videoId/hqdefault.jpg',
+            'https://i.ytimg.com/vi/$videoId/mqdefault.jpg',
+            'https://i.ytimg.com/vi/$videoId/maxresdefault.jpg',
+          ];
+        } else if (original.contains('mqdefault.jpg')) {
+          tiers = [
+            'https://i.ytimg.com/vi/$videoId/mqdefault.jpg',
+            'https://i.ytimg.com/vi/$videoId/hqdefault.jpg',
+          ];
+        } else if (original.contains('maxresdefault.jpg')) {
+          tiers = [
+            'https://i.ytimg.com/vi/$videoId/maxresdefault.jpg',
+            'https://i.ytimg.com/vi/$videoId/hqdefault.jpg',
+            'https://i.ytimg.com/vi/$videoId/mqdefault.jpg',
+          ];
+        } else {
+          tiers = isSmallThumbnail
+              ? [
+                  'https://i.ytimg.com/vi/$videoId/mqdefault.jpg',
+                  'https://i.ytimg.com/vi/$videoId/hqdefault.jpg',
+                ]
+              : [
+                  'https://i.ytimg.com/vi/$videoId/hqdefault.jpg',
+                  'https://i.ytimg.com/vi/$videoId/mqdefault.jpg',
+                  'https://i.ytimg.com/vi/$videoId/maxresdefault.jpg',
+                ];
+        }
         list.clear();
         for (final tier in tiers) {
           if (!list.contains(tier)) {
@@ -112,10 +131,9 @@ class _CascadingArtworkState extends State<CascadingArtwork> {
         list.add('https://i.ytimg.com/vi/$ytId/mqdefault.jpg');
         list.add('https://i.ytimg.com/vi/$ytId/hqdefault.jpg');
       } else {
-        list.add('https://i.ytimg.com/vi/$ytId/maxresdefault.jpg');
-        list.add('https://i.ytimg.com/vi/$ytId/sddefault.jpg');
-        list.add('https://i.ytimg.com/vi/$ytId/mqdefault.jpg');
         list.add('https://i.ytimg.com/vi/$ytId/hqdefault.jpg');
+        list.add('https://i.ytimg.com/vi/$ytId/mqdefault.jpg');
+        list.add('https://i.ytimg.com/vi/$ytId/maxresdefault.jpg');
       }
     }
 

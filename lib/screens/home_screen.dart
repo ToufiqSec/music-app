@@ -1922,10 +1922,15 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
                   child: SizedBox(
                     width: 140,
                     height: 130,
-                    child: CachedNetworkImage(
+                    child: CascadingArtwork(
+                      key: ValueKey('trending_art_${track.id}'),
+                      trackId: track.id,
                       imageUrl: track.thumbnailUrl,
+                      title: track.title,
+                      artist: track.artist,
+                      width: 140,
+                      height: 130,
                       fit: BoxFit.cover,
-                      memCacheWidth: 280,
                     ),
                   ),
                 ),
