@@ -131,7 +131,7 @@ class TasteEngine {
     ArtistProfile(
       id: 'h_jubin',
       name: 'Jubin Nautiyal',
-      imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/90/Jubin_Nauityal_at_the_Good_Homes_Awards_2015.jpg/500px-Jubin_Nauityal_at_the_Good_Homes_Awards_2015.jpg',
+      imageUrl: 'https://cdn-images.dzcdn.net/images/artist/9031b483049b5551abcb11529873b4f6/1000x1000-000000-80-0-0.jpg',
       language: 'Hindi',
     ),
     ArtistProfile(
@@ -179,25 +179,25 @@ class TasteEngine {
     ArtistProfile(
       id: 'h_vishal',
       name: 'Vishal Mishra',
-      imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Vishal_Mishra_at_IIFA_2019.jpg/500px-Vishal_Mishra_at_IIFA_2019.jpg',
+      imageUrl: 'https://cdn-images.dzcdn.net/images/artist/6125247795ee1f0b64253a1e993e7b0e/1000x1000-000000-80-0-0.jpg',
       language: 'Hindi',
     ),
     ArtistProfile(
       id: 'h_darshan',
       name: 'Darshan Raval',
-      imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Darshan_Raval_in_2020.jpg/500px-Darshan_Raval_in_2020.jpg',
+      imageUrl: 'https://cdn-images.dzcdn.net/images/artist/9428424029a929927b7081b70d3a0fc6/1000x1000-000000-80-0-0.jpg',
       language: 'Hindi',
     ),
     ArtistProfile(
       id: 'h_anuv_jain',
       name: 'Anuv Jain',
-      imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Anuv_Jain_performing_in_2023.jpg/500px-Anuv_Jain_performing_in_2023.jpg',
+      imageUrl: 'https://cdn-images.dzcdn.net/images/artist/eb0c0e91c8ad621b41178e0d66c81057/1000x1000-000000-80-0-0.jpg',
       language: 'Hindi',
     ),
     ArtistProfile(
       id: 'h_prateek',
       name: 'Prateek Kuhad',
-      imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/Prateek_Kuhad_2019.jpg/500px-Prateek_Kuhad_2019.jpg',
+      imageUrl: 'https://cdn-images.dzcdn.net/images/artist/7f69b3905ae630b3f7bcd826bd2dc46f/1000x1000-000000-80-0-0.jpg',
       language: 'Hindi',
     ),
 
@@ -211,7 +211,7 @@ class TasteEngine {
     ArtistProfile(
       id: 'b_nachiketa',
       name: 'Nachiketa Chakraborty',
-      imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/Nachiketa_Chakraborty.jpg/500px-Nachiketa_Chakraborty.jpg',
+      imageUrl: 'https://cdn-images.dzcdn.net/images/artist/cabc7990aaf4b70bc31b3afded26646a/1000x1000-000000-80-0-0.jpg',
       language: 'Bengali',
     ),
     ArtistProfile(
@@ -241,43 +241,43 @@ class TasteEngine {
     ArtistProfile(
       id: 'b_anjan',
       name: 'Anjan Dutt',
-      imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Anjan_Dutt_in_2017_premiere.png/500px-Anjan_Dutt_in_2017_premiere.png',
+      imageUrl: 'https://cdn-images.dzcdn.net/images/artist/32b8921d94a153c511263215af53c45c/1000x1000-000000-80-0-0.jpg',
       language: 'Bengali',
     ),
     ArtistProfile(
       id: 'b_kabir',
       name: 'Kabir Suman',
-      imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/84/Kabir_Suman_playing_organ.jpg/500px-Kabir_Suman_playing_organ.jpg',
+      imageUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music128/v4/e1/f5/20/e1f5208c-233c-7c2d-efb1-416673e3b2f7/191773326364.jpg/600x600bb.jpg',
       language: 'Bengali',
     ),
     ArtistProfile(
       id: 'b_somlata',
       name: 'Somlata Acharyya',
-      imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/90/Somlata_Acharyya_Chowdhury.jpg/500px-Somlata_Acharyya_Chowdhury.jpg',
+      imageUrl: 'https://cdn-images.dzcdn.net/images/artist/5d189c37432cf62d8426fb8fdecc8e67/1000x1000-000000-80-0-0.jpg',
       language: 'Bengali',
     ),
     ArtistProfile(
       id: 'b_rupankar',
       name: 'Rupankar Bagchi',
-      imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Rupankar_Bagchi_2016.jpg/500px-Rupankar_Bagchi_2016.jpg',
+      imageUrl: 'https://cdn-images.dzcdn.net/images/artist/d166830cbad55c6b5847273cc06735b6/1000x1000-000000-80-0-0.jpg',
       language: 'Bengali',
     ),
     ArtistProfile(
       id: 'b_iman',
       name: 'Iman Chakraborty',
-      imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f9/Iman_Chakraborty_in_2018.jpg/500px-Iman_Chakraborty_in_2018.jpg',
+      imageUrl: 'https://cdn-images.dzcdn.net/images/artist/9d70214ccae8b4360305d324088cdba7/1000x1000-000000-80-0-0.jpg',
       language: 'Bengali',
     ),
     ArtistProfile(
       id: 'b_lagnajita',
       name: 'Lagnajita Chakraborty',
-      imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Lagnajita_Chakraborty.jpg/500px-Lagnajita_Chakraborty.jpg',
+      imageUrl: 'https://cdn-images.dzcdn.net/images/artist/4c23c0c1f093f6856eba122542309500/1000x1000-000000-80-0-0.jpg',
       language: 'Bengali',
     ),
     ArtistProfile(
       id: 'b_monali',
       name: 'Monali Thakur',
-      imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Monali_Thakur_at_Mirchi_Music_Awards_2014.jpg/500px-Monali_Thakur_at_Mirchi_Music_Awards_2014.jpg',
+      imageUrl: 'https://cdn-images.dzcdn.net/images/artist/baf2fd45c36240e33c9fa5c81ee7bc82/1000x1000-000000-80-0-0.jpg',
       language: 'Bengali',
     ),
 
@@ -291,13 +291,13 @@ class TasteEngine {
     ArtistProfile(
       id: 'p_sidhu',
       name: 'Sidhu Moose Wala',
-      imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7a/Sidhu_Moose_Wala_during_the_shooting_of_his_film_Moosa_Jatt_%28cropped%29.jpg/500px-Sidhu_Moose_Wala_during_the_shooting_of_his_film_Moosa_Jatt_%28cropped%29.jpg',
+      imageUrl: 'https://cdn-images.dzcdn.net/images/artist/f559ebe3851db26a6a47a76b1d95748f/1000x1000-000000-80-0-0.jpg',
       language: 'Punjabi',
     ),
     ArtistProfile(
       id: 'p_ap',
       name: 'AP Dhillon',
-      imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/AP_Dhillon_in_2023.jpg/500px-AP_Dhillon_in_2023.jpg',
+      imageUrl: 'https://cdn-images.dzcdn.net/images/artist/52594ac9fa763dc163ed13d21cb130ec/1000x1000-000000-80-0-0.jpg',
       language: 'Punjabi',
     ),
     ArtistProfile(
@@ -315,25 +315,25 @@ class TasteEngine {
     ArtistProfile(
       id: 'p_bpraak',
       name: 'B Praak',
-      imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/B_Praak_2020.jpg/500px-B_Praak_2020.jpg',
+      imageUrl: 'https://cdn-images.dzcdn.net/images/artist/efe513aabaa0a94c4db307ac3431b833/1000x1000-000000-80-0-0.jpg',
       language: 'Punjabi',
     ),
     ArtistProfile(
       id: 'p_harrdy',
       name: 'Harrdy Sandhu',
-      imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Harrdy_Sandhu_2019.jpg/500px-Harrdy_Sandhu_2019.jpg',
+      imageUrl: 'https://cdn-images.dzcdn.net/images/artist/738cdc5b00f71b067fb3e0b0fe52e783/1000x1000-000000-80-0-0.jpg',
       language: 'Punjabi',
     ),
     ArtistProfile(
       id: 'p_jass',
       name: 'Jass Manak',
-      imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Jass_Manak_2020.jpg/500px-Jass_Manak_2020.jpg',
+      imageUrl: 'https://cdn-images.dzcdn.net/images/artist/4844200d1bbd953d966fbb906bbf2340/1000x1000-000000-80-0-0.jpg',
       language: 'Punjabi',
     ),
     ArtistProfile(
       id: 'p_ammy',
       name: 'Ammy Virk',
-      imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/78/Ammy_Virk_in_2019.jpg/500px-Ammy_Virk_in_2019.jpg',
+      imageUrl: 'https://cdn-images.dzcdn.net/images/artist/9fe16f6f33ec30a63d504e0012de05bb/1000x1000-000000-80-0-0.jpg',
       language: 'Punjabi',
     ),
 
@@ -365,43 +365,43 @@ class TasteEngine {
     ArtistProfile(
       id: 'e_billie',
       name: 'Billie Eilish',
-      imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/Billie_Eilish_at_the_2024_Toronto_International_Film_Festival_%28cropped%29.jpg/500px-Billie_Eilish_at_the_2024_Toronto_International_Film_Festival_%28cropped%29.jpg',
+      imageUrl: 'https://cdn-images.dzcdn.net/images/artist/8eab1a9a644889aabaca1e193e05f984/1000x1000-000000-80-0-0.jpg',
       language: 'English',
     ),
     ArtistProfile(
       id: 'e_bruno',
       name: 'Bruno Mars',
-      imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Bruno_Mars_2017.jpg/500px-Bruno_Mars_2017.jpg',
+      imageUrl: 'https://cdn-images.dzcdn.net/images/artist/90f0b5b11df4f87ee878f38569b5995b/1000x1000-000000-80-0-0.jpg',
       language: 'English',
     ),
     ArtistProfile(
       id: 'e_dualipa',
       name: 'Dua Lipa',
-      imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/Dua_Lipa_2022.jpg/500px-Dua_Lipa_2022.jpg',
+      imageUrl: 'https://cdn-images.dzcdn.net/images/artist/877872aaf75694f11d53c318700ab2b5/1000x1000-000000-80-0-0.jpg',
       language: 'English',
     ),
     ArtistProfile(
       id: 'e_justin',
       name: 'Justin Bieber',
-      imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/Justin_Bieber_in_2015.jpg/500px-Justin_Bieber_in_2015.jpg',
+      imageUrl: 'https://cdn-images.dzcdn.net/images/artist/fe097f693cebf1f882e3da79e99e3bf9/1000x1000-000000-80-0-0.jpg',
       language: 'English',
     ),
     ArtistProfile(
       id: 'e_drake',
       name: 'Drake',
-      imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/Drake_July_2016.jpg/500px-Drake_July_2016.jpg',
+      imageUrl: 'https://cdn-images.dzcdn.net/images/artist/eb0ed5b21d1ea5af021fc074ded0e91f/1000x1000-000000-80-0-0.jpg',
       language: 'English',
     ),
     ArtistProfile(
       id: 'e_post',
       name: 'Post Malone',
-      imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/27/Post_Malone_2018.jpg/500px-Post_Malone_2018.jpg',
+      imageUrl: 'https://cdn-images.dzcdn.net/images/artist/a5a8cca44e7eab2db7d44e039bed2574/1000x1000-000000-80-0-0.jpg',
       language: 'English',
     ),
     ArtistProfile(
       id: 'e_imaginedragons',
       name: 'Imagine Dragons',
-      imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/90/Imagine_Dragons_2017.jpg/500px-Imagine_Dragons_2017.jpg',
+      imageUrl: 'https://cdn-images.dzcdn.net/images/artist/1ba025c23cae3dee14b51152990285fc/1000x1000-000000-80-0-0.jpg',
       language: 'English',
     ),
     ArtistProfile(
@@ -413,13 +413,13 @@ class TasteEngine {
     ArtistProfile(
       id: 'e_adele',
       name: 'Adele',
-      imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Adele_2016.jpg/500px-Adele_2016.jpg',
+      imageUrl: 'https://cdn-images.dzcdn.net/images/artist/5e22b1d2569cf1ea763b09ff3c978a50/1000x1000-000000-80-0-0.jpg',
       language: 'English',
     ),
     ArtistProfile(
       id: 'e_charlie',
       name: 'Charlie Puth',
-      imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/Charlie_Puth_2018.jpg/500px-Charlie_Puth_2018.jpg',
+      imageUrl: 'https://cdn-images.dzcdn.net/images/artist/03a74f573792d5e693427cf34ee03ebf/1000x1000-000000-80-0-0.jpg',
       language: 'English',
     ),
   ];
