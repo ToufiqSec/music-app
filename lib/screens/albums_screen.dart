@@ -653,7 +653,7 @@ class _AlbumsScreenState extends State<AlbumsScreen> with SingleTickerProviderSt
 
                                       return ListTile(
                                         contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                        leading: SizedBox(
+                                        leading: Container(
                                           width: 32,
                                           alignment: Alignment.center,
                                           child: isPlayingThis
