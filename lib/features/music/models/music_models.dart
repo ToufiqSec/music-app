@@ -11,6 +11,7 @@ class YoutubeTrack {
   final bool isDownloaded;
   final String? localFilePath;
   final String? album;
+  final String? composer;
 
   String get thumbnail => thumbnailUrl;
 
@@ -24,6 +25,7 @@ class YoutubeTrack {
     this.isDownloaded = false,
     this.localFilePath,
     this.album,
+    this.composer,
   });
 
   YoutubeTrack copyWith({
@@ -36,6 +38,7 @@ class YoutubeTrack {
     bool? isDownloaded,
     String? localFilePath,
     String? album,
+    String? composer,
   }) {
     return YoutubeTrack(
       id: id ?? this.id,
@@ -47,6 +50,7 @@ class YoutubeTrack {
       isDownloaded: isDownloaded ?? this.isDownloaded,
       localFilePath: localFilePath ?? this.localFilePath,
       album: album ?? this.album,
+      composer: composer ?? this.composer,
     );
   }
 
@@ -61,6 +65,7 @@ class YoutubeTrack {
       'isDownloaded': isDownloaded,
       'localFilePath': localFilePath,
       'album': album,
+      'composer': composer,
     };
   }
 
@@ -75,6 +80,7 @@ class YoutubeTrack {
       isDownloaded: json['isDownloaded'] as bool? ?? false,
       localFilePath: json['localFilePath']?.toString(),
       album: json['album']?.toString(),
+      composer: json['composer']?.toString(),
     );
   }
 
@@ -89,6 +95,8 @@ class YoutubeTrack {
         'audioStreamUrl': audioStreamUrl,
         'localFilePath': localFilePath,
         'isDownloaded': isDownloaded,
+        'album': album,
+        'composer': composer,
       },
     );
   }
@@ -103,6 +111,8 @@ class YoutubeTrack {
       audioStreamUrl: item.extras?['audioStreamUrl'] as String?,
       isDownloaded: item.extras?['isDownloaded'] as bool? ?? false,
       localFilePath: item.extras?['localFilePath'] as String?,
+      album: item.extras?['album'] as String?,
+      composer: item.extras?['composer'] as String?,
     );
   }
 }
