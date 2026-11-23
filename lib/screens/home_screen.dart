@@ -629,10 +629,12 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
                 ),
                 const SizedBox(width: 8),
 
-                // Top Action Group (Notifications, Moods & Genres, Profile Avatar)
+                // Top Action Group (Listen Together, Notifications, Moods & Genres, Profile Avatar)
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    const ListenTogetherButton(),
+                    const SizedBox(width: 8),
                     _buildHeaderIconButton(
                       icon: Icons.notifications_none_rounded,
                       tooltip: 'Notifications',
