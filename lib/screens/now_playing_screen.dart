@@ -248,16 +248,19 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(26),
-                        child: CascadingArtwork(
-                          key: ValueKey('hero_art_${track.id}'),
-                          trackId: track.id,
-                          imageUrl: track.thumbnailUrl,
-                          title: track.title,
-                          artist: track.artist,
-                          width: heroSize,
-                          height: heroSize,
-                          borderRadius: BorderRadius.circular(26),
-                          fit: BoxFit.cover,
+                        child: Transform.scale(
+                          scale: 1.08,
+                          child: CascadingArtwork(
+                            key: ValueKey('hero_art_${track.id}'),
+                            trackId: track.id,
+                            imageUrl: track.thumbnailUrl,
+                            title: track.title,
+                            artist: track.artist,
+                            width: heroSize,
+                            height: heroSize,
+                            borderRadius: BorderRadius.circular(26),
+                            fit: BoxFit.cover,
+                          ),
                         ),
                       ),
                     ),
@@ -559,12 +562,19 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
+                      color: _showHindiLyrics ? AppColors.softPurple.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: _showHindiLyrics ? AppColors.softPurple : Colors.white24,
+                      ),
                     ),
                     child: Text(
-                      _showHindiLyrics ? 'Roman Lyrics' : 'Hindi Meaning',
-                      style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                      _showHindiLyrics ? 'Hindi: ON' : 'Hindi: OFF',
+                      style: TextStyle(
+                        color: _showHindiLyrics ? AppColors.softPurple : Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
@@ -605,27 +615,43 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                 return Column(
                   children: previewLines.map((line) {
                     final isCurrent = lines.indexOf(line) == activeIdx;
-                    final displayText = (_showHindiLyrics && line.meaningText != null)
-                        ? line.meaningText!
-                        : line.mainText;
-                    final isUrdu = _isUrduOrArabic(displayText);
+                    final isUrdu = _isUrduOrArabic(line.mainText);
+                    final hasHindiTranslation = _showHindiLyrics &&
+                        line.meaningText != null &&
+                        line.meaningText!.trim().isNotEmpty;
 
                     return GestureDetector(
                       onTap: () => audio.seekTo(line.timestamp),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 7.0),
-                        child: Text(
-                          displayText,
-                          textAlign: TextAlign.center,
-                          textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,
-                          style: TextStyle(
-                            color: isCurrent ? Colors.white : Colors.white.withValues(alpha: 0.45),
-                            fontSize: isCurrent ? 18 : 15,
-                            fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
-                            height: 1.6,
-                            decoration: isCurrent ? TextDecoration.underline : TextDecoration.none,
-                            decorationColor: Colors.white.withValues(alpha: 0.8),
-                          ),
+                        padding: const EdgeInsets.symmetric(vertical: 6.0),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              line.mainText,
+                              textAlign: TextAlign.center,
+                              textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,
+                              style: TextStyle(
+                                color: isCurrent ? Colors.white : Colors.white.withValues(alpha: 0.45),
+                                fontSize: isCurrent ? 17 : 14.5,
+                                fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
+                                height: 1.4,
+                              ),
+                            ),
+                            if (hasHindiTranslation) ...[
+                              const SizedBox(height: 3),
+                              Text(
+                                line.meaningText!,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: isCurrent ? AppColors.softPurple : Colors.white.withValues(alpha: 0.40),
+                                  fontSize: isCurrent ? 13 : 11.5,
+                                  fontWeight: FontWeight.normal,
+                                  height: 1.3,
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ),
                     );
@@ -923,6 +949,10 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
   // SECTION 8: CREDITS
   // ===========================================================================
   Widget _buildCreditsSection(BuildContext context, YoutubeTrack track) {
+    final hasValidComposer = track.composer != null &&
+        track.composer!.trim().isNotEmpty &&
+        track.composer != 'Original Composition';
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -944,15 +974,17 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                 onTap: () => _showAllCreditsSheet(context, track),
                 child: const Text(
                   'Show all',
-                  style: TextStyle(color: Color(0xFF1DB954), fontWeight: FontWeight.bold, fontSize: 13),
+                  style: TextStyle(color: AppColors.softPurple, fontWeight: FontWeight.bold, fontSize: 13),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 16),
           _buildCreditRow(track.artist, 'Main Artist, Vocals', hasFollow: true),
-          const SizedBox(height: 12),
-          _buildCreditRow('Original Composition', 'Composer & Author'),
+          if (hasValidComposer) ...[
+            const SizedBox(height: 12),
+            _buildCreditRow(track.composer!, 'Composer & Author'),
+          ],
           const SizedBox(height: 12),
           _buildCreditRow('Twilight Sound Labs', 'Producer, Audio Engineering'),
         ],
@@ -1028,10 +1060,26 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
   // ===========================================================================
   Widget _buildExploreCarousel(BuildContext context, YoutubeTrack track, AudioProvider audio) {
     final exploreCards = [
-      {'title': 'Songs by ${track.artist}', 'query': '${track.artist} top songs'},
-      {'title': 'More from Coke Studio', 'query': 'Coke Studio Season trending songs'},
-      {'title': 'Similar to ${track.title}', 'query': '${track.title} similar song'},
-      {'title': 'Top Chartbusters', 'query': 'trending hits billboard 2026'},
+      {
+        'title': 'Songs by ${track.artist}',
+        'query': '${track.artist} top songs',
+        'imageUrl': track.thumbnailUrl,
+      },
+      {
+        'title': 'More from Coke Studio',
+        'query': 'Coke Studio Season trending songs',
+        'imageUrl': 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&q=80',
+      },
+      {
+        'title': 'Similar to ${track.title}',
+        'query': '${track.title} similar song',
+        'imageUrl': 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&q=80',
+      },
+      {
+        'title': 'Top Chartbusters',
+        'query': 'trending hits billboard 2026',
+        'imageUrl': 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&q=80',
+      },
     ];
 
     return Column(
@@ -1070,8 +1118,8 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                     children: [
                       CascadingArtwork(
                         key: ValueKey('explore_art_${card['query']}'),
-                        trackId: track.id,
-                        imageUrl: track.thumbnailUrl,
+                        trackId: 'explore_${i}_${track.id}',
+                        imageUrl: card['imageUrl']!,
                         title: card['title']!,
                         artist: track.artist,
                         width: 140,
@@ -1224,7 +1272,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                       value: progress,
                       minHeight: 2.0,
                       backgroundColor: Colors.white10,
-                      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF1DB954)),
+                      valueColor: const AlwaysStoppedAnimation<Color>(AppColors.softPurple),
                     );
                   },
                 ),
@@ -1245,110 +1293,160 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.92,
-          minChildSize: 0.60,
-          maxChildSize: 0.98,
-          builder: (_, scrollController) {
-            return Container(
-              decoration: BoxDecoration(
-                color: _palette.lyricsCardColor,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-              ),
-              child: Column(
-                children: [
-                  const SizedBox(height: 12),
-                  Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.white30,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
+        return StatefulBuilder(
+          builder: (modalContext, setModalState) {
+            return DraggableScrollableSheet(
+              initialChildSize: 0.92,
+              minChildSize: 0.60,
+              maxChildSize: 0.98,
+              builder: (_, scrollController) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: _palette.lyricsCardColor,
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                track.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                              ),
-                              Text(
-                                track.artist,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(color: Color(0xFFB3B3B3), fontSize: 13),
-                              ),
-                            ],
-                          ),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 12),
+                      Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.white30,
+                          borderRadius: BorderRadius.circular(2),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.close_rounded, color: Colors.white),
-                          onPressed: () => Navigator.pop(ctx),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Divider(color: Colors.white12, height: 1),
-                  Expanded(
-                    child: _dualLyrics == null || !_dualLyrics!.hasLyrics
-                        ? const Center(
-                            child: Text('Lyrics not available', style: TextStyle(color: Colors.white70)),
-                          )
-                        : Selector<AudioProvider, Duration>(
-                            selector: (_, ap) => ap.position,
-                            builder: (context, pos, _) {
-                              final lines = _dualLyrics!.lines;
-                              final active = _findActiveLyricIndex(pos, lines);
-
-                              return ListView.builder(
-                                controller: scrollController,
-                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-                                itemCount: lines.length,
-                                itemBuilder: (context, index) {
-                                  final line = lines[index];
-                                  final isCurrent = index == active;
-                                  final text = (_showHindiLyrics && line.meaningText != null)
-                                      ? line.meaningText!
-                                      : line.mainText;
-                                  final isUrdu = _isUrduOrArabic(text);
-
-                                  return GestureDetector(
-                                    onTap: () {
-                                      HapticFeedback.selectionClick();
-                                      audio.seekTo(line.timestamp);
-                                    },
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 12.0),
-                                      child: Text(
-                                        text,
-                                        textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,
-                                        style: TextStyle(
-                                          color: isCurrent ? Colors.white : Colors.white.withValues(alpha: 0.40),
-                                          fontSize: isCurrent ? 24 : 18,
-                                          fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
-                                          height: 1.6,
-                                          decoration: isCurrent ? TextDecoration.underline : TextDecoration.none,
-                                          decorationColor: Colors.white.withValues(alpha: 0.8),
-                                        ),
-                                      ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    track.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                                  ),
+                                  Text(
+                                    track.artist,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(color: Color(0xFFB3B3B3), fontSize: 13),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (_dualLyrics != null && _dualLyrics!.isHindiOrUrdu)
+                              GestureDetector(
+                                onTap: () {
+                                  HapticFeedback.selectionClick();
+                                  setState(() => _showHindiLyrics = !_showHindiLyrics);
+                                  setModalState(() {});
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  margin: const EdgeInsets.only(right: 8),
+                                  decoration: BoxDecoration(
+                                    color: _showHindiLyrics
+                                        ? AppColors.softPurple.withValues(alpha: 0.3)
+                                        : Colors.white.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: _showHindiLyrics ? AppColors.softPurple : Colors.white24,
                                     ),
+                                  ),
+                                  child: Text(
+                                    _showHindiLyrics ? 'Hindi: ON' : 'Hindi: OFF',
+                                    style: TextStyle(
+                                      color: _showHindiLyrics ? AppColors.softPurple : Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            IconButton(
+                              icon: const Icon(Icons.close_rounded, color: Colors.white),
+                              onPressed: () => Navigator.pop(ctx),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Divider(color: Colors.white12, height: 1),
+                      Expanded(
+                        child: _dualLyrics == null || !_dualLyrics!.hasLyrics
+                            ? const Center(
+                                child: Text('Lyrics not available', style: TextStyle(color: Colors.white70)),
+                              )
+                            : Selector<AudioProvider, Duration>(
+                                selector: (_, ap) => ap.position,
+                                builder: (context, pos, _) {
+                                  final lines = _dualLyrics!.lines;
+                                  final active = _findActiveLyricIndex(pos, lines);
+
+                                  return ListView.builder(
+                                    controller: scrollController,
+                                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                                    itemCount: lines.length,
+                                    itemBuilder: (context, index) {
+                                      final line = lines[index];
+                                      final isCurrent = index == active;
+                                      final isUrdu = _isUrduOrArabic(line.mainText);
+                                      final hasHindiTranslation = _showHindiLyrics &&
+                                          line.meaningText != null &&
+                                          line.meaningText!.trim().isNotEmpty;
+
+                                      return GestureDetector(
+                                        onTap: () {
+                                          HapticFeedback.selectionClick();
+                                          audio.seekTo(line.timestamp);
+                                        },
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(vertical: 10.0),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.center,
+                                            children: [
+                                              Text(
+                                                line.mainText,
+                                                textAlign: TextAlign.center,
+                                                textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,
+                                                style: TextStyle(
+                                                  color: isCurrent ? Colors.white : Colors.white.withValues(alpha: 0.40),
+                                                  fontSize: isCurrent ? 22 : 17,
+                                                  fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
+                                                  height: 1.5,
+                                                ),
+                                              ),
+                                              if (hasHindiTranslation) ...[
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  line.meaningText!,
+                                                  textAlign: TextAlign.center,
+                                                  style: TextStyle(
+                                                    color: isCurrent ? AppColors.softPurple : Colors.white.withValues(alpha: 0.4),
+                                                    fontSize: isCurrent ? 15 : 13,
+                                                    fontWeight: FontWeight.normal,
+                                                    height: 1.4,
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    },
                                   );
                                 },
-                              );
-                            },
-                          ),
+                              ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                );
+              },
             );
           },
         );

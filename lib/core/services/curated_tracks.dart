@@ -415,7 +415,7 @@ class CuratedTracks {
       title: 'Sunday Suspense: Feluda - Joto Kando Kathmandu-te',
       artist: 'Sunday Suspense • Satyajit Ray',
       durationSeconds: 9813,
-      thumbnailUrl: 'https://d3wo5wojvuv7l.cloudfront.net/t_rss_itunes_square_1400/images.spreaker.com/original/1448de548583885ff422361fdb951f38.jpg',
+      thumbnailUrl: 'https://d3wo5wojvuv7l.cloudfront.net/t_rss_itunes_square_1400/images.spreaker.com/original/d36a886547e5ce2af77fd2bda1afcf44.jpg',
       audioStreamUrl: 'https://dts.podtrac.com/redirect.mp3/api.spreaker.com/download/episode/58582188/joto_kando_kathmandu_te.mp3',
     ),
     const YoutubeTrack(

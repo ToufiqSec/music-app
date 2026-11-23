@@ -57,11 +57,14 @@ class AudioProvider extends ChangeNotifier {
 
   void _startBufferingWatchdog() {
     _bufferingWatchdogTimer?.cancel();
-    _bufferingWatchdogTimer = Timer(const Duration(seconds: 10), () {
+    _bufferingWatchdogTimer = Timer(const Duration(seconds: 8), () {
       if (_isBuffering) {
-        debugPrint('[AudioProvider] Watchdog: Buffering timed out.');
+        debugPrint('[AudioProvider] Watchdog: Buffering timed out. Attempting resume.');
         _isBuffering = false;
         notifyListeners();
+        if (_isPlaying && _audioHandler.player.processingState != ProcessingState.completed) {
+          _audioHandler.play().catchError((_) {});
+        }
       }
     });
   }
@@ -537,23 +540,10 @@ class AudioProvider extends ChangeNotifier {
       }
 
       // 3. Network protocol check (robust for Windows & Unix)
-      // Debounce background caching by 25s so initial stream buffer is never starved.
-      // For long podcasts / narrative audio (> 20 mins), skip background whole-file disk caching to avoid network strain.
-      final isRemote = resolvedUrl.startsWith('http://') || resolvedUrl.startsWith('https://');
-      final isLongNarrative = track.durationSeconds > 1200;
-      if (isRemote && !isLongNarrative && !await AudioCacheService.isTrackCached(track.id)) {
-        _backgroundCacheTimer?.cancel();
-        _backgroundCacheTimer = Timer(const Duration(seconds: 25), () async {
-          if (_currentTrack?.id == track.id && _isPlaying) {
-            _currentDownloadSubscription?.cancel();
-            _currentDownloadSubscription = AudioCacheService.downloadAndCacheTrack(
-              track.id,
-              resolvedUrl!,
-              trackMetadata: track,
-            ).listen(null, onError: (_) {});
-          }
-        });
-      }
+      // Note: We do NOT auto-download the active stream concurrently over HTTP to prevent
+      // network bandwidth contention and YouTube CDN 403 / connection drop at 0:20-0:25.
+      // Offline caching is initiated on user action or prefetch when idle.
+      _backgroundCacheTimer?.cancel();
     } catch (e) {
       debugPrint('==================== [PLAYBACK DIAGNOSTIC] ====================');
       debugPrint('Track ID: ${track.id}');
@@ -594,6 +584,13 @@ class AudioProvider extends ChangeNotifier {
     if (_isPlaying) {
       await _audioHandler.pause();
     } else {
+      final pState = _audioHandler.player.processingState;
+      if (pState == ProcessingState.completed) {
+        seekTo(Duration.zero);
+      } else if (pState == ProcessingState.idle && _currentTrack != null) {
+        await playTrack(_currentTrack!);
+        return;
+      }
       await _audioHandler.play();
     }
   }

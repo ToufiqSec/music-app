@@ -67,22 +67,23 @@ class _CascadingArtworkState extends State<CascadingArtwork> {
     final original = widget.imageUrl?.trim() ?? '';
 
     if (original.isNotEmpty) {
-      list.add(original);
-
       // Check if YouTube image
       final ytMatch = RegExp(r'(?:i\.ytimg\.com/vi/|youtube\.com/vi/)([a-zA-Z0-9_-]{11})').firstMatch(original);
       if (ytMatch != null) {
         final videoId = ytMatch.group(1)!;
         final isSmallThumbnail = widget.width != null && widget.width! <= 120;
+        // YouTube's hqdefault.jpg (480x360) has 45px baked black letterbox bars.
+        // maxresdefault (1280x720) and mqdefault (320x180) are true 16:9 with no letterbox bars.
         final tiers = isSmallThumbnail
             ? [
                 'https://i.ytimg.com/vi/$videoId/mqdefault.jpg',
                 'https://i.ytimg.com/vi/$videoId/hqdefault.jpg',
               ]
             : [
-                'https://i.ytimg.com/vi/$videoId/hqdefault.jpg',
-                'https://i.ytimg.com/vi/$videoId/mqdefault.jpg',
+                'https://i.ytimg.com/vi/$videoId/maxresdefault.jpg',
                 'https://i.ytimg.com/vi/$videoId/sddefault.jpg',
+                'https://i.ytimg.com/vi/$videoId/mqdefault.jpg',
+                'https://i.ytimg.com/vi/$videoId/hqdefault.jpg',
               ];
         list.clear();
         for (final tier in tiers) {
@@ -90,14 +91,17 @@ class _CascadingArtworkState extends State<CascadingArtwork> {
             list.add(tier);
           }
         }
-      } else if (original.contains('saavncdn.com')) {
-        // Multi-tier JioSaavn image fallback: 500x500 -> 150x150
-        if (original.contains('500x500')) {
-          final smaller = original.replaceAll('500x500', '150x150');
-          if (!list.contains(smaller)) list.add(smaller);
-        } else if (original.contains('150x150')) {
-          final larger = original.replaceAll('150x150', '500x500');
-          if (!list.contains(larger)) list.insert(0, larger);
+      } else {
+        list.add(original);
+        if (original.contains('saavncdn.com')) {
+          // Multi-tier JioSaavn image fallback: 500x500 -> 150x150
+          if (original.contains('500x500')) {
+            final smaller = original.replaceAll('500x500', '150x150');
+            if (!list.contains(smaller)) list.add(smaller);
+          } else if (original.contains('150x150')) {
+            final larger = original.replaceAll('150x150', '500x500');
+            if (!list.contains(larger)) list.insert(0, larger);
+          }
         }
       }
     } else if (widget.trackId != null && RegExp(r'^[a-zA-Z0-9_-]{11}$').hasMatch(widget.trackId!)) {
@@ -108,8 +112,10 @@ class _CascadingArtworkState extends State<CascadingArtwork> {
         list.add('https://i.ytimg.com/vi/$ytId/mqdefault.jpg');
         list.add('https://i.ytimg.com/vi/$ytId/hqdefault.jpg');
       } else {
-        list.add('https://i.ytimg.com/vi/$ytId/hqdefault.jpg');
+        list.add('https://i.ytimg.com/vi/$ytId/maxresdefault.jpg');
+        list.add('https://i.ytimg.com/vi/$ytId/sddefault.jpg');
         list.add('https://i.ytimg.com/vi/$ytId/mqdefault.jpg');
+        list.add('https://i.ytimg.com/vi/$ytId/hqdefault.jpg');
       }
     }
 
@@ -117,6 +123,8 @@ class _CascadingArtworkState extends State<CascadingArtwork> {
   }
 
   Widget _buildShimmer() {
+    final titleTrimmed = widget.title.trim();
+    final letter = titleTrimmed.isNotEmpty ? titleTrimmed.substring(0, 1).toUpperCase() : '';
     return Container(
       width: widget.width,
       height: widget.height,
@@ -124,6 +132,24 @@ class _CascadingArtworkState extends State<CascadingArtwork> {
         color: AppColors.surface2,
         borderRadius: widget.borderRadius ?? AppRadii.borderMedium,
       ),
+      alignment: Alignment.center,
+      child: letter.isNotEmpty
+          ? Text(
+              letter,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.3),
+                fontSize: ((widget.height != null && widget.height!.isFinite)
+                        ? widget.height! * 0.35
+                        : 24.0)
+                    .clamp(14.0, 32.0),
+                fontWeight: FontWeight.bold,
+              ),
+            )
+          : Icon(
+              Icons.music_note_rounded,
+              color: Colors.white.withValues(alpha: 0.2),
+              size: 24,
+            ),
     );
   }
 

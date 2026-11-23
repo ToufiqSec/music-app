@@ -596,10 +596,14 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
       _lastShownPlaybackError = null;
     }
 
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+    final hasActiveTrack = audioProvider.currentTrack != null;
+    final dynamicBottomPadding = 64.0 + (hasActiveTrack ? 80.0 : 0.0) + bottomInset + 56.0;
+
     return SafeArea(
       bottom: false,
       child: ListView(
-        padding: const EdgeInsets.only(bottom: 240),
+        padding: EdgeInsets.only(bottom: dynamicBottomPadding.clamp(240.0, 360.0)),
         children: [
           const SizedBox(height: 12),
 
@@ -625,7 +629,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
                 ),
                 const SizedBox(width: 8),
 
-                // Top Action Group (Bell, Clock, Tune, Profile Avatar)
+                // Top Action Group (Notifications, Moods & Genres, Profile Avatar)
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -644,15 +648,6 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
                             duration: const Duration(seconds: 1),
                           ),
                         );
-                      },
-                    ),
-                    const SizedBox(width: 8),
-                    _buildHeaderIconButton(
-                      icon: Icons.access_time_rounded,
-                      tooltip: 'Listening History',
-                      onTap: () {
-                        HapticFeedback.lightImpact();
-                        _showHistorySheet(context, audioProvider);
                       },
                     ),
                     const SizedBox(width: 8),
@@ -773,37 +768,73 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
 
           const SizedBox(height: 20),
 
-          // 2. Panoramic Hero Artist / Featured Music Banner (Major Lazer / Featured Artist)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: FeaturedBanner(
-              title: 'Major Lazer',
-              metaText: '23,564,846 listeners',
-              actionLabel: 'Follow',
-              imageUrl: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&q=80',
-              onActionTap: () {
-                HapticFeedback.lightImpact();
-                audioProvider.playTrack(
-                  CuratedTracks.trendingTracks.first,
-                  CuratedTracks.trendingTracks,
-                );
-              },
+          // 2. Panoramic Hero Artist / Featured Music Banner & Sections according to Filter
+          if (_activeFilter == 'All') ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: FeaturedBanner(
+                title: 'Major Lazer',
+                metaText: '23,564,846 listeners',
+                actionLabel: 'Follow',
+                imageUrl: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&q=80',
+                onActionTap: () {
+                  HapticFeedback.lightImpact();
+                  audioProvider.playTrack(
+                    CuratedTracks.trendingTracks.first,
+                    CuratedTracks.trendingTracks,
+                  );
+                },
+              ),
             ),
-          ),
+            const SizedBox(height: 24),
 
-          const SizedBox(height: 24),
+            // Fresh New Music Carousel (Section 2 from 3rd reference UI)
+            _buildHomeSection(
+              title: 'Fresh New Music',
+              tracks: CuratedTracks.freshPicksTracks,
+              audioProvider: audioProvider,
+            ),
 
-          // 3. Fresh New Music Carousel (Section 2 from 3rd reference UI)
-          _buildHomeSection(
-            title: 'Fresh New Music',
-            tracks: CuratedTracks.freshPicksTracks,
-            audioProvider: audioProvider,
-          ),
-
-          // 4. Recently Played (Section 3 from 3rd reference UI - vertical items)
-          _buildRecentlyPlayedList(audioProvider),
-
-          const SizedBox(height: 24),
+            // Recently Played (Section 3 from 3rd reference UI - vertical items)
+            _buildRecentlyPlayedList(audioProvider),
+            const SizedBox(height: 24),
+          ] else if (_activeFilter == 'Sunday Suspense') ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: FeaturedBanner(
+                title: 'Sunday Suspense',
+                metaText: 'Mirchi Bangla • Audio Thrillers & Mystery',
+                actionLabel: 'Play All',
+                imageUrl: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=800&q=80',
+                onActionTap: () {
+                  HapticFeedback.lightImpact();
+                  final tracks = CuratedTracks.featuredPodcasts;
+                  if (tracks.isNotEmpty) {
+                    audioProvider.playTrack(tracks.first, tracks);
+                  }
+                },
+              ),
+            ),
+            const SizedBox(height: 20),
+          ] else ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: FeaturedBanner(
+                title: '$_activeFilter Mixes',
+                metaText: 'Curated for your current mood',
+                actionLabel: 'Play All',
+                imageUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&q=80',
+                onActionTap: () {
+                  HapticFeedback.lightImpact();
+                  final tracks = _getCarousel1Tracks();
+                  if (tracks.isNotEmpty) {
+                    audioProvider.playTrack(tracks.first, tracks);
+                  }
+                },
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
 
           // 5. Jump Back In (Section 4 from prompt - Improved 2x3 Glass Cards)
           Padding(
@@ -1258,7 +1289,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
               Expanded(
                 child: Text(
                   title,
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: AppTextStyles.h3.copyWith(
                     color: AppColors.primaryText,

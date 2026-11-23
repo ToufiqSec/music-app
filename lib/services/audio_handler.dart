@@ -136,13 +136,14 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
             safeUrl.contains('youtube.com') ||
             safeUrl.contains('youtu.be');
 
-        final headers = <String, String>{
-          'User-Agent':
-              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        };
-        // Only set Referer for YouTube servers to avoid CORS/403 blocks on podcast and audio drama CDNs
-        if (isYouTubeStream) {
-          headers['Referer'] = 'https://www.youtube.com/';
+        // Do not spoof desktop User-Agent or YouTube Referer on googlevideo CDN streams;
+        // ExoPlayer requires clean mobile/native media headers to avoid HTTP 403 range-request blocks after 20s.
+        Map<String, String>? headers;
+        if (!isYouTubeStream) {
+          headers = <String, String>{
+            'User-Agent':
+                'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
+          };
         }
 
         await _player.setUrl(
