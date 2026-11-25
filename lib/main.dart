@@ -144,10 +144,11 @@ class _MusicAppBootstrapState extends State<MusicAppBootstrap> {
         builder: () => MyAudioHandler(),
         config: const AudioServiceConfig(
           androidNotificationChannelId: 'com.musicapp.channel.audio',
-          androidNotificationChannelName: 'Music Playback',
+          androidNotificationChannelName: 'Swarva Playback',
           androidNotificationOngoing: true,
           androidStopForegroundOnPause: true,
-          androidNotificationIcon: 'mipmap/ic_launcher',
+          androidNotificationIcon: 'drawable/ic_launcher_monochrome',
+          notificationColor: AppColors.primary,
         ),
       );
       debugPrint('[Startup] AudioService successfully initialized.');

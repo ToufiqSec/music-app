@@ -12,12 +12,14 @@ import '../core/services/curated_tracks.dart';
 import '../widgets/generated_cover_art.dart';
 import '../services/audio_handler.dart';
 import '../core/services/playback_resolver.dart';
+import '../core/services/playback_transition_controller.dart';
 
 enum RepeatMode { off, all, one }
 
 class AudioProvider extends ChangeNotifier {
   final MyAudioHandler _audioHandler;
   final YoutubeMusicService _musicService = YoutubeMusicService();
+  final PlaybackTransitionController _transitionController = PlaybackTransitionController();
   late final RelatedTracksEngine _relatedEngine;
 
   YoutubeTrack? _currentTrack;
@@ -40,12 +42,12 @@ class AudioProvider extends ChangeNotifier {
 
   // Track pre-fetch flag to avoid duplicate trigger per song
   bool _preFetchedNextTrack = false;
-  bool _isTransitioningTrack = false;
   String? _playbackErrorMessage;
   final ValueNotifier<String?> playbackErrorNotifier = ValueNotifier<String?>(null);
   final Set<String> _retriedPreviewCutoffTrackIds = {};
   Timer? _seekDebounceTimer;
   Timer? _backgroundCacheTimer;
+  final List<StreamSubscription<dynamic>> _subscriptions = [];
 
   // Listen Together Room delegate callback (Spec Section 1 & 6)
   Future<bool> Function()? onTrackCompletedInRoom;
@@ -183,57 +185,68 @@ class AudioProvider extends ChangeNotifier {
     _audioHandler.onSkipToNext = playNext;
     _audioHandler.onSkipToPrevious = playPrevious;
 
-    _audioHandler.playbackState.listen((state) {
-      _isPlaying = state.playing;
-      final wasBuffering = _isBuffering;
-      _isBuffering = state.processingState == AudioProcessingState.buffering ||
-          state.processingState == AudioProcessingState.loading;
-      if (_isBuffering && !wasBuffering) {
-        _startBufferingWatchdog();
-      } else if (!_isBuffering) {
-        _bufferingWatchdogTimer?.cancel();
-      }
-      notifyListeners();
-    });
-
-    _audioHandler.player.positionStream.listen((pos) {
-      _position = pos;
-      _checkAndPrefetchNextTrack(pos);
-      _checkAndSaveResumePosition(pos);
-      // Fallback auto-progression trigger if stream finishes without emitting ProcessingState.completed
-      if (_duration > Duration.zero &&
-          pos >= _duration &&
-          !_isTransitioningTrack &&
-          _isPlaying) {
-        _onTrackCompleted();
-      }
-      notifyListeners();
-    });
-
-    _audioHandler.player.durationStream.listen((dur) {
-      if (dur != null) {
-        _duration = dur;
+    _subscriptions.add(
+      _audioHandler.playbackState.listen((state) {
+        _isPlaying = state.playing;
+        final wasBuffering = _isBuffering;
+        _isBuffering = state.processingState == AudioProcessingState.buffering ||
+            state.processingState == AudioProcessingState.loading;
+        if (_isBuffering && !wasBuffering) {
+          _startBufferingWatchdog();
+        } else if (!_isBuffering) {
+          _bufferingWatchdogTimer?.cancel();
+        }
         notifyListeners();
-      }
-    });
+      }),
+    );
 
-    _audioHandler.player.bufferedPositionStream.listen((buffered) {
-      _bufferedPosition = buffered;
-      notifyListeners();
-    });
+    _subscriptions.add(
+      _audioHandler.player.positionStream.listen((pos) {
+        _position = pos;
+        _checkAndPrefetchNextTrack(pos);
+        _checkAndSaveResumePosition(pos);
+        // Fallback auto-progression trigger if stream finishes without emitting ProcessingState.completed
+        if (_duration > Duration.zero &&
+            pos >= _duration &&
+            !_transitionController.isCompleting &&
+            _isPlaying) {
+          _onTrackCompleted();
+        }
+        notifyListeners();
+      }),
+    );
 
-    // Auto-advance, repeat one, or Autoplay next related track on completion (Rock-solid single trigger)
-    _audioHandler.player.playerStateStream.listen((state) {
-      if (state.processingState == ProcessingState.completed && !_isTransitioningTrack) {
-        _onTrackCompleted();
-      }
-    });
+    _subscriptions.add(
+      _audioHandler.player.durationStream.listen((dur) {
+        if (dur != null) {
+          _duration = dur;
+          notifyListeners();
+        }
+      }),
+    );
+
+    _subscriptions.add(
+      _audioHandler.player.bufferedPositionStream.listen((buffered) {
+        _bufferedPosition = buffered;
+        notifyListeners();
+      }),
+    );
+
+    // Auto-advance, repeat one, or Autoplay next related track on completion (Single owner via state machine)
+    _subscriptions.add(
+      _audioHandler.player.playerStateStream.listen((state) {
+        if (state.processingState == ProcessingState.completed &&
+            !_transitionController.isCompleting) {
+          _onTrackCompleted();
+        }
+      }),
+    );
   }
 
   /// Handles track completion with queue precedence and dynamic related autoplay
   Future<void> _onTrackCompleted() async {
-    if (_isTransitioningTrack) return;
-    _isTransitioningTrack = true;
+    final completingRequestId = _transitionController.currentRequestId;
+    if (!_transitionController.tryBeginCompletion(completingRequestId)) return;
 
     try {
       if (_currentTrack != null) {
@@ -316,10 +329,7 @@ class AudioProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint('[AudioProvider] _onTrackCompleted error: $e');
     } finally {
-      // Short debounce window to avoid re-triggering while audio player state settles
-      Future.delayed(const Duration(milliseconds: 800), () {
-        _isTransitioningTrack = false;
-      });
+      _transitionController.finishCompletion();
     }
   }
 
@@ -396,29 +406,38 @@ class AudioProvider extends ChangeNotifier {
     }
   }
 
-  int? _getNextIndex() {
-    if (_playlistQueue.isEmpty || _currentIndex < 0) return null;
-    if (_currentIndex + 1 < _playlistQueue.length) {
-      return _currentIndex + 1;
-    } else if (_repeatMode == RepeatMode.all) {
-      return 0;
+  TransitionRepeatMode get _transitionRepeatMode {
+    switch (_repeatMode) {
+      case RepeatMode.off:
+        return TransitionRepeatMode.off;
+      case RepeatMode.all:
+        return TransitionRepeatMode.all;
+      case RepeatMode.one:
+        return TransitionRepeatMode.one;
     }
-    return null;
+  }
+
+  int? _getNextIndex() {
+    return _transitionController.computeNextIndex(
+      currentIndex: _currentIndex,
+      queueLength: _playlistQueue.length,
+      repeatMode: _transitionRepeatMode,
+    );
   }
 
   int? _getPreviousIndex() {
-    if (_playlistQueue.isEmpty || _currentIndex < 0) return null;
-    if (_currentIndex - 1 >= 0) {
-      return _currentIndex - 1;
-    } else if (_repeatMode == RepeatMode.all) {
-      return _playlistQueue.length - 1;
-    }
-    return null;
+    return _transitionController.computePreviousIndex(
+      currentIndex: _currentIndex,
+      queueLength: _playlistQueue.length,
+      repeatMode: _transitionRepeatMode,
+    );
   }
 
   /// Plays a track using the multi-tier zero-delay pipeline:
   /// Tier 3: Local cache -> Tier 1: JioSaavn -> Tier 2: YouTube
   Future<void> playTrack(YoutubeTrack track, [List<YoutubeTrack>? queue]) async {
+    final requestId = _transitionController.beginPlayRequest();
+
     if (queue != null) {
       _playlistQueue = List.from(queue);
       _currentIndex = _playlistQueue.indexWhere((t) => t.id == track.id);
@@ -470,6 +489,7 @@ class AudioProvider extends ChangeNotifier {
         track: track,
         musicService: _musicService,
       );
+      if (!_transitionController.isCurrentRequest(requestId)) return;
 
       // Retry once on failure with forceRefresh if initial resolution failed (Issue 2)
       if (!resolution.isPlayable || resolution.url == null) {
@@ -480,6 +500,7 @@ class AudioProvider extends ChangeNotifier {
           musicService: _musicService,
           forceRefresh: true,
         );
+        if (!_transitionController.isCurrentRequest(requestId)) return;
       }
 
       if (!resolution.isPlayable || resolution.url == null) {
@@ -504,9 +525,13 @@ class AudioProvider extends ChangeNotifier {
           }
         });
 
-        // Gracefully advance to next track without crashing the queue (Issue 2)
-        if (_playlistQueue.length > 1) {
-          Future.delayed(const Duration(milliseconds: 600), () => playNext());
+        // Gracefully advance to next track without entering an infinite skip loop
+        if (_transitionController.recordFailureAndShouldAdvance(queueLength: _playlistQueue.length)) {
+          Future.delayed(const Duration(milliseconds: 600), () {
+            if (_transitionController.isCurrentRequest(requestId)) {
+              playNext();
+            }
+          });
         }
         return;
       }
@@ -517,6 +542,7 @@ class AudioProvider extends ChangeNotifier {
       try {
         await _audioHandler.playTrackUrl(track.toMediaItem(), resolvedUrl);
       } catch (playErr) {
+        if (!_transitionController.isCurrentRequest(requestId)) return;
         debugPrint('[AudioProvider] Primary playback failed: $playErr. Attempting direct fallback...');
         _musicService.invalidateCache(track.id);
         final fbResolution = await PlaybackResolver.resolveAudioSource(
@@ -524,6 +550,7 @@ class AudioProvider extends ChangeNotifier {
           musicService: _musicService,
           forceRefresh: true,
         );
+        if (!_transitionController.isCurrentRequest(requestId)) return;
         if (fbResolution.isPlayable && fbResolution.url != null) {
           resolvedUrl = fbResolution.url!;
           await _audioHandler.playTrackUrl(track.toMediaItem(), resolvedUrl);
@@ -532,10 +559,15 @@ class AudioProvider extends ChangeNotifier {
         }
       }
 
+      if (!_transitionController.isCurrentRequest(requestId)) return;
+      _transitionController.recordSuccess();
+
       // Seek to resume position for long narrative audio / podcast safely
       if (resumeSeconds > 15) {
         Future.delayed(const Duration(milliseconds: 350), () {
-          _audioHandler.seek(Duration(seconds: resumeSeconds)).catchError((_) {});
+          if (_transitionController.isCurrentRequest(requestId)) {
+            _audioHandler.seek(Duration(seconds: resumeSeconds)).catchError((_) {});
+          }
         });
       }
 
@@ -545,6 +577,7 @@ class AudioProvider extends ChangeNotifier {
       // Offline caching is initiated on user action or prefetch when idle.
       _backgroundCacheTimer?.cancel();
     } catch (e) {
+      if (!_transitionController.isCurrentRequest(requestId)) return;
       debugPrint('==================== [PLAYBACK DIAGNOSTIC] ====================');
       debugPrint('Track ID: ${track.id}');
       debugPrint('Track Title: "${track.title}" by ${track.artist}');
@@ -567,16 +600,20 @@ class AudioProvider extends ChangeNotifier {
         }
       });
 
-      // If a track in queue fails to load, gracefully advance to next track so playback doesn't stall
-      if (_playlistQueue.length > 1) {
+      // If a track in queue fails to load, gracefully advance to next track up to maxConsecutiveFailures
+      if (_transitionController.recordFailureAndShouldAdvance(queueLength: _playlistQueue.length)) {
         Future.delayed(const Duration(milliseconds: 600), () {
-          playNext();
+          if (_transitionController.isCurrentRequest(requestId)) {
+            playNext();
+          }
         });
       }
     } finally {
-      _isBuffering = false;
-      _bufferingWatchdogTimer?.cancel();
-      notifyListeners();
+      if (_transitionController.isCurrentRequest(requestId)) {
+        _isBuffering = false;
+        _bufferingWatchdogTimer?.cancel();
+        notifyListeners();
+      }
     }
   }
 
@@ -752,9 +789,16 @@ class AudioProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    for (final sub in _subscriptions) {
+      sub.cancel();
+    }
+    _subscriptions.clear();
+    _bufferingWatchdogTimer?.cancel();
+    _sleepTimer?.cancel();
     _seekDebounceTimer?.cancel();
     _backgroundCacheTimer?.cancel();
     _currentDownloadSubscription?.cancel();
+    playbackErrorNotifier.dispose();
     _musicService.dispose();
     super.dispose();
   }
