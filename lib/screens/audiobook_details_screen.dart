@@ -10,11 +10,12 @@ import '../theme/app_text_styles.dart';
 class AudiobookDetailsScreen extends StatelessWidget {
   final AudiobookModel book;
 
-  const AudiobookDetailsScreen({
+  AudiobookDetailsScreen({
     super.key,
     AudiobookModel? book,
     AudiobookModel? audiobook,
-  }) : book = book ?? audiobook!;
+  })  : assert(book != null || audiobook != null),
+        book = (book ?? audiobook)!;
 
   String _formatDuration(int seconds) {
     final hours = seconds ~/ 3600;
