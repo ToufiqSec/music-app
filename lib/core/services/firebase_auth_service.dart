@@ -164,8 +164,12 @@ class FirebaseAuthService {
           return error.message ?? 'Authentication failed. Please try again.';
       }
     }
-    final str = error.toString();
-    if (str.contains('sign_in_canceled') || str.contains('sign_in_cancelled') || str.contains('aborted')) {
+    final lower = error.toString().toLowerCase();
+    if (lower.contains('sign_in_canceled') ||
+        lower.contains('sign_in_cancelled') ||
+        lower.contains('canceled') ||
+        lower.contains('cancelled') ||
+        lower.contains('aborted')) {
       return 'Google sign-in was canceled.';
     }
     return 'Authentication error: $error';

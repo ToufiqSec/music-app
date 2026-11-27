@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:music_app/features/music/models/music_models.dart';
 import 'package:music_app/widgets/generated_cover_art.dart';
 import 'package:music_app/core/services/curated_tracks.dart';
 import 'package:music_app/core/services/supabase_service.dart';
