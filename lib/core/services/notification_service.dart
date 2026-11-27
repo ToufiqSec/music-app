@@ -5,6 +5,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../features/listen_together/screens/join_room_screen.dart';
+import '../utils/log_sanitizer.dart';
 
 /// Top-level background message handler for FCM
 @pragma('vm:entry-point')
@@ -80,12 +81,12 @@ class NotificationService {
 
       // Retrieve device FCM Token
       _fcmToken = await _fcm.getToken();
-      debugPrint('[NotificationService] FCM Token: $_fcmToken');
+      debugPrint('[NotificationService] FCM Token: ${LogSanitizer.maskToken(_fcmToken)}');
 
       // Listen for token refreshes
       _fcm.onTokenRefresh.listen((newToken) {
         _fcmToken = newToken;
-        debugPrint('[NotificationService] FCM Token refreshed: $newToken');
+        debugPrint('[NotificationService] FCM Token refreshed: ${LogSanitizer.maskToken(newToken)}');
       });
 
       _initialized = true;

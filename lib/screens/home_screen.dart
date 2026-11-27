@@ -775,10 +775,12 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: FeaturedBanner(
-                title: 'Major Lazer',
-                metaText: '23,564,846 listeners',
-                actionLabel: 'Follow',
-                imageUrl: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&q=80',
+                title: CuratedTracks.trendingTracks.first.title,
+                metaText: '${CuratedTracks.trendingTracks.first.artist} • Trending Now',
+                actionLabel: 'Play',
+                imageUrl: CuratedTracks.trendingTracks.first.thumbnailUrl.isNotEmpty
+                    ? CuratedTracks.trendingTracks.first.thumbnailUrl
+                    : 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&q=80',
                 onActionTap: () {
                   HapticFeedback.lightImpact();
                   audioProvider.playTrack(
@@ -807,7 +809,9 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
                 title: 'Sunday Suspense',
                 metaText: 'Mirchi Bangla • Audio Thrillers & Mystery',
                 actionLabel: 'Play All',
-                imageUrl: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=800&q=80',
+                imageUrl: CuratedTracks.featuredPodcasts.first.thumbnailUrl.isNotEmpty
+                    ? CuratedTracks.featuredPodcasts.first.thumbnailUrl
+                    : 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=800&q=80',
                 onActionTap: () {
                   HapticFeedback.lightImpact();
                   final tracks = CuratedTracks.featuredPodcasts;

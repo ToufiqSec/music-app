@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../features/music/models/music_models.dart';
 import 'track_metadata_store.dart';
+import '../utils/log_sanitizer.dart';
 
 class UserProfileData {
   final String id;
@@ -120,7 +121,7 @@ class SupabaseService {
   /// Exchanges a PKCE auth code or recovery token from an incoming deep link URL
   static Future<AuthSessionUrlResponse?> handleDeepLink(Uri uri) async {
     try {
-      debugPrint('[Supabase] Handling deep link callback: $uri');
+      debugPrint('[Supabase] Handling deep link callback: ${LogSanitizer.sanitizeUri(uri)}');
       final response = await client.auth.getSessionFromUrl(uri);
       if (response.session.user.id.isNotEmpty) {
         debugPrint('[Supabase] Deep link auth successful for: ${response.session.user.email}');

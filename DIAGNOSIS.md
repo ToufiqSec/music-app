@@ -26,7 +26,7 @@
       "status": 400,
       "error": "400: Invalid login credentials",
       "error_code": "invalid_credentials",
-      "remote_addr": "122.183.39.102",
+      "remote_addr": "203.0.113.10",
       "time": "2026-11-20T20:03:02Z"
     }
     ```
@@ -39,9 +39,9 @@
       "status": 429,
       "error": "429: email rate limit exceeded",
       "error_code": "over_email_send_rate_limit",
-      "actor_username": "testmusictoufiq999@gmail.com",
+      "actor_username": "test-user@example.com",
       "referer": "http://localhost:3000",
-      "remote_addr": "122.183.39.102",
+      "remote_addr": "203.0.113.10",
       "time": "2026-11-20T20:05:46Z"
     }
     ```
@@ -49,7 +49,7 @@
     ```json
     {
       "event": "mail.send",
-      "mail_to": "asif999busy@gmail.com",
+      "mail_to": "user@example.com",
       "mail_type": "confirmation",
       "referer": "http://localhost:3000",
       "time": "2026-11-20T16:40:57Z"
@@ -80,7 +80,7 @@
       "referer": "http://localhost:3000",
       "status": 302,
       "msg": "Redirecting to external provider",
-      "remote_addr": "115.96.129.151",
+      "remote_addr": "203.0.113.11",
       "time": "2026-11-21T10:07:20Z"
     }
     ```

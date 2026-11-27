@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
 import '../core/services/playback_resolver.dart';
+import '../core/utils/log_sanitizer.dart';
 
 /// Background Audio Handler using audio_service and just_audio.
 class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
@@ -176,7 +177,7 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
       await _player.setVolume(1.0);
       await _player.play();
     } catch (e, stack) {
-      debugPrint('[AudioHandler] Player Error Code / Exception: $e for stream URL: "$safeUrl"');
+      debugPrint('[AudioHandler] Player Error Code / Exception: $e for stream URL: "${LogSanitizer.sanitizeUrl(safeUrl)}"');
       await _player.stop();
       rethrow;
     }

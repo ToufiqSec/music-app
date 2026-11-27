@@ -23,11 +23,28 @@ class AudioCacheService {
     return cache;
   }
 
+  /// Sanitizes track IDs for safe filesystem storage.
+  static String safeFileId(String trackId) {
+    final cleaned = trackId.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+    return cleaned.isEmpty ? 'track_unknown' : cleaned;
+  }
+
+  /// Validates that an HTTP response is a successful non-HTML/JSON audio stream.
+  static bool isValidAudioResponse(int statusCode, String? contentType) {
+    if (statusCode < 200 || statusCode >= 300) return false;
+    final ct = (contentType ?? '').toLowerCase();
+    if (ct.contains('text/html') || ct.contains('application/json') || ct.contains('text/plain')) {
+      return false;
+    }
+    return true;
+  }
+
   /// Returns File if track exists on disk, else null
   static Future<File?> getCachedTrackFile(String trackId) async {
     final dir = await getCacheDirectory();
-    final file = File('${dir.path}/$trackId.m4a');
-    if (await file.exists() && await file.length() > 0) {
+    final safeId = safeFileId(trackId);
+    final file = File('${dir.path}/$safeId.m4a');
+    if (await file.exists() && await file.length() > 1024) {
       // Touch file for LRU update asynchronously
       try {
         await file.setLastModified(DateTime.now());
@@ -55,14 +72,20 @@ class AudioCacheService {
     }
 
     final dir = await getCacheDirectory();
-    final targetFile = File('${dir.path}/$trackId.m4a');
-    final tempFile = File('${dir.path}/$trackId.tmp');
+    final safeId = safeFileId(trackId);
+    final targetFile = File('${dir.path}/$safeId.m4a');
+    final tempFile = File('${dir.path}/$safeId.tmp');
 
     http.StreamedResponse response;
     try {
       final request = http.Request('GET', Uri.parse(streamUrl));
-      response = await _sharedClient.send(request);
+      response = await _sharedClient.send(request).timeout(const Duration(seconds: 20));
     } catch (e) {
+      return;
+    }
+
+    if (!isValidAudioResponse(response.statusCode, response.headers['content-type'])) {
+      await response.stream.drain<void>().catchError((_) {});
       return;
     }
 

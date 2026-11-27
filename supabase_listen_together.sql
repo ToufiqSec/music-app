@@ -138,12 +138,44 @@ CREATE POLICY "Members can view room members"
     ON public.room_members FOR SELECT
     USING (public.is_room_active_member(room_id, auth.uid()));
 
-CREATE POLICY "Users can update their own membership or admin can manage"
+CREATE POLICY "Users can update their own non-role fields or admin can manage"
     ON public.room_members FOR UPDATE
     USING (
         user_id = auth.uid() OR
         EXISTS (SELECT 1 FROM public.rooms WHERE id = room_members.room_id AND admin_id = auth.uid())
+    )
+    WITH CHECK (
+        EXISTS (SELECT 1 FROM public.rooms WHERE id = room_members.room_id AND admin_id = auth.uid())
+        OR (
+            user_id = auth.uid()
+            AND role = public.get_room_member_role(room_id, auth.uid())
+        )
     );
+
+-- Defense-in-depth trigger: reject any role change unless performed by the room admin
+CREATE OR REPLACE FUNCTION public.prevent_member_role_self_escalation()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    IF NEW.role IS DISTINCT FROM OLD.role THEN
+        IF NOT EXISTS (
+            SELECT 1 FROM public.rooms
+            WHERE id = OLD.room_id AND admin_id = auth.uid()
+        ) THEN
+            RAISE EXCEPTION 'Only room admins may change member roles';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_prevent_member_role_self_escalation ON public.room_members;
+CREATE TRIGGER trg_prevent_member_role_self_escalation
+    BEFORE UPDATE ON public.room_members
+    FOR EACH ROW
+    EXECUTE FUNCTION public.prevent_member_role_self_escalation();
 
 -- RLS: room_playback_state
 CREATE POLICY "Members can view playback state"

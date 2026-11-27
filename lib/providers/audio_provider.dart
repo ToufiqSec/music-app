@@ -13,6 +13,7 @@ import '../widgets/generated_cover_art.dart';
 import '../services/audio_handler.dart';
 import '../core/services/playback_resolver.dart';
 import '../core/services/playback_transition_controller.dart';
+import '../core/utils/log_sanitizer.dart';
 
 enum RepeatMode { off, all, one }
 
@@ -582,7 +583,7 @@ class AudioProvider extends ChangeNotifier {
       debugPrint('Track ID: ${track.id}');
       debugPrint('Track Title: "${track.title}" by ${track.artist}');
       debugPrint('Source Type: ${track.audioStreamUrl != null ? "Direct Enclosure" : "Streaming Resolver"}');
-      debugPrint('Resolved Stream URL: $resolvedUrl');
+      debugPrint('Resolved Stream URL: ${LogSanitizer.sanitizeUrl(resolvedUrl ?? '')}');
       debugPrint('Exact Error: $e');
       debugPrint('===============================================================');
 
@@ -661,7 +662,7 @@ class AudioProvider extends ChangeNotifier {
         _currentIndex = _playlistQueue.length - 1;
         await playTrack(candidate);
       }
-    } else if (_playlistQueue.isNotEmpty) {
+    } else if (_repeatMode == RepeatMode.all && _playlistQueue.isNotEmpty) {
       _currentIndex = 0;
       await playTrack(_playlistQueue[0]);
     }

@@ -21,6 +21,7 @@ dependencies:
   # Audio Stream Extraction & HTTP
   youtube_explode_dart: ^2.2.1
   http: ^1.2.2
+  crypto: ^3.0.3
   path_provider: ^2.1.4
 
   # UI, Fonts & Network Assets

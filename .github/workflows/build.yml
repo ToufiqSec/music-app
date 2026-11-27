@@ -61,17 +61,13 @@ jobs:
       - name: Install Project Dependencies
         run: flutter pub get
 
-      - name: Run Unit Tests (Non-Fatal)
+      - name: Run Unit Tests
         run: |
-          echo "Running Unit Tests..."
-          flutter test test/numeric_utils_test.dart || true
-          flutter test test/now_playing_screen_test.dart || true
-          flutter test test/quick_pick_title_cleaner_test.dart || true
-          flutter test test/update_review_test.dart || true
-          flutter test test/firebase_auth_test.dart || true
+          echo "Running Full Unit Test Suite..."
+          flutter test --no-pub
 
-      - name: Analyze Project Code (Non-Fatal)
-        run: flutter analyze --no-fatal-infos --no-fatal-warnings || true
+      - name: Analyze Project Code
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
       - name: Extract App Version from pubspec.yaml
         id: get_version
@@ -132,7 +128,9 @@ jobs:
           cp "$APK_PATH" release-output/swarva-release.apk
           cp "$APK_PATH" release-output/music-app-v${{ env.APP_VERSION }}.apk
           cp "$APK_PATH" release-output/music-app-release.apk
+          (cd release-output && sha256sum swarva-v${{ env.APP_VERSION }}.apk swarva-release.apk music-app-v${{ env.APP_VERSION }}.apk music-app-release.apk > checksums.sha256)
           ls -lh release-output/
+          cat release-output/checksums.sha256
 
       - name: Upload APK as GitHub Actions Artifact
         uses: actions/upload-artifact@v4
@@ -175,5 +173,6 @@ jobs:
             release-output/swarva-release.apk
             release-output/music-app-v${{ env.APP_VERSION }}.apk
             release-output/music-app-release.apk
+            release-output/checksums.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

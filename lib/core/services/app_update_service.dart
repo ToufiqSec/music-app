@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
@@ -14,6 +15,8 @@ class UpdateInfo {
   final int apkSizeBytes;
   final DateTime publishedAt;
   final String currentVersion;
+  final String? expectedSha256;
+  final String? apkAssetName;
 
   const UpdateInfo({
     required this.latestVersion,
@@ -23,6 +26,8 @@ class UpdateInfo {
     required this.apkSizeBytes,
     required this.publishedAt,
     required this.currentVersion,
+    this.expectedSha256,
+    this.apkAssetName,
   });
 
   String get formattedSize {
@@ -142,17 +147,35 @@ class AppUpdateService {
         if (isSnoozed) return null;
       }
 
-      // Locate release APK asset
+      // Locate preferred release APK asset & optional SHA-256 manifest
       final assets = data['assets'] as List<dynamic>? ?? [];
-      final apkAsset = assets.firstWhere(
-        (a) => a['name'].toString().toLowerCase().endsWith('.apk'),
-        orElse: () => null,
-      );
+      final apkAsset = selectPreferredApkAsset(assets);
 
       if (apkAsset == null) return null;
 
+      final assetName = apkAsset['name']?.toString() ?? '';
       final downloadUrl = apkAsset['browser_download_url']?.toString() ?? '';
       final size = apkAsset['size'] as int? ?? 0;
+      String? expectedSha256;
+
+      final checksumAsset = assets.cast<dynamic>().firstWhere(
+        (a) => a['name']?.toString().toLowerCase() == 'checksums.sha256',
+        orElse: () => null,
+      );
+      if (checksumAsset != null) {
+        final checksumUrl = checksumAsset['browser_download_url']?.toString() ?? '';
+        if (checksumUrl.isNotEmpty) {
+          try {
+            final cResp = await http
+                .get(Uri.parse(checksumUrl))
+                .timeout(const Duration(seconds: 6));
+            if (cResp.statusCode == 200) {
+              expectedSha256 = parseSha256ForAsset(cResp.body, assetName);
+            }
+          } catch (_) {}
+        }
+      }
+
       final notes = _cleanReleaseNotes(data['body']?.toString());
       final published = DateTime.tryParse(data['published_at']?.toString() ?? '') ??
           DateTime.now();
@@ -165,6 +188,8 @@ class AppUpdateService {
         apkSizeBytes: size,
         publishedAt: published,
         currentVersion: currentVersion,
+        expectedSha256: expectedSha256,
+        apkAssetName: assetName,
       );
     } catch (e) {
       debugPrint('Silent update check caught: $e');
@@ -214,10 +239,15 @@ class AppUpdateService {
       final targetFile = File('${tempDir.path}/$fileName');
       final tempFile = File('${tempDir.path}/$fileName.part');
 
-      // Check if target file already exists and is fully downloaded
+      // Check if target file already exists and passes size + SHA-256 verification
       if (await targetFile.exists()) {
-        final existingTargetLen = await targetFile.length();
-        if (info.apkSizeBytes > 0 && existingTargetLen == info.apkSizeBytes) {
+        final ok = await verifyFileIntegrity(
+          targetFile,
+          expectedBytes: info.apkSizeBytes,
+          expectedSha256: info.expectedSha256,
+        );
+        if (ok) {
+          final existingTargetLen = await targetFile.length();
           _progressController?.add(DownloadProgressState(
             bytesDownloaded: existingTargetLen,
             bytesTotal: existingTargetLen,
@@ -226,6 +256,8 @@ class AppUpdateService {
             filePath: targetFile.path,
           ));
           return;
+        } else {
+          await targetFile.delete().catchError((_) => targetFile);
         }
       }
 
@@ -309,6 +341,16 @@ class AppUpdateService {
 
       if (await targetFile.exists()) await targetFile.delete();
       await tempFile.rename(targetFile.path);
+
+      final verified = await verifyFileIntegrity(
+        targetFile,
+        expectedBytes: info.apkSizeBytes,
+        expectedSha256: info.expectedSha256,
+      );
+      if (!verified) {
+        await targetFile.delete().catchError((_) => targetFile);
+        throw Exception('APK integrity verification failed');
+      }
 
       _progressController?.add(DownloadProgressState(
         bytesDownloaded: bytesReceived,
@@ -397,7 +439,72 @@ class AppUpdateService {
     if (msg.contains('HTTP ')) {
       return 'Server error while downloading update. Tap Retry or Download in Browser.';
     }
+    if (msg.contains('integrity verification failed')) {
+      return 'Downloaded update failed integrity verification. Tap Retry or Download in Browser.';
+    }
     return 'Download could not complete. Check your connection and tap Retry or Download in Browser.';
+  }
+
+  /// Selects the preferred Android release APK asset, prioritizing Swarva branding.
+  @visibleForTesting
+  static Map<String, dynamic>? selectPreferredApkAsset(List<dynamic> assets) {
+    final apkAssets = assets
+        .whereType<Map<String, dynamic>>()
+        .where((a) => a['name'].toString().toLowerCase().endsWith('.apk'))
+        .toList();
+    if (apkAssets.isEmpty) return null;
+
+    for (final preferred in const ['swarva-release.apk', 'music-app-release.apk']) {
+      for (final a in apkAssets) {
+        if (a['name'].toString().toLowerCase() == preferred) return a;
+      }
+    }
+    for (final a in apkAssets) {
+      if (a['name'].toString().toLowerCase().startsWith('swarva-')) return a;
+    }
+    return apkAssets.first;
+  }
+
+  /// Extracts a 64-char SHA-256 hex digest for [assetName] from a `checksums.sha256` file.
+  @visibleForTesting
+  static String? parseSha256ForAsset(String checksumsBody, String assetName) {
+    final target = assetName.trim().toLowerCase();
+    for (final rawLine in checksumsBody.split('\n')) {
+      final line = rawLine.trim();
+      if (line.isEmpty) continue;
+      final match = RegExp(r'^([a-fA-F0-9]{64})\s+\*?(.+)$').firstMatch(line);
+      if (match != null) {
+        final hash = match.group(1)!.toLowerCase();
+        final file = match.group(2)!.trim().toLowerCase();
+        if (file == target || file.endsWith('/$target')) {
+          return hash;
+        }
+      }
+    }
+    return null;
+  }
+
+  /// Verifies that [file] exists, is non-empty, matches [expectedBytes] (when > 0),
+  /// and matches [expectedSha256] (when provided).
+  @visibleForTesting
+  static Future<bool> verifyFileIntegrity(
+    File file, {
+    int? expectedBytes,
+    String? expectedSha256,
+  }) async {
+    if (!await file.exists()) return false;
+    final len = await file.length();
+    if (len <= 0) return false;
+    if (expectedBytes != null && expectedBytes > 0 && len != expectedBytes) {
+      return false;
+    }
+    if (expectedSha256 != null && expectedSha256.trim().isNotEmpty) {
+      final digest = await sha256.bind(file.openRead()).first;
+      if (digest.toString().toLowerCase() != expectedSha256.trim().toLowerCase()) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /// Cancels any active download cleanly
