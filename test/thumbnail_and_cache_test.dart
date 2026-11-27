@@ -10,7 +10,10 @@ class CardArtworkMismatchTracker {
   static void reset() => _mismatches = 0;
 
   static void recordInspection({required String trackId, required String imageId}) {
-    if (trackId.isNotEmpty && imageId.isNotEmpty && !imageId.contains(trackId) && !trackId.contains(imageId)) {
+    if (trackId.isEmpty || imageId.isEmpty) return;
+    // YouTube artwork URLs embed the 11-char video ID; JioSaavn CDN URLs use album slugs.
+    if (imageId.contains('saavncdn.com')) return;
+    if (!imageId.contains(trackId) && !trackId.contains(imageId)) {
       _mismatches++;
     }
   }

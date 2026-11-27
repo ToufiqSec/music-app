@@ -4,6 +4,7 @@ import 'package:music_app/core/services/curated_tracks.dart';
 import 'package:music_app/core/services/supabase_service.dart';
 import 'package:music_app/core/services/playback_resolver.dart';
 import 'package:music_app/core/services/youtube_music_service.dart';
+import 'package:music_app/features/music/models/music_models.dart';
 
 void main() {
   group('Podcast & Music Playback Tests', () {

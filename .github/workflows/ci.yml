@@ -35,7 +35,9 @@ jobs:
         run: flutter pub get
 
       - name: Run Tests
-        run: flutter test --no-pub 2>&1 | tee test.log
+        run: |
+          set -o pipefail
+          flutter test --no-pub 2>&1 | tee test.log
 
       - name: Report Test Failure to Commit Comments
         if: failure()
