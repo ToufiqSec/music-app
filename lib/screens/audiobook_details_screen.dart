@@ -10,7 +10,7 @@ import '../theme/app_text_styles.dart';
 class AudiobookDetailsScreen extends StatelessWidget {
   final AudiobookModel book;
 
-  const AudiobookDetailsScreen({
+  AudiobookDetailsScreen({
     super.key,
     AudiobookModel? book,
     AudiobookModel? audiobook,
