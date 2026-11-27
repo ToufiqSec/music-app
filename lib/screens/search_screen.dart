@@ -33,6 +33,7 @@ class _SearchScreenState extends State<SearchScreen> {
   Timer? _debounceTimer;
 
   bool _isSearching = false;
+  int _searchSequence = 0;
   String _lastQuery = '';
   List<YoutubeTrack> _searchResults = [];
   String _errorMessage = '';
@@ -183,6 +184,9 @@ class _SearchScreenState extends State<SearchScreen> {
         ? (SearchCacheStore.moodQueryMap[trimmed] ?? trimmed)
         : trimmed;
 
+    final requestId = ++_searchSequence;
+    final stopwatch = Stopwatch()..start();
+
     setState(() {
       _lastQuery = trimmed;
       _isSearching = true;
@@ -193,6 +197,7 @@ class _SearchScreenState extends State<SearchScreen> {
     // 1. Check local persistent cache first (<5ms instant response)
     final cached = SearchCacheStore.getCached(targetQuery);
     if (cached != null && cached.tracks.isNotEmpty) {
+      if (requestId != _searchSequence) return;
       setState(() {
         _searchResults = cached.tracks;
         _isShowingCached = true;
@@ -201,6 +206,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
       // If cache is still within validity period, we are done
       if (!cached.isExpired(cacheHours)) {
+        debugPrint('[SearchMetrics] cache_hit query="$targetQuery" elapsedMs=${stopwatch.elapsedMilliseconds}');
         return;
       }
       // If expired, continue to background quiet refresh
@@ -211,12 +217,19 @@ class _SearchScreenState extends State<SearchScreen> {
       final audioProvider = context.read<AudioProvider>();
       final results = await audioProvider.musicService.searchTracks(targetQuery);
 
+      // Discard stale response if user has already typed a newer query
+      if (requestId != _searchSequence) {
+        debugPrint('[SearchMetrics] discarded_stale query="$targetQuery" seq=$requestId current=$_searchSequence');
+        return;
+      }
+
       if (results.isNotEmpty) {
         // Update persistent cache
         await SearchCacheStore.putCached(targetQuery, results);
       }
 
-      if (mounted) {
+      debugPrint('[SearchMetrics] live_search query="$targetQuery" count=${results.length} elapsedMs=${stopwatch.elapsedMilliseconds}');
+      if (mounted && requestId == _searchSequence) {
         setState(() {
           if (results.isNotEmpty || _searchResults.isEmpty) {
             _searchResults = results;
@@ -227,7 +240,7 @@ class _SearchScreenState extends State<SearchScreen> {
         });
       }
     } catch (e) {
-      if (mounted) {
+      if (mounted && requestId == _searchSequence) {
         setState(() {
           _isSearching = false;
           if (_searchResults.isNotEmpty) {

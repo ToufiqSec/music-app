@@ -3,6 +3,8 @@ import 'package:music_app/core/services/artwork_resolver.dart';
 import 'package:music_app/core/services/blend_playlist_service.dart';
 import 'package:music_app/core/services/mood_recommendation_engine.dart';
 import 'package:music_app/core/services/playback_resolver.dart';
+import 'package:music_app/core/services/supabase_service.dart';
+import 'package:music_app/core/services/taste_engine.dart';
 import 'package:music_app/features/music/models/music_models.dart';
 
 void main() {
@@ -85,6 +87,56 @@ void main() {
       expect(
         ArtworkResolver.resolveArtwork('http://c.saavncdn.com/123/song_150x150.jpg'),
         'https://c.saavncdn.com/123/song_500x500.jpg',
+      );
+    });
+  });
+
+  group('TasteEngine two-layer feedback', () {
+    test('filters out Not Interested tracks and respects session boosts', () {
+      TasteEngine.clearSessionIntent();
+      const disliked = YoutubeTrack(
+        id: 'skip_1',
+        title: 'Skip Track',
+        artist: 'Blocked Artist',
+        durationSeconds: 180,
+        thumbnailUrl: '',
+      );
+      const liked = YoutubeTrack(
+        id: 'keep_1',
+        title: 'Keep Track',
+        artist: 'Preferred Artist',
+        durationSeconds: 200,
+        thumbnailUrl: '',
+      );
+
+      TasteEngine.recordNotInterested(disliked);
+      final reranked = TasteEngine.rerankWithTaste([disliked, liked]);
+      expect(reranked.map((t) => t.id), ['keep_1']);
+    });
+  });
+
+  group('UserEntitlement', () {
+    test('enforces active status and expiry on premium plan', () {
+      expect(UserEntitlement.free().isPremium, isFalse);
+      expect(
+        UserEntitlement(
+          plan: 'premium',
+          isActive: true,
+          expiresAt: DateTime.now().add(const Duration(days: 7)),
+        ).isPremium,
+        isTrue,
+      );
+      expect(
+        UserEntitlement(
+          plan: 'premium',
+          isActive: true,
+          expiresAt: DateTime.now().subtract(const Duration(days: 1)),
+        ).isPremium,
+        isFalse,
+      );
+      expect(
+        const UserEntitlement(plan: 'premium', isActive: false).isPremium,
+        isFalse,
       );
     });
   });

@@ -635,6 +635,9 @@ class AudioProvider extends ChangeNotifier {
   }
 
   Future<void> playNext() async {
+    if (_currentTrack != null && _position.inSeconds > 0 && _position.inSeconds < 15) {
+      TasteEngine.recordSkipSignal(_currentTrack!, _position);
+    }
     final nextIdx = _getNextIndex();
     if (nextIdx != null && nextIdx < _playlistQueue.length) {
       _currentIndex = nextIdx;
@@ -779,6 +782,7 @@ class AudioProvider extends ChangeNotifier {
       track.id,
       streamUrl,
       trackMetadata: track,
+      isUserDownload: true,
     ).listen(
       (progress) {
         _downloadProgress[track.id] = progress;

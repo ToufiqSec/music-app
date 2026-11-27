@@ -265,6 +265,17 @@ class TrackMetadataStore {
 
   static Future<void> _saveLibraryVault() => _saveLibraryVaultImmediate();
 
+  /// Clears user-scoped library state (favorites, history, playlists, resume positions)
+  /// on sign-out or account switch so data never leaks across accounts.
+  static Future<void> clearUserLibrary() async {
+    _librarySaveDebounceTimer?.cancel();
+    _favoriteIds = {};
+    _historyIds = [];
+    _userPlaylists = {};
+    _playbackPositions = {};
+    await _saveLibraryVaultImmediate();
+  }
+
   static Future<void> _saveLibraryVaultImmediate() async {
     try {
       final file = await _getFile(_userLibraryFileName);

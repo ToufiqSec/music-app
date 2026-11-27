@@ -11,7 +11,23 @@ class AudioCacheService {
   static const int maxCacheSizeBytes = 1024 * 1024 * 1024; // 1 GB
   static const List<String> _supportedExtensions = ['.m4a', '.mp3', '.opus', '.ogg', '.aac', '.wav'];
   static Directory? _cacheDir;
+  static Directory? _downloadsDir;
   static final http.Client _sharedClient = http.Client();
+
+  static String _safeFileKey(String trackId) {
+    return trackId.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+  }
+
+  static Future<Directory> getDownloadsDirectory() async {
+    if (_downloadsDir != null) return _downloadsDir!;
+    final docsDir = await getApplicationDocumentsDirectory();
+    final dir = Directory('${docsDir.path}/downloads');
+    if (!await dir.exists()) {
+      await dir.create(recursive: true);
+    }
+    _downloadsDir = dir;
+    return dir;
+  }
 
   static String _detectAudioExtension(String streamUrl) {
     final lower = streamUrl.toLowerCase();
@@ -47,11 +63,20 @@ class AudioCacheService {
     return cache;
   }
 
-  /// Returns File if track exists on disk, else null
+  /// Returns File if track exists in user downloads or temporary cache, else null
   static Future<File?> getCachedTrackFile(String trackId) async {
+    final safeKey = _safeFileKey(trackId);
+    final downloadsDir = await getDownloadsDirectory();
+    for (final ext in _supportedExtensions) {
+      final dlFile = File('${downloadsDir.path}/$safeKey$ext');
+      if (await dlFile.exists() && await dlFile.length() > 0) {
+        return dlFile;
+      }
+    }
+
     final dir = await getCacheDirectory();
     for (final ext in _supportedExtensions) {
-      final file = File('${dir.path}/$trackId$ext');
+      final file = File('${dir.path}/$safeKey$ext');
       if (await file.exists() && await file.length() > 0) {
         // Touch file for LRU update asynchronously
         try {
@@ -75,15 +100,17 @@ class AudioCacheService {
     String trackId,
     String streamUrl, {
     YoutubeTrack? trackMetadata,
+    bool isUserDownload = false,
   }) async* {
     if (trackMetadata != null) {
       await TrackMetadataStore.saveTrackMetadata(trackMetadata);
     }
 
-    final dir = await getCacheDirectory();
+    final dir = isUserDownload ? await getDownloadsDirectory() : await getCacheDirectory();
+    final safeKey = _safeFileKey(trackId);
     final ext = _detectAudioExtension(streamUrl);
-    final targetFile = File('${dir.path}/$trackId$ext');
-    final tempFile = File('${dir.path}/$trackId.tmp');
+    final targetFile = File('${dir.path}/$safeKey$ext');
+    final tempFile = File('${dir.path}/$safeKey.tmp');
 
     http.StreamedResponse response;
     try {
