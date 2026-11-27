@@ -1739,7 +1739,7 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
   String _cleanTrackTitle(String rawTitle) {
     final cleaned = rawTitle
         .replaceAll(RegExp(r'\[.*?\]|\(.*?\)', caseSensitive: false), '')
-        .split(RegExp(r'\s*[\|\-•]\s*(?:Bollywood|Audio|Jukebox|Official|Full Video|Remix|Song).*', caseSensitive: false))
+        .split(RegExp(r'\s*[\|•]\s*.*|\s+-\s+(?:Bollywood|Audio|Jukebox|Official|Full Video|Remix|Song).*', caseSensitive: false))
         .first
         .trim();
     return cleaned.isEmpty ? rawTitle : cleaned;
