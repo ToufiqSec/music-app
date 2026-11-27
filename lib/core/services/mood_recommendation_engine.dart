@@ -9,6 +9,7 @@ import '../../widgets/generated_cover_art.dart';
 import 'youtube_music_service.dart';
 import 'taste_engine.dart';
 import 'supabase_service.dart';
+import 'curated_tracks.dart';
 
 /// Content style mode for the AI Recommendation Hub (Issue 7)
 enum MoodContentStyle {
@@ -47,7 +48,35 @@ class VibeMixResult {
 }
 
 class MoodRecommendationEngine {
+  static const int minRecommendedTracks = 15;
   final YoutubeMusicService _musicService;
+
+  /// Ensures at least [minimum] unique tracks by topping up from [fallbackPool].
+  @visibleForTesting
+  static List<YoutubeTrack> ensureMinimumTracks(
+    List<YoutubeTrack> initial, {
+    required List<YoutubeTrack> fallbackPool,
+    int minimum = minRecommendedTracks,
+  }) {
+    final out = <YoutubeTrack>[];
+    final seen = <String>{};
+
+    for (final t in initial) {
+      final key = '${t.title.toLowerCase()}_${t.artist.toLowerCase()}';
+      if (seen.add(key)) out.add(t);
+    }
+
+    if (out.length < minimum) {
+      for (final t in fallbackPool) {
+        final key = '${t.title.toLowerCase()}_${t.artist.toLowerCase()}';
+        if (seen.add(key)) {
+          out.add(t);
+          if (out.length >= minimum) break;
+        }
+      }
+    }
+    return out;
+  }
 
   // Configurable Groq AI Provider (Loaded via dart-define or Profile settings with persistent storage) (Issue 2.4)
   static const String _envGroqKey = String.fromEnvironment('GROQ_API_KEY');
@@ -200,8 +229,8 @@ class MoodRecommendationEngine {
       }
     }
 
-    // 4.5. Enforce minimum floor of 5 verified results (Issue 7 Step 2)
-    if (results.length < 5) {
+    // 4.5. Enforce minimum floor of 15 verified results (AGENT.md rule 3)
+    if (results.length < minRecommendedTracks) {
       final fallbackQuery = queries.isNotEmpty
           ? '${queries.first} trending'
           : 'top acoustic ambient hits';
@@ -212,14 +241,21 @@ class MoodRecommendationEngine {
           if (!seenKeys.contains(key)) {
             seenKeys.add(key);
             results.add(track);
-            if (results.length >= 5) break;
+            if (results.length >= minRecommendedTracks) break;
           }
         }
       } catch (_) {}
     }
 
+    // 4.6. Top up from curated catalog if live search returned fewer than 15 unique tracks
+    final guaranteed = ensureMinimumTracks(
+      results,
+      fallbackPool: CuratedTracks.allCatalogTracks,
+      minimum: minRecommendedTracks,
+    );
+
     // 5. Rerank through user's taste engine
-    final reranked = TasteEngine.rerankSearchResults(results);
+    final reranked = TasteEngine.rerankSearchResults(guaranteed);
 
     // 6. Save session metadata to Supabase / local cache for taste adaptation
     _recordMoodSession(selectedMoodIds, customDescription.trim(), style.label, reranked.length);

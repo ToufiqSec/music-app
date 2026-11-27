@@ -176,6 +176,9 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  /// Whether Supabase cloud sync / Listen Together has an active authenticated session.
+  bool get isCloudSessionSynced => SupabaseService.isAuthenticated;
+
   /// Native 1-Tap Google Sign-In via Firebase Auth (Google Play Services)
   Future<bool> signInWithGoogle() async {
     _setLoading(true);
@@ -183,6 +186,10 @@ class AuthProvider extends ChangeNotifier {
     try {
       final cred = await FirebaseAuthService.signInWithGoogle();
       if (cred != null && cred.user != null) {
+        await SupabaseService.syncFirebaseSession(
+          googleIdToken: FirebaseAuthService.lastGoogleIdToken,
+          googleAccessToken: FirebaseAuthService.lastGoogleAccessToken,
+        );
         await _loadProfileAndSettings();
         _setLoading(false);
         return true;
@@ -198,11 +205,12 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  /// Sign Out via Firebase Auth
+  /// Sign Out via Firebase Auth and Supabase
   Future<void> signOut() async {
     _setLoading(true);
     try {
       await FirebaseAuthService.signOut();
+      await SupabaseService.signOut();
       _profile = null;
       _settings = const UserSettingsData();
     } catch (e) {

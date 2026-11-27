@@ -6,6 +6,8 @@ import 'package:google_sign_in/google_sign_in.dart';
 /// Central Firebase Authentication Service handling Email/Password & Native Google Sign-In.
 class FirebaseAuthService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
+  static String? lastGoogleIdToken;
+  static String? lastGoogleAccessToken;
 
   // Web Client ID from google-services.json (client_type: 3) for Google Play Services ID token exchange
   static const String webClientId =
@@ -43,6 +45,8 @@ class FirebaseAuthService {
 
       debugPrint('[FirebaseAuthService] Account selected: ${googleUser.email}. Authenticating...');
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      lastGoogleIdToken = googleAuth.idToken;
+      lastGoogleAccessToken = googleAuth.accessToken;
 
       final OAuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
@@ -99,6 +103,8 @@ class FirebaseAuthService {
 
   /// Sign Out from both Firebase and GoogleSignIn
   static Future<void> signOut() async {
+    lastGoogleIdToken = null;
+    lastGoogleAccessToken = null;
     try {
       await _googleSignIn.signOut();
     } catch (_) {}

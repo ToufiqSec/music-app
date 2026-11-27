@@ -104,6 +104,32 @@ class SupabaseService {
 
   static Stream<AuthState> get authStateChanges => client.auth.onAuthStateChange;
 
+  /// Bridges a Firebase Google Sign-In session into Supabase using the Google OIDC ID token
+  /// so Supabase RLS-protected tables and Listen Together rooms share an authenticated user.
+  static Future<bool> syncFirebaseSession({
+    String? googleIdToken,
+    String? googleAccessToken,
+  }) async {
+    try {
+      if (client.auth.currentSession != null) return true;
+      if (googleIdToken != null && googleIdToken.isNotEmpty) {
+        final res = await client.auth.signInWithIdToken(
+          provider: OAuthProvider.google,
+          idToken: googleIdToken,
+          accessToken: googleAccessToken,
+        );
+        if (res.session != null) {
+          debugPrint('[Supabase] Bridged Google ID token into Supabase session.');
+          await syncDownAllUserData();
+          return true;
+        }
+      }
+    } catch (e) {
+      debugPrint('[Supabase] Firebase-to-Supabase session bridge failed: $e');
+    }
+    return isAuthenticated;
+  }
+
   /// Initializes Supabase in main.dart (PKCE flow is enabled by default in supabase_flutter 2.x)
   static Future<void> initialize() async {
     try {
