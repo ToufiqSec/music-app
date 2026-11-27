@@ -219,6 +219,25 @@ class SupabaseService {
     }
   }
 
+  /// Bridges a native Google Sign-In ID token into Supabase Auth so RLS policies
+  /// (`auth.uid()`) work seamlessly alongside Firebase Auth.
+  static Future<void> signInWithGoogleIdToken({
+    required String idToken,
+    String? accessToken,
+  }) async {
+    try {
+      await client.auth.signInWithIdToken(
+        provider: OAuthProvider.google,
+        idToken: idToken,
+        accessToken: accessToken,
+      );
+      debugPrint('[Supabase] Bridged Google ID token into Supabase session: ${currentUser?.email}');
+      await syncDownAllUserData();
+    } catch (e) {
+      debugPrint('[Supabase] signInWithGoogleIdToken failed: $e');
+    }
+  }
+
   static Future<void> resetPassword(String email) async {
     final trimmed = email.trim();
     await client.auth.resetPasswordForEmail(

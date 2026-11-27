@@ -5,6 +5,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../providers/audio_provider.dart';
 import '../core/services/curated_tracks.dart';
 import '../core/services/track_metadata_store.dart';
+import '../core/services/blend_playlist_service.dart';
+import '../providers/auth_provider.dart';
 import '../features/music/models/music_models.dart';
 import '../widgets/generated_cover_art.dart';
 import '../widgets/cascading_artwork.dart';
@@ -115,6 +117,63 @@ class LibraryScreen extends StatelessWidget {
                   ],
                 );
               },
+            ),
+
+            const SizedBox(height: 14),
+
+            // Collaborative Blend Playlist Card (AGENT.md Rule 6)
+            GestureDetector(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                _showCollaborativeBlendSheet(context, audioProvider);
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF3E2B5C), Color(0xFF8A4F7D)],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
+                  borderRadius: AppRadii.borderMedium,
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 22),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Collaborative Blend',
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Merge your music taste with a friend',
+                            style: AppTextStyles.caption.copyWith(
+                              color: Colors.white.withValues(alpha: 0.8),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 16),
+                  ],
+                ),
+              ),
             ),
 
             const SizedBox(height: 24),
@@ -694,6 +753,167 @@ class LibraryScreen extends StatelessWidget {
                   ),
                 );
               },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showCollaborativeBlendSheet(BuildContext context, AudioProvider audioProvider) {
+    final controller = TextEditingController();
+    final userName = context.read<AuthProvider>().displayName;
+    final myCode = BlendPlaylistService.exportCurrentUserTasteCode(displayName: userName);
+    bool isGenerating = false;
+    String? errorMsg;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface1,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 20,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Collaborative Blend', style: AppTextStyles.h2),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Share your Blend code with a friend or paste theirs (or artist names) to generate a merged playlist.',
+                    style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface2,
+                      borderRadius: AppRadii.borderMedium,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            myCode,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.caption.copyWith(color: AppColors.textPrimary),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        TextButton.icon(
+                          onPressed: () {
+                            Clipboard.setData(ClipboardData(text: myCode));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Blend code copied!')),
+                            );
+                          },
+                          icon: const Icon(Icons.copy_rounded, size: 16, color: AppColors.primarySoft),
+                          label: const Text('Copy', style: TextStyle(color: AppColors.primarySoft)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: controller,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: 'Paste friend\'s SWARVA-BLEND code or artists (e.g. KK, Coldplay)',
+                      hintStyle: TextStyle(color: AppColors.textSecondary.withValues(alpha: 0.7), fontSize: 13),
+                      filled: true,
+                      fillColor: AppColors.surface2,
+                      border: OutlineInputBorder(
+                        borderRadius: AppRadii.borderMedium,
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                  if (errorMsg != null) ...[
+                    const SizedBox(height: 8),
+                    Text(errorMsg!, style: const TextStyle(color: Color(0xFFFF8FA3), fontSize: 12)),
+                  ],
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primarySoft,
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: AppRadii.borderMedium),
+                      ),
+                      onPressed: isGenerating
+                          ? null
+                          : () async {
+                              final parsed = BlendPlaylistService.parseTasteInput(controller.text);
+                              if (parsed == null) {
+                                setSheetState(() {
+                                  errorMsg = 'Enter a valid Blend code or at least one artist name.';
+                                });
+                                return;
+                              }
+                              setSheetState(() {
+                                isGenerating = true;
+                                errorMsg = null;
+                              });
+                              try {
+                                final blend = await BlendPlaylistService.generateBlendPlaylist(
+                                  musicService: audioProvider.musicService,
+                                  friendTaste: parsed,
+                                  currentUserName: userName,
+                                );
+                                if (blend.tracks.isEmpty) {
+                                  setSheetState(() {
+                                    isGenerating = false;
+                                    errorMsg = 'Could not find tracks for those artists. Try again.';
+                                  });
+                                  return;
+                                }
+                                await audioProvider.createPlaylist(blend.playlistTitle);
+                                for (final t in blend.tracks) {
+                                  await audioProvider.addTrackToPlaylist(blend.playlistTitle, t);
+                                }
+                                if (ctx.mounted) Navigator.pop(ctx);
+                                await audioProvider.playTrack(blend.tracks.first, blend.tracks);
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        '${blend.playlistTitle} (${blend.matchPercentage}% Taste Match) • ${blend.tracks.length} tracks',
+                                      ),
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                setSheetState(() {
+                                  isGenerating = false;
+                                  errorMsg = 'Failed to generate Blend: $e';
+                                });
+                              }
+                            },
+                      child: isGenerating
+                          ? const SizedBox(
+                              height: 18,
+                              width: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                            )
+                          : const Text('Generate & Play Blend', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
             );
           },
         );

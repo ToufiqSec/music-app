@@ -129,12 +129,7 @@ class _MusicAppBootstrapState extends State<MusicAppBootstrap> {
       await MoodRecommendationEngine.initApiKey();
     } catch (_) {}
 
-    // 4. Invalidate legacy un-keyed image cache & stale home section JSON on upgrade
-    try {
-      PaintingBinding.instance.imageCache.clear();
-      PaintingBinding.instance.imageCache.clearLiveImages();
-      await HomeSectionCacheStore.clear();
-    } catch (_) {}
+    // 4. Preserve persistent home section & image caches across launches for instant cold start
 
     // 5. Initialize native AudioService
     MyAudioHandler handler;

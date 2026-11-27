@@ -181,30 +181,20 @@ class YoutubeMusicService {
         }
       } catch (_) {}
     } else {
-      // For general music:
-      // First, query JioSaavn for instant lossless 320kbps CDN playback
-      try {
-        final saavnTracks = await _searchJioSaavn(cleanQuery);
-        for (final track in saavnTracks) {
+      // For general music: query JioSaavn (320kbps) and YouTube in parallel to halve search latency
+      final fetched = await Future.wait([
+        _searchJioSaavn(cleanQuery).catchError((_) => <YoutubeTrack>[]),
+        _searchYouTube(cleanQuery).catchError((_) => <YoutubeTrack>[]),
+      ]);
+      for (final list in fetched) {
+        for (final track in list) {
           final key = '${track.title.toLowerCase()}_${track.artist.toLowerCase()}';
           if (!seenKeys.contains(key)) {
             seenKeys.add(key);
             results.add(track);
           }
         }
-      } catch (_) {}
-
-      // Supplement & fallback to YouTube global audio search
-      try {
-        final ytTracks = await _searchYouTube(cleanQuery);
-        for (final track in ytTracks) {
-          final key = '${track.title.toLowerCase()}_${track.artist.toLowerCase()}';
-          if (!seenKeys.contains(key)) {
-            seenKeys.add(key);
-            results.add(track);
-          }
-        }
-      } catch (_) {}
+      }
     }
 
     return results;

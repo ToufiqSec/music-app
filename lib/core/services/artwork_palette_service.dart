@@ -35,6 +35,14 @@ class ExtractedPalette {
 /// Service that extracts vibrant dominant colors from artwork and caches them per track.
 class ArtworkPaletteService {
   static final Map<String, ExtractedPalette> _cache = {};
+  static const int _maxCacheEntries = 100;
+
+  static void _putCache(String key, ExtractedPalette palette) {
+    if (_cache.length >= _maxCacheEntries && !_cache.containsKey(key)) {
+      _cache.remove(_cache.keys.first);
+    }
+    _cache[key] = palette;
+  }
 
   static const List<Color> _vibrantAnchors = [
     Color(0xFF8B1E3F), // Coke Studio Crimson Red
@@ -73,7 +81,7 @@ class ArtworkPaletteService {
     }
 
     final fallback = _deriveHarmoniousPalette(title, artist);
-    _cache[key] = fallback;
+    _putCache(key, fallback);
 
     if (imageUrl == null || imageUrl.trim().isEmpty) {
       return fallback;
@@ -86,7 +94,7 @@ class ArtworkPaletteService {
       final res = await http.get(uri).timeout(const Duration(seconds: 4));
       if (res.statusCode == 200 && res.bodyBytes.isNotEmpty) {
         final palette = await _extractFromBytes(res.bodyBytes, fallback);
-        _cache[key] = palette;
+        _putCache(key, palette);
         return palette;
       }
     } catch (_) {
@@ -105,14 +113,17 @@ class ArtworkPaletteService {
     Uint8List bytes,
     ExtractedPalette fallback,
   ) async {
+    ui.Codec? codec;
+    ui.Image? image;
     try {
-      final codec = await ui.instantiateImageCodec(
+      codec = await ui.instantiateImageCodec(
         bytes,
         targetWidth: 20,
         targetHeight: 20,
       );
       final frame = await codec.getNextFrame();
-      final byteData = await frame.image.toByteData(
+      image = frame.image;
+      final byteData = await image.toByteData(
         format: ui.ImageByteFormat.rawRgba,
       );
 
@@ -157,6 +168,9 @@ class ArtworkPaletteService {
       }
     } catch (_) {
       // Ignore codec errors
+    } finally {
+      image?.dispose();
+      codec?.dispose();
     }
     return fallback;
   }

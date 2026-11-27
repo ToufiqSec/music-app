@@ -9,8 +9,32 @@ import 'track_metadata_store.dart';
 /// Fully asynchronous I/O to prevent main UI isolate frame drops.
 class AudioCacheService {
   static const int maxCacheSizeBytes = 1024 * 1024 * 1024; // 1 GB
+  static const List<String> _supportedExtensions = ['.m4a', '.mp3', '.opus', '.ogg', '.aac', '.wav'];
   static Directory? _cacheDir;
   static final http.Client _sharedClient = http.Client();
+
+  static String _detectAudioExtension(String streamUrl) {
+    final lower = streamUrl.toLowerCase();
+    for (final ext in _supportedExtensions) {
+      if (lower.contains(ext)) {
+        return ext;
+      }
+    }
+    return '.m4a';
+  }
+
+  static String _stripAudioExtension(String fileName) {
+    for (final ext in _supportedExtensions) {
+      if (fileName.endsWith(ext)) {
+        return fileName.substring(0, fileName.length - ext.length);
+      }
+    }
+    return fileName.replaceAll('.tmp', '');
+  }
+
+  static bool _isAudioCacheFile(String path) {
+    return _supportedExtensions.any((ext) => path.endsWith(ext));
+  }
 
   static Future<Directory> getCacheDirectory() async {
     if (_cacheDir != null) return _cacheDir!;
@@ -26,13 +50,15 @@ class AudioCacheService {
   /// Returns File if track exists on disk, else null
   static Future<File?> getCachedTrackFile(String trackId) async {
     final dir = await getCacheDirectory();
-    final file = File('${dir.path}/$trackId.m4a');
-    if (await file.exists() && await file.length() > 0) {
-      // Touch file for LRU update asynchronously
-      try {
-        await file.setLastModified(DateTime.now());
-      } catch (_) {}
-      return file;
+    for (final ext in _supportedExtensions) {
+      final file = File('${dir.path}/$trackId$ext');
+      if (await file.exists() && await file.length() > 0) {
+        // Touch file for LRU update asynchronously
+        try {
+          await file.setLastModified(DateTime.now());
+        } catch (_) {}
+        return file;
+      }
     }
     return null;
   }
@@ -55,7 +81,8 @@ class AudioCacheService {
     }
 
     final dir = await getCacheDirectory();
-    final targetFile = File('${dir.path}/$trackId.m4a');
+    final ext = _detectAudioExtension(streamUrl);
+    final targetFile = File('${dir.path}/$trackId$ext');
     final tempFile = File('${dir.path}/$trackId.tmp');
 
     http.StreamedResponse response;
@@ -163,7 +190,7 @@ class AudioCacheService {
           if (bytesToDelete <= 0) break;
           try {
             await item.file.delete();
-            final trackId = item.file.uri.pathSegments.last.replaceAll('.m4a', '');
+            final trackId = _stripAudioExtension(item.file.uri.pathSegments.last);
             await TrackMetadataStore.removeTrackMetadata(trackId);
             bytesToDelete -= item.size;
           } catch (_) {}
@@ -178,8 +205,8 @@ class AudioCacheService {
       final dir = await getCacheDirectory();
       final entities = await dir.list().where((e) => e is File).cast<File>().toList();
       return entities
-          .where((f) => f.path.endsWith('.m4a'))
-          .map((f) => f.uri.pathSegments.last.replaceAll('.m4a', ''))
+          .where((f) => _isAudioCacheFile(f.path))
+          .map((f) => _stripAudioExtension(f.uri.pathSegments.last))
           .toList();
     } catch (_) {
       return [];
@@ -193,7 +220,7 @@ class AudioCacheService {
       final entities = await dir.list().where((e) => e is File).cast<File>().toList();
       int total = 0;
       for (final f in entities) {
-        if (f.path.endsWith('.m4a')) {
+        if (_isAudioCacheFile(f.path)) {
           total += await f.length();
         }
       }
@@ -215,10 +242,10 @@ class AudioCacheService {
       final dir = await getCacheDirectory();
       final entities = await dir.list().where((e) => e is File).cast<File>().toList();
       for (final f in entities) {
-        if (f.path.endsWith('.m4a') || f.path.endsWith('.tmp')) {
+        if (_isAudioCacheFile(f.path) || f.path.endsWith('.tmp')) {
           try {
             await f.delete();
-            final trackId = f.uri.pathSegments.last.replaceAll('.m4a', '').replaceAll('.tmp', '');
+            final trackId = _stripAudioExtension(f.uri.pathSegments.last);
             await TrackMetadataStore.removeTrackMetadata(trackId);
           } catch (_) {}
         }

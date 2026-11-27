@@ -8,6 +8,7 @@ import '../core/services/youtube_music_service.dart';
 import '../core/services/track_metadata_store.dart';
 import '../core/services/supabase_service.dart';
 import '../core/services/related_tracks_engine.dart';
+import '../core/services/taste_engine.dart';
 import '../core/services/curated_tracks.dart';
 import '../widgets/generated_cover_art.dart';
 import '../services/audio_handler.dart';
@@ -22,7 +23,10 @@ class AudioProvider extends ChangeNotifier {
 
   YoutubeTrack? _currentTrack;
   List<YoutubeTrack> _playlistQueue = [];
+  List<YoutubeTrack> _originalQueue = [];
   int _currentIndex = -1;
+  int _consecutivePlaybackFailures = 0;
+  static const int _maxConsecutiveFailures = 3;
 
   bool _isPlaying = false;
   bool _isBuffering = false;
@@ -239,6 +243,7 @@ class AudioProvider extends ChangeNotifier {
       if (_currentTrack != null) {
         TrackMetadataStore.clearPlaybackPosition(_currentTrack!.id);
         _relatedEngine.markTrackPlayed(_currentTrack!.id);
+        TasteEngine.recordPlaySignal(_currentTrack!.artist).catchError((_) {});
       }
 
       // 1. Repeat One
@@ -454,7 +459,8 @@ class AudioProvider extends ChangeNotifier {
       }
     }
 
-    // Record to listening history
+    // Record to listening history & adaptive taste engine
+    TasteEngine.recordPlaySignal(track.artist).catchError((_) {});
     TrackMetadataStore.addToHistory(track).then((_) {
       TrackMetadataStore.getListeningHistory().then((h) {
         _historyTracks = h;
@@ -504,9 +510,12 @@ class AudioProvider extends ChangeNotifier {
           }
         });
 
-        // Gracefully advance to next track without crashing the queue (Issue 2)
-        if (_playlistQueue.length > 1) {
+        // Gracefully advance to next track without crashing the queue, up to circuit-breaker limit
+        _consecutivePlaybackFailures++;
+        if (_playlistQueue.length > 1 && _consecutivePlaybackFailures < _maxConsecutiveFailures) {
           Future.delayed(const Duration(milliseconds: 600), () => playNext());
+        } else {
+          _consecutivePlaybackFailures = 0;
         }
         return;
       }
@@ -516,6 +525,7 @@ class AudioProvider extends ChangeNotifier {
       // 2. Play via AudioHandler with automated fallback recovery (Requirement A2.3 & A2.4)
       try {
         await _audioHandler.playTrackUrl(track.toMediaItem(), resolvedUrl);
+        _consecutivePlaybackFailures = 0;
       } catch (playErr) {
         debugPrint('[AudioProvider] Primary playback failed: $playErr. Attempting direct fallback...');
         _musicService.invalidateCache(track.id);
@@ -527,6 +537,7 @@ class AudioProvider extends ChangeNotifier {
         if (fbResolution.isPlayable && fbResolution.url != null) {
           resolvedUrl = fbResolution.url!;
           await _audioHandler.playTrackUrl(track.toMediaItem(), resolvedUrl);
+          _consecutivePlaybackFailures = 0;
         } else {
           rethrow;
         }
@@ -567,11 +578,14 @@ class AudioProvider extends ChangeNotifier {
         }
       });
 
-      // If a track in queue fails to load, gracefully advance to next track so playback doesn't stall
-      if (_playlistQueue.length > 1) {
+      // If a track in queue fails to load, gracefully advance to next track up to circuit-breaker limit
+      _consecutivePlaybackFailures++;
+      if (_playlistQueue.length > 1 && _consecutivePlaybackFailures < _maxConsecutiveFailures) {
         Future.delayed(const Duration(milliseconds: 600), () {
           playNext();
         });
+      } else {
+        _consecutivePlaybackFailures = 0;
       }
     } finally {
       _isBuffering = false;
@@ -580,19 +594,34 @@ class AudioProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> play() async {
+    final pState = _audioHandler.player.processingState;
+    if (pState == ProcessingState.completed) {
+      await seekImmediate(Duration.zero);
+    } else if (pState == ProcessingState.idle && _currentTrack != null) {
+      await playTrack(_currentTrack!);
+      return;
+    }
+    await _audioHandler.play();
+  }
+
+  Future<void> pause() async {
+    await _audioHandler.pause();
+  }
+
   Future<void> togglePlayPause() async {
     if (_isPlaying) {
-      await _audioHandler.pause();
+      await pause();
     } else {
-      final pState = _audioHandler.player.processingState;
-      if (pState == ProcessingState.completed) {
-        seekTo(Duration.zero);
-      } else if (pState == ProcessingState.idle && _currentTrack != null) {
-        await playTrack(_currentTrack!);
-        return;
-      }
-      await _audioHandler.play();
+      await play();
     }
+  }
+
+  Future<void> seekImmediate(Duration targetPosition) async {
+    _seekDebounceTimer?.cancel();
+    _position = targetPosition;
+    notifyListeners();
+    await _audioHandler.seek(targetPosition);
   }
 
   void seekTo(Duration targetPosition) {
@@ -650,9 +679,21 @@ class AudioProvider extends ChangeNotifier {
   void toggleShuffle() {
     _isShuffle = !_isShuffle;
     if (_isShuffle && _playlistQueue.isNotEmpty) {
-      _playlistQueue.shuffle();
+      _originalQueue = List.from(_playlistQueue);
+      final current = _currentTrack;
+      if (current != null) {
+        final remaining = _playlistQueue.where((t) => t.id != current.id).toList()..shuffle();
+        _playlistQueue = [current, ...remaining];
+        _currentIndex = 0;
+      } else {
+        _playlistQueue.shuffle();
+      }
+    } else if (!_isShuffle && _originalQueue.isNotEmpty) {
+      _playlistQueue = List.from(_originalQueue);
+      _originalQueue = [];
       if (_currentTrack != null) {
-        _currentIndex = _playlistQueue.indexWhere((t) => t.id == _currentTrack!.id);
+        final idx = _playlistQueue.indexWhere((t) => t.id == _currentTrack!.id);
+        _currentIndex = idx != -1 ? idx : 0;
       }
     }
     notifyListeners();
@@ -675,6 +716,9 @@ class AudioProvider extends ChangeNotifier {
   Future<bool> toggleFavorite(YoutubeTrack track) async {
     final result = await TrackMetadataStore.toggleFavorite(track);
     _favoriteIds = await TrackMetadataStore.getFavoriteIds();
+    if (result) {
+      TasteEngine.recordPlaySignal(track.artist).catchError((_) {});
+    }
     notifyListeners();
     SupabaseService.syncToggleLikedSong(track, result).catchError((_) {});
     return result;
@@ -730,7 +774,8 @@ class AudioProvider extends ChangeNotifier {
     _downloadProgress[track.id] = 0.0;
     notifyListeners();
 
-    AudioCacheService.downloadAndCacheTrack(
+    await _currentDownloadSubscription?.cancel();
+    _currentDownloadSubscription = AudioCacheService.downloadAndCacheTrack(
       track.id,
       streamUrl,
       trackMetadata: track,
@@ -754,7 +799,10 @@ class AudioProvider extends ChangeNotifier {
   void dispose() {
     _seekDebounceTimer?.cancel();
     _backgroundCacheTimer?.cancel();
+    _bufferingWatchdogTimer?.cancel();
+    _sleepTimer?.cancel();
     _currentDownloadSubscription?.cancel();
+    playbackErrorNotifier.dispose();
     _musicService.dispose();
     super.dispose();
   }
