@@ -63,11 +63,14 @@ jobs:
 
       - name: Run Unit Tests
         run: |
+          set -o pipefail
           echo "Running Full Unit Test Suite..."
-          flutter test --no-pub
+          flutter test --no-pub 2>&1 | tee build.log
 
       - name: Analyze Project Code
-        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+        run: |
+          set -o pipefail
+          flutter analyze --no-fatal-infos --no-fatal-warnings 2>&1 | tee -a build.log
 
       - name: Extract App Version from pubspec.yaml
         id: get_version
