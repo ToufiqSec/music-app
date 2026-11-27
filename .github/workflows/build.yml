@@ -105,7 +105,10 @@ jobs:
         if: failure()
         run: |
           echo "Extracting failure logs..."
-          BUILD_ERR=$(grep -E "❌|Error:|\[E\]|failed" build.log 2>/dev/null | tail -n 80 || tail -n 80 build.log 2>/dev/null || echo "No build.log found")
+          BUILD_ERR=$(grep -iE "error •|❌|error:|failed" build.log 2>/dev/null | tail -n 80)
+          if [ -z "$BUILD_ERR" ]; then
+            BUILD_ERR=$(tail -n 80 build.log 2>/dev/null || echo "No build.log found")
+          fi
           GRADLE_ERR=$(tail -n 80 android/gradle.log 2>/dev/null || echo "No gradle.log found")
           
           # Create escaped JSON payload
