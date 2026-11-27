@@ -112,12 +112,25 @@ class AudioCacheService {
     final targetFile = File('${dir.path}/$safeKey$ext');
     final tempFile = File('${dir.path}/$safeKey.tmp');
 
+    int existingBytes = 0;
+    if (await tempFile.exists()) {
+      existingBytes = await tempFile.length();
+    }
+
     http.StreamedResponse response;
     try {
       final request = http.Request('GET', Uri.parse(streamUrl));
+      if (existingBytes > 0) {
+        request.headers['Range'] = 'bytes=$existingBytes-';
+      }
       response = await _sharedClient.send(request);
     } catch (e) {
       return;
+    }
+
+    final isResuming = existingBytes > 0 && response.statusCode == 206;
+    if (!isResuming) {
+      existingBytes = 0;
     }
 
     int totalBytes = response.contentLength ?? 0;
@@ -126,6 +139,9 @@ class AudioCacheService {
       if (headerLen != null) {
         totalBytes = int.tryParse(headerLen) ?? 0;
       }
+    }
+    if (isResuming && totalBytes > 0) {
+      totalBytes += existingBytes;
     }
     if (totalBytes <= 0) {
       final contentRange = response.headers['content-range'];
@@ -144,10 +160,10 @@ class AudioCacheService {
             ? (trackMetadata.durationSeconds * 20000)
             : 5 * 1024 * 1024);
 
-    int bytesReceived = 0;
+    int bytesReceived = existingBytes;
     double lastYieldedProgress = 0.0;
 
-    final sink = tempFile.openWrite();
+    final sink = tempFile.openWrite(mode: isResuming ? FileMode.append : FileMode.write);
 
     try {
       await for (final chunk in response.stream) {
@@ -283,6 +299,41 @@ class AudioCacheService {
   /// Alias for clearCache
   static Future<void> clearAllCache() async {
     await clearCache();
+  }
+
+  /// Scans common device Music/Download folders for local audio files (Problem 8).
+  static Future<List<YoutubeTrack>> getLocalDeviceAudioFiles() async {
+    final results = <YoutubeTrack>[];
+    if (!Platform.isAndroid) return results;
+
+    const candidateDirs = [
+      '/storage/emulated/0/Music',
+      '/storage/emulated/0/Download',
+    ];
+
+    for (final dirPath in candidateDirs) {
+      try {
+        final dir = Directory(dirPath);
+        if (!await dir.exists()) continue;
+        await for (final entity in dir.list(recursive: false, followLinks: false)) {
+          if (entity is File && _isAudioCacheFile(entity.path.toLowerCase())) {
+            final name = entity.uri.pathSegments.last;
+            final title = _stripAudioExtension(name);
+            results.add(YoutubeTrack(
+              id: 'local_${entity.path.hashCode.abs()}',
+              title: title,
+              artist: 'Local Device Audio',
+              durationSeconds: 0,
+              localFilePath: entity.path,
+              isDownloaded: true,
+            ));
+          }
+        }
+      } catch (_) {
+        // Permission may not be granted yet; fail gracefully without crashing
+      }
+    }
+    return results;
   }
 }
 

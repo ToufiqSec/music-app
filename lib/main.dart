@@ -142,7 +142,7 @@ class _MusicAppBootstrapState extends State<MusicAppBootstrap> {
           androidNotificationChannelName: 'Music Playback',
           androidNotificationOngoing: true,
           androidStopForegroundOnPause: true,
-          androidNotificationIcon: 'mipmap/ic_launcher',
+          androidNotificationIcon: 'drawable/ic_stat_swarva',
         ),
       );
       debugPrint('[Startup] AudioService successfully initialized.');

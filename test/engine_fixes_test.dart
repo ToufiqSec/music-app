@@ -140,4 +140,35 @@ void main() {
       );
     });
   });
+
+  group('YoutubeTrack source & playability', () {
+    test('reports accurate sourceProvider and isLikelyPlayable', () {
+      const saavn = YoutubeTrack(
+        id: 's1',
+        title: 'Song',
+        artist: 'Artist',
+        durationSeconds: 200,
+        audioStreamUrl: 'https://aac.saavncdn.com/123/song.mp4',
+      );
+      const yt = YoutubeTrack(
+        id: 'dQw4w9WgXcQ',
+        title: 'Video',
+        artist: 'Artist',
+        durationSeconds: 212,
+      );
+      const webpage = YoutubeTrack(
+        id: 'bad1',
+        title: 'Page',
+        artist: 'Artist',
+        durationSeconds: 100,
+        audioStreamUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      );
+
+      expect(saavn.sourceProvider, 'JioSaavn');
+      expect(saavn.isLikelyPlayable, isTrue);
+      expect(yt.sourceProvider, 'YouTube');
+      expect(yt.isLikelyPlayable, isTrue);
+      expect(webpage.isLikelyPlayable, isFalse);
+    });
+  });
 }

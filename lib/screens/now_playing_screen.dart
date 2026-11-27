@@ -1622,6 +1622,38 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                 },
               ),
               ListTile(
+                leading: const Icon(Icons.thumb_up_alt_outlined, color: Color(0xFF1DB954)),
+                title: const Text('More like this', style: TextStyle(color: Colors.white)),
+                subtitle: const Text('Boost similar artists in recommendations', style: TextStyle(color: Color(0xFFB3B3B3), fontSize: 12)),
+                onTap: () async {
+                  Navigator.pop(context);
+                  await TasteEngine.recordMoreLikeThis(track);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Got it — playing more tracks like this')),
+                    );
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.thumb_down_alt_outlined, color: Colors.white70),
+                title: const Text('Less like this', style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  TasteEngine.recordLessLikeThis(track);
+                  audioProvider.playNext();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.block_rounded, color: Color(0xFFFF8FA3)),
+                title: const Text('Not interested', style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  TasteEngine.recordNotInterested(track);
+                  audioProvider.playNext();
+                },
+              ),
+              ListTile(
                 leading: const Icon(Icons.high_quality_rounded, color: Color(0xFF1DB954)),
                 title: const Text('Audio Quality: Ultra Lossless (320 kbps)', style: TextStyle(color: Colors.white)),
                 subtitle: const Text('Direct Master Stream • Pure CD Quality', style: TextStyle(color: Color(0xFFB3B3B3), fontSize: 12)),

@@ -601,6 +601,24 @@ class _SearchScreenState extends State<SearchScreen> {
                         ),
                       ),
                     ],
+                    Container(
+                      margin: const EdgeInsets.only(right: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: track.isLikelyPlayable
+                            ? Colors.white.withValues(alpha: 0.08)
+                            : const Color(0xFFFF8FA3).withValues(alpha: 0.18),
+                        borderRadius: AppRadii.borderSmall,
+                      ),
+                      child: Text(
+                        track.isLikelyPlayable ? track.sourceProvider : 'Unavailable',
+                        style: TextStyle(
+                          fontSize: 8.5,
+                          fontWeight: FontWeight.w600,
+                          color: track.isLikelyPlayable ? AppColors.textSecondary : const Color(0xFFFF8FA3),
+                        ),
+                      ),
+                    ),
                     Expanded(
                       child: Text(
                         '${track.artist} • ${_formatDuration(track.durationSeconds)}',
