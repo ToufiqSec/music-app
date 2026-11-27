@@ -3,10 +3,13 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import '../core/services/firebase_auth_service.dart';
 import '../core/services/supabase_service.dart';
+import '../core/services/taste_engine.dart';
+import '../core/services/track_metadata_store.dart';
 
 class AuthProvider extends ChangeNotifier {
   UserProfileData? _profile;
   UserSettingsData _settings = const UserSettingsData();
+  UserEntitlement _entitlement = UserEntitlement.free();
   bool _isLoading = false;
   String? _errorMessage;
   StreamSubscription<fb.User?>? _authSubscription;
@@ -20,6 +23,8 @@ class AuthProvider extends ChangeNotifier {
   fb.User? get currentUser => FirebaseAuthService.currentUser;
   UserProfileData? get profile => _profile;
   UserSettingsData get settings => _settings;
+  UserEntitlement get entitlement => _entitlement;
+  bool get isPremium => _entitlement.isPremium;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
@@ -101,6 +106,7 @@ class AuthProvider extends ChangeNotifier {
     }
     try {
       _settings = await SupabaseService.fetchUserSettings();
+      _entitlement = await SupabaseService.fetchEntitlement();
     } catch (_) {}
     notifyListeners();
   }
@@ -198,13 +204,16 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  /// Sign Out via Firebase Auth
+  /// Sign Out via Firebase Auth & isolate local user data
   Future<void> signOut() async {
     _setLoading(true);
     try {
       await FirebaseAuthService.signOut();
+      await TrackMetadataStore.clearUserLibrary();
+      TasteEngine.clearSessionIntent();
       _profile = null;
       _settings = const UserSettingsData();
+      _entitlement = UserEntitlement.free();
     } catch (e) {
       debugPrint('[Auth] Sign out error: $e');
     } finally {

@@ -44,6 +44,9 @@ class TasteEngine {
   static List<ArtistProfile> _favoriteArtists = [];
   static List<String> _preferredLanguages = ['English', 'Hindi', 'Bengali', 'Punjabi'];
   static Map<String, int> _artistPlayWeights = {};
+  static final Map<String, int> _sessionArtistBoosts = {};
+  static final Set<String> _dislikedTrackIds = {};
+  static final Set<String> _dislikedArtists = {};
   static bool _initialized = false;
 
   static List<ArtistProfile> get favoriteArtists => List.unmodifiable(_favoriteArtists);
@@ -619,20 +622,70 @@ class TasteEngine {
   }
 
   static Future<void> recordPlaySignal(String artistName) async {
-    final clean = artistName.trim().toLowerCase();
+    final clean = _extractPrimaryArtist(artistName);
     if (clean.isEmpty) return;
 
     _artistPlayWeights[clean] = (_artistPlayWeights[clean] ?? 0) + 1;
+    _sessionArtistBoosts[clean] = ((_sessionArtistBoosts[clean] ?? 0) + 3).clamp(-30, 40);
     await _persistLocal();
   }
 
+  /// Records a short skip (<15s) as a mild current-session negative signal
+  /// without erasing long-term preferences.
+  static void recordSkipSignal(YoutubeTrack track, Duration playedDuration) {
+    if (playedDuration.inSeconds >= 15) return;
+    final clean = _extractPrimaryArtist(track.artist);
+    if (clean.isEmpty) return;
+    _sessionArtistBoosts[clean] = ((_sessionArtistBoosts[clean] ?? 0) - 4).clamp(-30, 40);
+  }
+
+  /// Explicit positive feedback ("More like this")
+  static Future<void> recordMoreLikeThis(YoutubeTrack track) async {
+    _dislikedTrackIds.remove(track.id);
+    final clean = _extractPrimaryArtist(track.artist);
+    if (clean.isEmpty) return;
+    _dislikedArtists.remove(clean);
+    _artistPlayWeights[clean] = (_artistPlayWeights[clean] ?? 0) + 3;
+    _sessionArtistBoosts[clean] = ((_sessionArtistBoosts[clean] ?? 0) + 12).clamp(-30, 40);
+    await _persistLocal();
+  }
+
+  /// Explicit negative feedback ("Less like this")
+  static void recordLessLikeThis(YoutubeTrack track) {
+    _dislikedTrackIds.add(track.id);
+    final clean = _extractPrimaryArtist(track.artist);
+    if (clean.isNotEmpty) {
+      _sessionArtistBoosts[clean] = ((_sessionArtistBoosts[clean] ?? 0) - 15).clamp(-30, 40);
+    }
+  }
+
+  /// Explicit dismissal ("Not interested")
+  static void recordNotInterested(YoutubeTrack track) {
+    _dislikedTrackIds.add(track.id);
+    final clean = _extractPrimaryArtist(track.artist);
+    if (clean.isNotEmpty) {
+      _dislikedArtists.add(clean);
+    }
+  }
+
+  static void clearSessionIntent() {
+    _sessionArtistBoosts.clear();
+  }
+
   static List<YoutubeTrack> rerankWithTaste(List<YoutubeTrack> tracks) {
-    if (_favoriteArtists.isEmpty && _artistPlayWeights.isEmpty) {
-      return tracks;
+    final filtered = tracks.where((t) {
+      if (_dislikedTrackIds.contains(t.id)) return false;
+      final primary = _extractPrimaryArtist(t.artist);
+      if (_dislikedArtists.contains(primary)) return false;
+      return true;
+    }).toList();
+
+    if (_favoriteArtists.isEmpty && _artistPlayWeights.isEmpty && _sessionArtistBoosts.isEmpty) {
+      return avoidConsecutiveArtists(filtered);
     }
 
     final favoriteNames = _favoriteArtists.map((a) => a.name.toLowerCase()).toSet();
-    final scoredList = List<YoutubeTrack>.from(tracks);
+    final scoredList = List<YoutubeTrack>.from(filtered);
 
     scoredList.sort((a, b) {
       int scoreA = 0;
@@ -640,12 +693,18 @@ class TasteEngine {
 
       final artistALower = a.artist.toLowerCase();
       final artistBLower = b.artist.toLowerCase();
+      final primaryA = _extractPrimaryArtist(a.artist);
+      final primaryB = _extractPrimaryArtist(b.artist);
 
       if (favoriteNames.any((fav) => artistALower.contains(fav))) scoreA += 50;
       if (favoriteNames.any((fav) => artistBLower.contains(fav))) scoreB += 50;
 
-      scoreA += (_artistPlayWeights[artistALower] ?? 0).clamp(0, 20);
-      scoreB += (_artistPlayWeights[artistBLower] ?? 0).clamp(0, 20);
+      scoreA += (_artistPlayWeights[primaryA] ?? _artistPlayWeights[artistALower] ?? 0).clamp(0, 20);
+      scoreB += (_artistPlayWeights[primaryB] ?? _artistPlayWeights[artistBLower] ?? 0).clamp(0, 20);
+
+      // Layer 2: current-session intent boost/penalty
+      scoreA += _sessionArtistBoosts[primaryA] ?? 0;
+      scoreB += _sessionArtistBoosts[primaryB] ?? 0;
 
       return scoreB.compareTo(scoreA);
     });

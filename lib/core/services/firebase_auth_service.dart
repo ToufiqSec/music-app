@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'supabase_service.dart';
 
 /// Central Firebase Authentication Service handling Email/Password & Native Google Sign-In.
 class FirebaseAuthService {
@@ -51,6 +52,19 @@ class FirebaseAuthService {
 
       final UserCredential userCredential = await _auth.signInWithCredential(credential);
       debugPrint('[FirebaseAuthService] Firebase Sign-In successful for UID: ${userCredential.user?.uid}');
+
+      // Bridge Google ID token to Supabase so RLS-protected Cloud Sync & Listen Together rooms work
+      if (googleAuth.idToken != null && googleAuth.idToken!.isNotEmpty) {
+        try {
+          await SupabaseService.signInWithGoogleIdToken(
+            idToken: googleAuth.idToken!,
+            accessToken: googleAuth.accessToken,
+          );
+        } catch (e) {
+          debugPrint('[FirebaseAuthService] Non-fatal Supabase ID token bridge error: $e');
+        }
+      }
+
       return userCredential;
     } on FirebaseAuthException catch (e) {
       debugPrint('[FirebaseAuthService] FirebaseAuthException: [${e.code}] ${e.message}');
@@ -97,10 +111,13 @@ class FirebaseAuthService {
     await _auth.sendPasswordResetEmail(email: trimmedEmail);
   }
 
-  /// Sign Out from both Firebase and GoogleSignIn
+  /// Sign Out from both Firebase, Supabase, and GoogleSignIn
   static Future<void> signOut() async {
     try {
       await _googleSignIn.signOut();
+    } catch (_) {}
+    try {
+      await SupabaseService.signOut();
     } catch (_) {}
     await _auth.signOut();
   }
@@ -147,8 +164,12 @@ class FirebaseAuthService {
           return error.message ?? 'Authentication failed. Please try again.';
       }
     }
-    final str = error.toString();
-    if (str.contains('sign_in_canceled') || str.contains('sign_in_cancelled') || str.contains('aborted')) {
+    final lower = error.toString().toLowerCase();
+    if (lower.contains('sign_in_canceled') ||
+        lower.contains('sign_in_cancelled') ||
+        lower.contains('canceled') ||
+        lower.contains('cancelled') ||
+        lower.contains('aborted')) {
       return 'Google sign-in was canceled.';
     }
     return 'Authentication error: $error';

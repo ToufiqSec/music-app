@@ -69,6 +69,15 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
       }
     }
 
+    // 4. Merge local device audio files (Music / Download folders)
+    final localFiles = await AudioCacheService.getLocalDeviceAudioFiles();
+    final existingIds = downloaded.map((t) => t.id).toSet();
+    for (final local in localFiles) {
+      if (!existingIds.contains(local.id)) {
+        downloaded.add(local);
+      }
+    }
+
     if (mounted) {
       setState(() {
         _downloadedTracks = downloaded;

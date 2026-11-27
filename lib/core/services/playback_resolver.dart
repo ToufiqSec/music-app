@@ -116,10 +116,10 @@ class PlaybackResolver {
       return clean;
     }
 
+    final client = HttpClient()
+      ..connectionTimeout = const Duration(seconds: 8);
     try {
       var currentUri = Uri.parse(clean);
-      final client = HttpClient()
-        ..connectionTimeout = const Duration(seconds: 8);
 
       int redirectCount = 0;
       const maxHops = 10;
@@ -159,10 +159,8 @@ class PlaybackResolver {
           }
 
           if (getResp.statusCode >= 200 && getResp.statusCode < 300) {
-            client.close(force: true);
             return upgradeToHttps(currentUri.toString());
           }
-          client.close(force: true);
           return null;
         }
 
@@ -181,16 +179,13 @@ class PlaybackResolver {
         }
 
         if (response.statusCode >= 200 && response.statusCode < 300) {
-          client.close(force: true);
           return upgradeToHttps(currentUri.toString());
         }
 
         debugPrint('[PlaybackResolver] Candidate URL check returned HTTP ${response.statusCode} for $currentUri');
-        client.close(force: true);
         return null;
       }
 
-      client.close(force: true);
       return upgradeToHttps(currentUri.toString());
     } catch (e) {
       debugPrint('[PlaybackResolver] Error resolving final URL for $url: $e');
@@ -201,6 +196,8 @@ class PlaybackResolver {
         return null;
       }
       return url;
+    } finally {
+      client.close(force: true);
     }
   }
 

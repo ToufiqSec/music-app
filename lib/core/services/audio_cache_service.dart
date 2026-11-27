@@ -9,8 +9,48 @@ import 'track_metadata_store.dart';
 /// Fully asynchronous I/O to prevent main UI isolate frame drops.
 class AudioCacheService {
   static const int maxCacheSizeBytes = 1024 * 1024 * 1024; // 1 GB
+  static const List<String> _supportedExtensions = ['.m4a', '.mp3', '.opus', '.ogg', '.aac', '.wav'];
   static Directory? _cacheDir;
+  static Directory? _downloadsDir;
   static final http.Client _sharedClient = http.Client();
+
+  static String _safeFileKey(String trackId) {
+    return trackId.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+  }
+
+  static Future<Directory> getDownloadsDirectory() async {
+    if (_downloadsDir != null) return _downloadsDir!;
+    final docsDir = await getApplicationDocumentsDirectory();
+    final dir = Directory('${docsDir.path}/downloads');
+    if (!await dir.exists()) {
+      await dir.create(recursive: true);
+    }
+    _downloadsDir = dir;
+    return dir;
+  }
+
+  static String _detectAudioExtension(String streamUrl) {
+    final lower = streamUrl.toLowerCase();
+    for (final ext in _supportedExtensions) {
+      if (lower.contains(ext)) {
+        return ext;
+      }
+    }
+    return '.m4a';
+  }
+
+  static String _stripAudioExtension(String fileName) {
+    for (final ext in _supportedExtensions) {
+      if (fileName.endsWith(ext)) {
+        return fileName.substring(0, fileName.length - ext.length);
+      }
+    }
+    return fileName.replaceAll('.tmp', '');
+  }
+
+  static bool _isAudioCacheFile(String path) {
+    return _supportedExtensions.any((ext) => path.endsWith(ext));
+  }
 
   static Future<Directory> getCacheDirectory() async {
     if (_cacheDir != null) return _cacheDir!;
@@ -23,16 +63,27 @@ class AudioCacheService {
     return cache;
   }
 
-  /// Returns File if track exists on disk, else null
+  /// Returns File if track exists in user downloads or temporary cache, else null
   static Future<File?> getCachedTrackFile(String trackId) async {
+    final safeKey = _safeFileKey(trackId);
+    final downloadsDir = await getDownloadsDirectory();
+    for (final ext in _supportedExtensions) {
+      final dlFile = File('${downloadsDir.path}/$safeKey$ext');
+      if (await dlFile.exists() && await dlFile.length() > 0) {
+        return dlFile;
+      }
+    }
+
     final dir = await getCacheDirectory();
-    final file = File('${dir.path}/$trackId.m4a');
-    if (await file.exists() && await file.length() > 0) {
-      // Touch file for LRU update asynchronously
-      try {
-        await file.setLastModified(DateTime.now());
-      } catch (_) {}
-      return file;
+    for (final ext in _supportedExtensions) {
+      final file = File('${dir.path}/$safeKey$ext');
+      if (await file.exists() && await file.length() > 0) {
+        // Touch file for LRU update asynchronously
+        try {
+          await file.setLastModified(DateTime.now());
+        } catch (_) {}
+        return file;
+      }
     }
     return null;
   }
@@ -49,21 +100,37 @@ class AudioCacheService {
     String trackId,
     String streamUrl, {
     YoutubeTrack? trackMetadata,
+    bool isUserDownload = false,
   }) async* {
     if (trackMetadata != null) {
       await TrackMetadataStore.saveTrackMetadata(trackMetadata);
     }
 
-    final dir = await getCacheDirectory();
-    final targetFile = File('${dir.path}/$trackId.m4a');
-    final tempFile = File('${dir.path}/$trackId.tmp');
+    final dir = isUserDownload ? await getDownloadsDirectory() : await getCacheDirectory();
+    final safeKey = _safeFileKey(trackId);
+    final ext = _detectAudioExtension(streamUrl);
+    final targetFile = File('${dir.path}/$safeKey$ext');
+    final tempFile = File('${dir.path}/$safeKey.tmp');
+
+    int existingBytes = 0;
+    if (await tempFile.exists()) {
+      existingBytes = await tempFile.length();
+    }
 
     http.StreamedResponse response;
     try {
       final request = http.Request('GET', Uri.parse(streamUrl));
+      if (existingBytes > 0) {
+        request.headers['Range'] = 'bytes=$existingBytes-';
+      }
       response = await _sharedClient.send(request);
     } catch (e) {
       return;
+    }
+
+    final isResuming = existingBytes > 0 && response.statusCode == 206;
+    if (!isResuming) {
+      existingBytes = 0;
     }
 
     int totalBytes = response.contentLength ?? 0;
@@ -72,6 +139,9 @@ class AudioCacheService {
       if (headerLen != null) {
         totalBytes = int.tryParse(headerLen) ?? 0;
       }
+    }
+    if (isResuming && totalBytes > 0) {
+      totalBytes += existingBytes;
     }
     if (totalBytes <= 0) {
       final contentRange = response.headers['content-range'];
@@ -90,10 +160,10 @@ class AudioCacheService {
             ? (trackMetadata.durationSeconds * 20000)
             : 5 * 1024 * 1024);
 
-    int bytesReceived = 0;
+    int bytesReceived = existingBytes;
     double lastYieldedProgress = 0.0;
 
-    final sink = tempFile.openWrite();
+    final sink = tempFile.openWrite(mode: isResuming ? FileMode.append : FileMode.write);
 
     try {
       await for (final chunk in response.stream) {
@@ -163,7 +233,7 @@ class AudioCacheService {
           if (bytesToDelete <= 0) break;
           try {
             await item.file.delete();
-            final trackId = item.file.uri.pathSegments.last.replaceAll('.m4a', '');
+            final trackId = _stripAudioExtension(item.file.uri.pathSegments.last);
             await TrackMetadataStore.removeTrackMetadata(trackId);
             bytesToDelete -= item.size;
           } catch (_) {}
@@ -178,8 +248,8 @@ class AudioCacheService {
       final dir = await getCacheDirectory();
       final entities = await dir.list().where((e) => e is File).cast<File>().toList();
       return entities
-          .where((f) => f.path.endsWith('.m4a'))
-          .map((f) => f.uri.pathSegments.last.replaceAll('.m4a', ''))
+          .where((f) => _isAudioCacheFile(f.path))
+          .map((f) => _stripAudioExtension(f.uri.pathSegments.last))
           .toList();
     } catch (_) {
       return [];
@@ -193,7 +263,7 @@ class AudioCacheService {
       final entities = await dir.list().where((e) => e is File).cast<File>().toList();
       int total = 0;
       for (final f in entities) {
-        if (f.path.endsWith('.m4a')) {
+        if (_isAudioCacheFile(f.path)) {
           total += await f.length();
         }
       }
@@ -215,10 +285,10 @@ class AudioCacheService {
       final dir = await getCacheDirectory();
       final entities = await dir.list().where((e) => e is File).cast<File>().toList();
       for (final f in entities) {
-        if (f.path.endsWith('.m4a') || f.path.endsWith('.tmp')) {
+        if (_isAudioCacheFile(f.path) || f.path.endsWith('.tmp')) {
           try {
             await f.delete();
-            final trackId = f.uri.pathSegments.last.replaceAll('.m4a', '').replaceAll('.tmp', '');
+            final trackId = _stripAudioExtension(f.uri.pathSegments.last);
             await TrackMetadataStore.removeTrackMetadata(trackId);
           } catch (_) {}
         }
@@ -229,6 +299,41 @@ class AudioCacheService {
   /// Alias for clearCache
   static Future<void> clearAllCache() async {
     await clearCache();
+  }
+
+  /// Scans common device Music/Download folders for local audio files (Problem 8).
+  static Future<List<YoutubeTrack>> getLocalDeviceAudioFiles() async {
+    final results = <YoutubeTrack>[];
+    if (!Platform.isAndroid) return results;
+
+    const candidateDirs = [
+      '/storage/emulated/0/Music',
+      '/storage/emulated/0/Download',
+    ];
+
+    for (final dirPath in candidateDirs) {
+      try {
+        final dir = Directory(dirPath);
+        if (!await dir.exists()) continue;
+        await for (final entity in dir.list(recursive: false, followLinks: false)) {
+          if (entity is File && _isAudioCacheFile(entity.path.toLowerCase())) {
+            final name = entity.uri.pathSegments.last;
+            final title = _stripAudioExtension(name);
+            results.add(YoutubeTrack(
+              id: 'local_${entity.path.hashCode.abs()}',
+              title: title,
+              artist: 'Local Device Audio',
+              durationSeconds: 0,
+              localFilePath: entity.path,
+              isDownloaded: true,
+            ));
+          }
+        }
+      } catch (_) {
+        // Permission may not be granted yet; fail gracefully without crashing
+      }
+    }
+    return results;
   }
 }
 

@@ -160,19 +160,13 @@ class RoomProvider extends ChangeNotifier {
     _syncEngine = RoomSyncEngine(
       fetchServerTimeMs: _roomService.getServerTimeMs,
       seek: (target) async {
-        if (_audioProvider != null) {
-          _audioProvider!.seekTo(target);
-        }
+        await _audioProvider?.seekImmediate(target);
       },
       play: () async {
-        if (_audioProvider != null && !_audioProvider!.isPlaying) {
-          await _audioProvider!.togglePlayPause();
-        }
+        await _audioProvider?.play();
       },
       pause: () async {
-        if (_audioProvider != null && _audioProvider!.isPlaying) {
-          await _audioProvider!.togglePlayPause();
-        }
+        await _audioProvider?.pause();
       },
       getPosition: () => _audioProvider?.position ?? Duration.zero,
       onSyncStatusChanged: (status) {

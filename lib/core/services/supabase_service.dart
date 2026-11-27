@@ -90,6 +90,37 @@ class UserSettingsData {
   }
 }
 
+/// Backend-managed Free/Premium entitlement model (Problem 11).
+/// Never trust a client-side toggle; defaults safely to Free when offline or unauthenticated.
+class UserEntitlement {
+  final String plan; // 'free' | 'premium'
+  final bool isActive;
+  final DateTime? expiresAt;
+
+  const UserEntitlement({
+    this.plan = 'free',
+    this.isActive = true,
+    this.expiresAt,
+  });
+
+  bool get isPremium {
+    if (!isActive || plan.toLowerCase() != 'premium') return false;
+    if (expiresAt != null && DateTime.now().isAfter(expiresAt!)) return false;
+    return true;
+  }
+
+  factory UserEntitlement.free() => const UserEntitlement(plan: 'free', isActive: true);
+
+  factory UserEntitlement.fromMap(Map<String, dynamic> map) {
+    final expRaw = map['expires_at']?.toString();
+    return UserEntitlement(
+      plan: map['plan']?.toString().toLowerCase() ?? 'free',
+      isActive: map['is_active'] as bool? ?? true,
+      expiresAt: expRaw != null ? DateTime.tryParse(expRaw) : null,
+    );
+  }
+}
+
 /// Central Supabase service handling Auth, Cloud Sync, and RLS interactions.
 class SupabaseService {
   static const String supabaseUrl = 'https://pxyyzwxvqrbedvlbtltq.supabase.co';
@@ -216,6 +247,25 @@ class SupabaseService {
     } catch (e) {
       debugPrint('[Supabase] Google OAuth Error: $e');
       rethrow;
+    }
+  }
+
+  /// Bridges a native Google Sign-In ID token into Supabase Auth so RLS policies
+  /// (`auth.uid()`) work seamlessly alongside Firebase Auth.
+  static Future<void> signInWithGoogleIdToken({
+    required String idToken,
+    String? accessToken,
+  }) async {
+    try {
+      await client.auth.signInWithIdToken(
+        provider: OAuthProvider.google,
+        idToken: idToken,
+        accessToken: accessToken,
+      );
+      debugPrint('[Supabase] Bridged Google ID token into Supabase session: ${currentUser?.email}');
+      await syncDownAllUserData();
+    } catch (e) {
+      debugPrint('[Supabase] signInWithGoogleIdToken failed: $e');
     }
   }
 
@@ -351,6 +401,28 @@ class SupabaseService {
     } catch (e) {
       debugPrint('[Supabase] Error updating settings: $e');
     }
+  }
+
+  // --- ENTITLEMENTS (READ-ONLY FROM BACKEND) ---
+
+  static Future<UserEntitlement> fetchEntitlement() async {
+    final user = currentUser;
+    if (user == null) return UserEntitlement.free();
+
+    try {
+      final res = await client
+          .from('user_entitlements')
+          .select('plan, is_active, expires_at')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+      if (res != null) {
+        return UserEntitlement.fromMap(res);
+      }
+    } catch (e) {
+      debugPrint('[Supabase] Entitlement fetch skipped/fallback to free: $e');
+    }
+    return UserEntitlement.free();
   }
 
   // --- CLOUD SYNC: RESTORE ON REINSTALL & NEW DEVICE ---

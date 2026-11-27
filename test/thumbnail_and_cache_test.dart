@@ -10,6 +10,17 @@ class CardArtworkMismatchTracker {
   static void reset() => _mismatches = 0;
 
   static void recordInspection({required String trackId, required String imageId}) {
+    final ytMatch = RegExp(r'i\.ytimg\.com/vi/([a-zA-Z0-9_-]{11})/').firstMatch(imageId);
+    if (ytMatch != null) {
+      final imageYtId = ytMatch.group(1)!;
+      if (trackId.isNotEmpty && imageYtId != trackId) {
+        _mismatches++;
+      }
+      return;
+    }
+    if (imageId.contains('saavncdn.com')) {
+      return; // JioSaavn CDN URLs use album slug paths, not track IDs
+    }
     if (trackId.isNotEmpty && imageId.isNotEmpty && !imageId.contains(trackId) && !trackId.contains(imageId)) {
       _mismatches++;
     }

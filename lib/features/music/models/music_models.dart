@@ -15,6 +15,35 @@ class YoutubeTrack {
 
   String get thumbnail => thumbnailUrl;
 
+  /// Identifies the source provider for honest UI labelling (Problem 1 & 3).
+  String get sourceProvider {
+    if (localFilePath != null && localFilePath!.isNotEmpty) return 'Local';
+    if (id.startsWith('ss_') || (audioStreamUrl?.contains('spreaker.com') ?? false)) return 'Podcast';
+    if (id.startsWith('ab_')) return 'Audiobook';
+    if (audioStreamUrl != null &&
+        (audioStreamUrl!.contains('saavncdn.com') || audioStreamUrl!.contains('jiosaavn'))) {
+      return 'JioSaavn';
+    }
+    if (RegExp(r'^[a-zA-Z0-9_-]{11}$').hasMatch(id)) return 'YouTube';
+    if (audioStreamUrl != null && audioStreamUrl!.isNotEmpty) return 'Direct';
+    return 'Catalog';
+  }
+
+  /// Honest playability check: distinguishes streamable/local items from dead or webpage links.
+  bool get isLikelyPlayable {
+    if (localFilePath != null && localFilePath!.isNotEmpty) return true;
+    final url = audioStreamUrl?.trim() ?? '';
+    if (url.isNotEmpty) {
+      final lower = url.toLowerCase();
+      if (lower.endsWith('.html') || lower.endsWith('.htm') || lower.contains('youtube.com/watch')) {
+        return false;
+      }
+      return true;
+    }
+    if (id.startsWith('ss_spk_') || RegExp(r'^[a-zA-Z0-9_-]{11}$').hasMatch(id)) return true;
+    return id.isNotEmpty && !id.startsWith('unavailable_');
+  }
+
   const YoutubeTrack({
     required this.id,
     required this.title,

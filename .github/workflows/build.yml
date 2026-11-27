@@ -61,17 +61,11 @@ jobs:
       - name: Install Project Dependencies
         run: flutter pub get
 
-      - name: Run Unit Tests (Non-Fatal)
-        run: |
-          echo "Running Unit Tests..."
-          flutter test test/numeric_utils_test.dart || true
-          flutter test test/now_playing_screen_test.dart || true
-          flutter test test/quick_pick_title_cleaner_test.dart || true
-          flutter test test/update_review_test.dart || true
-          flutter test test/firebase_auth_test.dart || true
+      - name: Run Unit Tests
+        run: flutter test --no-pub
 
-      - name: Analyze Project Code (Non-Fatal)
-        run: flutter analyze --no-fatal-infos --no-fatal-warnings || true
+      - name: Analyze Project Code
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
       - name: Extract App Version from pubspec.yaml
         id: get_version

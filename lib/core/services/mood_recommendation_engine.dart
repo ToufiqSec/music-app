@@ -200,8 +200,9 @@ class MoodRecommendationEngine {
       }
     }
 
-    // 4.5. Enforce minimum floor of 5 verified results (Issue 7 Step 2)
-    if (results.length < 5) {
+    // 4.5. Enforce minimum floor of 15 verified results (AGENT.md recommendation rule)
+    const int minRecommendedTracks = 15;
+    if (results.length < minRecommendedTracks) {
       final fallbackQuery = queries.isNotEmpty
           ? '${queries.first} trending'
           : 'top acoustic ambient hits';
@@ -212,14 +213,14 @@ class MoodRecommendationEngine {
           if (!seenKeys.contains(key)) {
             seenKeys.add(key);
             results.add(track);
-            if (results.length >= 5) break;
+            if (results.length >= minRecommendedTracks) break;
           }
         }
       } catch (_) {}
     }
 
-    // 5. Rerank through user's taste engine
-    final reranked = TasteEngine.rerankSearchResults(results);
+    // 5. Rerank through user's taste engine and avoid consecutive tracks by the same artist
+    final reranked = avoidConsecutiveSameArtist(TasteEngine.rerankSearchResults(results));
 
     // 6. Save session metadata to Supabase / local cache for taste adaptation
     _recordMoodSession(selectedMoodIds, customDescription.trim(), style.label, reranked.length);
@@ -228,6 +229,24 @@ class MoodRecommendationEngine {
       companionMessage: companionMessage,
       tracks: reranked,
     );
+  }
+
+  /// Reorders tracks greedily to avoid consecutive songs from the same primary artist.
+  static List<YoutubeTrack> avoidConsecutiveSameArtist(List<YoutubeTrack> tracks) {
+    if (tracks.length <= 2) return List.from(tracks);
+    final remaining = List<YoutubeTrack>.from(tracks);
+    final spaced = <YoutubeTrack>[];
+    String? lastArtist;
+
+    while (remaining.isNotEmpty) {
+      final nextIdx = remaining.indexWhere(
+        (t) => t.artist.toLowerCase().trim() != lastArtist,
+      );
+      final chosen = nextIdx != -1 ? remaining.removeAt(nextIdx) : remaining.removeAt(0);
+      spaced.add(chosen);
+      lastArtist = chosen.artist.toLowerCase().trim();
+    }
+    return spaced;
   }
 
   /// Calls Groq API with specialist companion system prompt

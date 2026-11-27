@@ -10,7 +10,6 @@ import 'features/listen_together/providers/room_provider.dart';
 import 'core/services/supabase_service.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/mood_recommendation_engine.dart';
-import 'core/services/home_section_cache_store.dart';
 import 'screens/home_screen.dart';
 import 'screens/splash_screen.dart';
 import 'theme/app_theme.dart';
@@ -129,12 +128,7 @@ class _MusicAppBootstrapState extends State<MusicAppBootstrap> {
       await MoodRecommendationEngine.initApiKey();
     } catch (_) {}
 
-    // 4. Invalidate legacy un-keyed image cache & stale home section JSON on upgrade
-    try {
-      PaintingBinding.instance.imageCache.clear();
-      PaintingBinding.instance.imageCache.clearLiveImages();
-      await HomeSectionCacheStore.clear();
-    } catch (_) {}
+    // 4. Preserve persistent home section & image caches across launches for instant cold start
 
     // 5. Initialize native AudioService
     MyAudioHandler handler;

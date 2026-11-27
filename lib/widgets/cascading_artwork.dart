@@ -64,7 +64,10 @@ class _CascadingArtworkState extends State<CascadingArtwork> {
 
   void _buildCandidateList() {
     final list = <String>[];
-    final original = widget.imageUrl?.trim() ?? '';
+    var original = widget.imageUrl?.trim() ?? '';
+    if (original.startsWith('http://')) {
+      original = 'https://${original.substring(7)}';
+    }
 
     if (original.isNotEmpty) {
       // Check if YouTube image
@@ -72,7 +75,6 @@ class _CascadingArtworkState extends State<CascadingArtwork> {
       if (ytMatch != null) {
         final videoId = ytMatch.group(1)!;
         final isSmallThumbnail = widget.width != null && widget.width! <= 120;
-        
         // Prioritize guaranteed available tiers to prevent 404 network stalls
         final List<String> tiers;
         if (original.contains('hqdefault.jpg')) {
@@ -111,16 +113,14 @@ class _CascadingArtworkState extends State<CascadingArtwork> {
           }
         }
       } else {
-        list.add(original);
-        if (original.contains('saavncdn.com')) {
-          // Multi-tier JioSaavn image fallback: 500x500 -> 150x150
-          if (original.contains('500x500')) {
-            final smaller = original.replaceAll('500x500', '150x150');
-            if (!list.contains(smaller)) list.add(smaller);
-          } else if (original.contains('150x150')) {
-            final larger = original.replaceAll('150x150', '500x500');
-            if (!list.contains(larger)) list.insert(0, larger);
-          }
+        // Multi-tier JioSaavn image fallback: 500x500 -> 150x150
+        if (original.contains('saavncdn.com') || original.contains('jiosaavn')) {
+          final hiRes = original.replaceAll('50x50', '500x500').replaceAll('150x150', '500x500');
+          final midRes = hiRes.replaceAll('500x500', '150x150');
+          list.add(hiRes);
+          if (!list.contains(midRes)) list.add(midRes);
+        } else {
+          list.add(original);
         }
       }
     } else if (widget.trackId != null && RegExp(r'^[a-zA-Z0-9_-]{11}$').hasMatch(widget.trackId!)) {
@@ -133,6 +133,7 @@ class _CascadingArtworkState extends State<CascadingArtwork> {
       } else {
         list.add('https://i.ytimg.com/vi/$ytId/hqdefault.jpg');
         list.add('https://i.ytimg.com/vi/$ytId/mqdefault.jpg');
+        list.add('https://i.ytimg.com/vi/$ytId/sddefault.jpg');
         list.add('https://i.ytimg.com/vi/$ytId/maxresdefault.jpg');
       }
     }
