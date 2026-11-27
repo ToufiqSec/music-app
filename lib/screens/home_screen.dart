@@ -629,10 +629,12 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
                 ),
                 const SizedBox(width: 8),
 
-                // Top Action Group (Notifications, Moods & Genres, Profile Avatar)
+                // Top Action Group (Listen Together, Notifications, Moods & Genres, Profile Avatar)
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    const ListenTogetherButton(),
+                    const SizedBox(width: 8),
                     _buildHeaderIconButton(
                       icon: Icons.notifications_none_rounded,
                       tooltip: 'Notifications',
@@ -1920,10 +1922,15 @@ class _HomeDiscoveryViewState extends State<_HomeDiscoveryView> with WidgetsBind
                   child: SizedBox(
                     width: 140,
                     height: 130,
-                    child: CachedNetworkImage(
+                    child: CascadingArtwork(
+                      key: ValueKey('trending_art_${track.id}'),
+                      trackId: track.id,
                       imageUrl: track.thumbnailUrl,
+                      title: track.title,
+                      artist: track.artist,
+                      width: 140,
+                      height: 130,
                       fit: BoxFit.cover,
-                      memCacheWidth: 280,
                     ),
                   ),
                 ),

@@ -74,7 +74,7 @@ class AppUpdateService {
   static int? _activeDownloadId;
   static Timer? _pollTimer;
   static StreamController<DownloadProgressState>? _progressController;
-  static http.Client? _activeHttpClient;
+  static HttpClient? _activeIoClient;
   static bool _isCancelled = false;
 
   /// Returns the dynamically resolved installed version (e.g. 1.0.0) from Android PackageManager.
@@ -244,20 +244,17 @@ class AppUpdateService {
         status: 'downloading',
       ));
 
-      _activeHttpClient?.close();
-      _activeHttpClient = http.Client();
+      _activeIoClient?.close(force: true);
+      final client = HttpClient()
+        ..connectionTimeout = const Duration(seconds: 15)
+        ..idleTimeout = const Duration(seconds: 5);
+      _activeIoClient = client;
 
-      final request = http.Request('GET', Uri.parse(info.apkDownloadUrl));
-      request.followRedirects = true;
-      request.maxRedirects = 5;
-      request.headers['User-Agent'] =
-          'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36';
-
-      if (existingBytes > 0) {
-        request.headers['Range'] = 'bytes=$existingBytes-';
-      }
-
-      final response = await _activeHttpClient!.send(request);
+      final response = await _openDownloadStreamWithRedirects(
+        client: client,
+        initialUri: Uri.parse(info.apkDownloadUrl),
+        rangeStart: existingBytes,
+      );
 
       if (_isCancelled) return;
 
@@ -266,9 +263,10 @@ class AppUpdateService {
       }
 
       final isPartial = response.statusCode == 206;
+      final contentLength = response.contentLength >= 0 ? response.contentLength : null;
       final totalBytes = isPartial
-          ? existingBytes + (response.contentLength ?? 0)
-          : (response.contentLength ?? expectedTotal);
+          ? existingBytes + (contentLength ?? 0)
+          : (contentLength ?? expectedTotal);
 
       if (!isPartial && existingBytes > 0) {
         existingBytes = 0;
@@ -279,7 +277,7 @@ class AppUpdateService {
       int bytesReceived = existingBytes;
       int lastReportTime = 0;
 
-      await for (final chunk in response.stream) {
+      await for (final chunk in response.timeout(const Duration(seconds: 30))) {
         if (_isCancelled) {
           await sink.close();
           return;
@@ -327,20 +325,87 @@ class AppUpdateService {
         bytesTotal: 0,
         progress: 0.0,
         status: 'failed',
-        errorMessage: 'Download error: $e. Tap Retry or Download in Browser.',
+        errorMessage: formatDownloadError(e),
       ));
     } finally {
-      _activeHttpClient?.close();
-      _activeHttpClient = null;
+      _activeIoClient?.close(force: true);
+      _activeIoClient = null;
     }
+  }
+
+  /// Opens the APK stream using a fresh system-default [HttpClient], explicitly
+  /// following GitHub cross-host redirects without reusing stale sockets.
+  static Future<HttpClientResponse> _openDownloadStreamWithRedirects({
+    required HttpClient client,
+    required Uri initialUri,
+    required int rangeStart,
+    int maxRedirects = 8,
+  }) async {
+    var currentUri = initialUri;
+    for (int hop = 0; hop <= maxRedirects; hop++) {
+      if (_isCancelled) {
+        throw Exception('Download cancelled');
+      }
+      final req = await client.getUrl(currentUri).timeout(const Duration(seconds: 20));
+      req.followRedirects = false;
+      req.headers.set(
+        HttpHeaders.userAgentHeader,
+        'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+      );
+      if (rangeStart > 0) {
+        req.headers.set(HttpHeaders.rangeHeader, 'bytes=$rangeStart-');
+      }
+
+      final resp = await req.close().timeout(const Duration(seconds: 20));
+      if (resp.statusCode == HttpStatus.movedPermanently ||
+          resp.statusCode == HttpStatus.movedTemporarily ||
+          resp.statusCode == HttpStatus.seeOther ||
+          resp.statusCode == HttpStatus.temporaryRedirect ||
+          resp.statusCode == HttpStatus.permanentRedirect) {
+        final location = resp.headers.value(HttpHeaders.locationHeader);
+        await resp.drain<void>().catchError((_) {});
+        if (location == null || location.isEmpty) {
+          throw Exception('Server returned redirect without Location header');
+        }
+        currentUri = currentUri.resolve(location);
+        continue;
+      }
+      return resp;
+    }
+    throw Exception('Too many redirects while downloading update');
+  }
+
+  /// Maps raw network/HTTP exceptions to a readable user-facing message.
+  @visibleForTesting
+  static String formatDownloadError(Object error) {
+    final msg = error.toString();
+    if (error is SocketException ||
+        error is HandshakeException ||
+        msg.contains('SocketException') ||
+        msg.contains('Connection refused') ||
+        msg.contains('Failed host lookup') ||
+        msg.contains('Network is unreachable') ||
+        msg.contains('Connection reset')) {
+      return 'Network connection failed. Check your internet or VPN settings, then tap Retry or Download in Browser.';
+    }
+    if (error is TimeoutException || msg.contains('TimeoutException') || msg.contains('timed out')) {
+      return 'Download timed out. Check your internet connection and tap Retry or Download in Browser.';
+    }
+    if (msg.contains('HTTP 404')) {
+      return 'Update file not found on server. Try again later or Download in Browser.';
+    }
+    if (msg.contains('HTTP ')) {
+      return 'Server error while downloading update. Tap Retry or Download in Browser.';
+    }
+    return 'Download could not complete. Check your connection and tap Retry or Download in Browser.';
   }
 
   /// Cancels any active download cleanly
   static Future<void> cancelActiveDownload() async {
     _isCancelled = true;
     _pollTimer?.cancel();
-    _activeHttpClient?.close();
-    _activeHttpClient = null;
+    _activeIoClient?.close(force: true);
+    _activeIoClient = null;
     if (_activeDownloadId != null) {
       try {
         await _channel.invokeMethod('cancelDownload', {

@@ -75,19 +75,37 @@ class _CascadingArtworkState extends State<CascadingArtwork> {
       if (ytMatch != null) {
         final videoId = ytMatch.group(1)!;
         final isSmallThumbnail = widget.width != null && widget.width! <= 120;
-        // Prefer mqdefault (320x180, true 16:9, zero 404s) for small cards and hqdefault/mqdefault
-        // ahead of maxresdefault (which frequently returns 404 on audio-only/older uploads).
-        final tiers = isSmallThumbnail
-            ? [
-                'https://i.ytimg.com/vi/$videoId/mqdefault.jpg',
-                'https://i.ytimg.com/vi/$videoId/hqdefault.jpg',
-              ]
-            : [
-                'https://i.ytimg.com/vi/$videoId/hqdefault.jpg',
-                'https://i.ytimg.com/vi/$videoId/mqdefault.jpg',
-                'https://i.ytimg.com/vi/$videoId/sddefault.jpg',
-                'https://i.ytimg.com/vi/$videoId/maxresdefault.jpg',
-              ];
+        // Prioritize guaranteed available tiers to prevent 404 network stalls
+        final List<String> tiers;
+        if (original.contains('hqdefault.jpg')) {
+          tiers = [
+            'https://i.ytimg.com/vi/$videoId/hqdefault.jpg',
+            'https://i.ytimg.com/vi/$videoId/mqdefault.jpg',
+            'https://i.ytimg.com/vi/$videoId/maxresdefault.jpg',
+          ];
+        } else if (original.contains('mqdefault.jpg')) {
+          tiers = [
+            'https://i.ytimg.com/vi/$videoId/mqdefault.jpg',
+            'https://i.ytimg.com/vi/$videoId/hqdefault.jpg',
+          ];
+        } else if (original.contains('maxresdefault.jpg')) {
+          tiers = [
+            'https://i.ytimg.com/vi/$videoId/maxresdefault.jpg',
+            'https://i.ytimg.com/vi/$videoId/hqdefault.jpg',
+            'https://i.ytimg.com/vi/$videoId/mqdefault.jpg',
+          ];
+        } else {
+          tiers = isSmallThumbnail
+              ? [
+                  'https://i.ytimg.com/vi/$videoId/mqdefault.jpg',
+                  'https://i.ytimg.com/vi/$videoId/hqdefault.jpg',
+                ]
+              : [
+                  'https://i.ytimg.com/vi/$videoId/hqdefault.jpg',
+                  'https://i.ytimg.com/vi/$videoId/mqdefault.jpg',
+                  'https://i.ytimg.com/vi/$videoId/maxresdefault.jpg',
+                ];
+        }
         list.clear();
         for (final tier in tiers) {
           if (!list.contains(tier)) {
@@ -272,7 +290,9 @@ class _CascadingArtworkState extends State<CascadingArtwork> {
               setState(() => _fallbackIndex++);
             }
           });
-          return _buildLetterTileFallback();
+          return (_fallbackIndex < _candidates.length - 1)
+              ? _buildShimmer()
+              : _buildLetterTileFallback();
         },
       ),
     );

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:audio_service/audio_service.dart';
@@ -7,6 +8,7 @@ import '../core/services/playback_resolver.dart';
 /// Background Audio Handler using audio_service and just_audio.
 class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
   final AudioPlayer _player = AudioPlayer();
+  final List<StreamSubscription<dynamic>> _subscriptions = [];
 
   MyAudioHandler() {
     _init();
@@ -15,23 +17,27 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
   AudioPlayer get player => _player;
 
   void _init() {
-    _player.playbackEventStream.listen(_broadcastState);
+    _subscriptions.add(_player.playbackEventStream.listen(_broadcastState));
 
-    _player.durationStream.listen((duration) {
-      final index = _player.currentIndex;
-      final newQueue = queue.value;
-      if (index != null && index < newQueue.length && duration != null) {
-        final currentItem = newQueue[index];
-        mediaItem.add(currentItem.copyWith(duration: duration));
-      }
-    });
+    _subscriptions.add(
+      _player.durationStream.listen((duration) {
+        final index = _player.currentIndex;
+        final newQueue = queue.value;
+        if (index != null && index < newQueue.length && duration != null) {
+          final currentItem = newQueue[index];
+          mediaItem.add(currentItem.copyWith(duration: duration));
+        }
+      }),
+    );
 
-    _player.currentIndexStream.listen((index) {
-      final newQueue = queue.value;
-      if (index != null && index < newQueue.length) {
-        mediaItem.add(newQueue[index]);
-      }
-    });
+    _subscriptions.add(
+      _player.currentIndexStream.listen((index) {
+        final newQueue = queue.value;
+        if (index != null && index < newQueue.length) {
+          mediaItem.add(newQueue[index]);
+        }
+      }),
+    );
   }
 
   void _broadcastState(PlaybackEvent event) {
@@ -78,6 +84,21 @@ class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
   Future<void> stop() async {
     await _player.stop();
     await super.stop();
+  }
+
+  @override
+  Future<void> onTaskRemoved() async {
+    if (!_player.playing) {
+      await stop();
+    }
+  }
+
+  Future<void> dispose() async {
+    for (final sub in _subscriptions) {
+      await sub.cancel();
+    }
+    _subscriptions.clear();
+    await _player.dispose();
   }
 
   @override

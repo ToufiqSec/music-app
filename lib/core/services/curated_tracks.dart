@@ -301,11 +301,11 @@ class CuratedTracks {
       thumbnailUrl: 'https://i.ytimg.com/vi/ElZfdU54Cp8/hqdefault.jpg',
     ),
     const YoutubeTrack(
-      id: 'H5v3k2nnD5Y',
+      id: 'It96yG1r',
       title: 'As It Was',
       artist: 'Harry Styles',
       durationSeconds: 167,
-      thumbnailUrl: 'https://i.ytimg.com/vi/H5v3k2nnD5Y/hqdefault.jpg',
+      thumbnailUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/2a/19/fb/2a19fb85-2f70-9e44-f2a9-82abe679b88e/886449990061.jpg/600x600bb.jpg',
     ),
   ];
 
@@ -332,11 +332,11 @@ class CuratedTracks {
       thumbnailUrl: 'https://i.ytimg.com/vi/z3UHfi9vpbc/hqdefault.jpg',
     ),
     const YoutubeTrack(
-      id: 's-bZF3n2TNE',
+      id: 'zara_sa_kk',
       title: 'Zara Sa',
       artist: 'KK',
       durationSeconds: 304,
-      thumbnailUrl: 'https://i.ytimg.com/vi/s-bZF3n2TNE/hqdefault.jpg',
+      thumbnailUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/e9/a3/cf/e9a3cf5e-09c3-3d6b-3bf2-c609475b6543/888880551801.jpg/600x600bb.jpg',
     ),
     const YoutubeTrack(
       id: 'mevO4I0f5lg',
